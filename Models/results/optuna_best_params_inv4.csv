@@ -1,0 +1,2 @@
+seed,seq_len,batch_size,use_lag_2,include_rolling_mean,model_size,num_cnn_blocks,lstm_layers,learning_rate,dropout,corr_weight
+4354,1,4,False,True,128,1,2,0.007183061567833714,0.08029584789142274,0.12563707732671603

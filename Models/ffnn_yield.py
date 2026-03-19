@@ -1,25 +1,21 @@
 """
-CNN-RNN Model for Greenhouse Crop Yield Prediction
-===================================================
-Based on: Gong et al. (2023) "A Novel Model Fusion Approach for Greenhouse
-Crop Yield Prediction", Horticulturae 9(1), 5.
+Feed-Forward Neural Network for Greenhouse Crop Yield Prediction
+================================================================
+Simple FFNN baseline: flat PCA-reduced weekly features → hidden layer (64) → prediction.
 
-Architecture (Section 2.2 of the paper):
-  - CNN part: N blocks of [1D Conv -> WeightNorm -> ReLU -> Dropout] + residual
-  - RNN part: LSTM units -> Feed-forward network -> Prediction
+No sequences — each row is an independent sample (like XGBoost) but trained
+with backpropagation via PyTorch.
 
-Trains one model per greenhouse (Inv. 3, Inv. 4) using all 5 seasons (T13-T17).
-All Excel files have 5 sheets (one per season) with sensor + production data.
+Trains one model per greenhouse (Inv. 3, Inv. 4) using all 5 seasons.
 Split: T13-T15 train, T16 validation, T17 test.
 Prediction horizon: 4 weeks ahead.
 
 Sections:
-  1. Data Loading & Feature Engineering
-  2. Dataset & DataLoader
-  3. CNN-RNN Model Definition
-  4. Hyperparameter Configuration (TUNE HERE)
-  5. Training (with validation-based early stopping)
-  6. Testing & Evaluation (RMSE, R², NSE, PBIAS, MAPE)
+  1. Data Loading & Feature Engineering (shared with CNN-RNN / XGBoost)
+  2. FFNN Model Definition
+  3. Hyperparameter Configuration
+  4. Training (with validation-based early stopping)
+  5. Testing & Evaluation (RMSE, R², NSE, PBIAS, MAPE)
 """
 
 import warnings
@@ -64,7 +60,6 @@ def load_internal_variables_all_seasons():
         df = df.rename(columns={'fecha': 'fecha'})
         df['fecha'] = pd.to_datetime(df['fecha'])
         df['temporada'] = SEASON_NAMES[i]
-        # Force numeric on all non-date columns
         for col in df.columns:
             if col not in ['fecha', 'temporada']:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -84,7 +79,6 @@ def load_external_variables_all_seasons():
         df = df.rename(columns={'fecha': 'fecha'})
         df['fecha'] = pd.to_datetime(df['fecha'])
         df['temporada'] = SEASON_NAMES[i]
-        # Force numeric on all non-date columns
         for col in df.columns:
             if col not in ['fecha', 'temporada']:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -113,30 +107,14 @@ def load_production(invernadero_id):
     return df
 
 
-def aggregate_daily_to_weekly(df_daily, temporada):
-    """Aggregate daily sensor data to weekly resolution within a season."""
-    season_data = df_daily[df_daily['temporada'] == temporada].copy()
-    season_data = season_data.sort_values('fecha').reset_index(drop=True)
-
-    # Assign week number within the season (sequential)
-    season_data['day_idx'] = np.arange(len(season_data))
-    season_data['week_idx'] = season_data['day_idx'] // 7
-
-    return season_data
-
-
-def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
-                                 include_rolling_mean=False,
-                                 train_seasons=None, val_season=None,
-                                 predict_delta=False):
+def build_dataset_for_greenhouse(invernadero_id, horizon=4):
     """
     Build feature matrix for a single greenhouse using all 5 seasons.
 
     Merges internal sensor data + external weather data (aggregated to weekly)
     with weekly production targets. Creates lag features and rolling stats.
 
-    If predict_delta=True, target = kg[t+h] - kg[t] (change in yield).
-    Otherwise, target = kg[t+h] (absolute yield).
+    The target is kg_reales at time t+horizon (4-week ahead prediction).
 
     Returns:
         train_df, val_df, test_df, feature_cols
@@ -243,20 +221,15 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         weekly['week_position'] = weekly['week_in_season'] / len(weekly)
 
         # Lag features
-        lags = lag_features if lag_features is not None else [1]
-        for lag in lags:
+        for lag in range(1, 5):
             weekly[f'kg_lag_{lag}'] = weekly['kg_reales'].shift(lag)
 
-        # Rolling statistics (optional)
-        if include_rolling_mean:
-            weekly['kg_roll_mean_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).mean()
+        # Rolling statistics
+        weekly['kg_roll_mean_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).mean()
+        weekly['kg_roll_std_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).std().fillna(0)
 
-        # Target: delta or absolute
-        if predict_delta:
-            weekly['target'] = weekly['kg_reales'].shift(-horizon) - weekly['kg_reales']
-            weekly['kg_base'] = weekly['kg_reales']  # keep base for reconstruction
-        else:
-            weekly['target'] = weekly['kg_reales'].shift(-horizon)
+        # Target: kg_reales h weeks ahead
+        weekly['target'] = weekly['kg_reales'].shift(-horizon)
 
         all_season_frames.append(weekly)
 
@@ -266,21 +239,17 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     df_all = df_all.dropna().reset_index(drop=True)
 
     # Feature columns
-    exclude = ['week_idx', 'semana', 'kg_reales', 'temporada', 'target', 'kg_base']
+    exclude = ['week_idx', 'semana', 'kg_reales', 'temporada', 'target']
     feature_cols = [c for c in df_all.columns if c not in exclude]
 
-    # Split: configurable train/val seasons, T17 always test
-    train_seasons = train_seasons if train_seasons is not None else ['T13', 'T14', 'T15']
-    val_season = val_season if val_season is not None else 'T16'
-
-    train_df = df_all[df_all['temporada'].isin(train_seasons)].reset_index(drop=True)
-    val_df = df_all[df_all['temporada'] == val_season].reset_index(drop=True)
+    # Split: T13-T15 train, T16 validation, T17 test
+    train_df = df_all[df_all['temporada'].isin(['T13', 'T14', 'T15'])].reset_index(drop=True)
+    val_df = df_all[df_all['temporada'] == 'T16'].reset_index(drop=True)
     test_df = df_all[df_all['temporada'] == 'T17'].reset_index(drop=True)
 
-    train_label = ','.join(train_seasons)
     print(f'  Invernadero {invernadero_id}:')
-    print(f'    Train samples: {len(train_df)} ({train_label})')
-    print(f'    Val samples:   {len(val_df)} ({val_season})')
+    print(f'    Train samples: {len(train_df)} (T13-T15)')
+    print(f'    Val samples:   {len(val_df)} (T16)')
     print(f'    Test samples:  {len(test_df)} (T17)')
     print(f'    Features ({len(feature_cols)}): {feature_cols}')
 
@@ -288,181 +257,67 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 
 
 # ============================================================================
-# 2. DATASET & DATALOADER
+# 2. DATASET
 # ============================================================================
 
-class YieldSequenceDataset(Dataset):
-    """
-    Creates sequences of length `seq_len` from the weekly data.
-    Each sample is a window of `seq_len` weeks of features -> predict the
-    target (kg_reales h weeks ahead) of the last week in the window.
-
-    Computes per-sample weights: peaks and valleys (far from mean) get
-    higher weight so the model is penalized more for missing extremes.
-      w_i = 1 + alpha * |y_i - mean(y)| / std(y)
-    """
-    def __init__(self, features, targets, seq_len, peak_weight_alpha=0.0):
-        self.features = features
-        self.targets = targets
-        self.seq_len = seq_len
-
-        # Precompute sample weights based on deviation from mean
-        if peak_weight_alpha > 0:
-            y_mean = np.mean(targets)
-            y_std = np.std(targets) + 1e-8
-            self.weights = 1.0 + peak_weight_alpha * np.abs(targets - y_mean) / y_std
-        else:
-            self.weights = np.ones(len(targets), dtype=np.float32)
+class FlatDataset(Dataset):
+    """Simple dataset for flat feature vectors (no sequences)."""
+    def __init__(self, features, targets):
+        self.features = torch.FloatTensor(features)
+        self.targets = torch.FloatTensor(targets)
 
     def __len__(self):
-        return len(self.features) - self.seq_len + 1
+        return len(self.features)
 
     def __getitem__(self, idx):
-        x = self.features[idx:idx + self.seq_len]
-        y = self.targets[idx + self.seq_len - 1]
-        w = self.weights[idx + self.seq_len - 1]
-        return torch.FloatTensor(x), torch.FloatTensor([y]), torch.FloatTensor([w])
+        return self.features[idx], self.targets[idx].unsqueeze(0)
 
 
 # ============================================================================
-# 3. CNN-RNN MODEL DEFINITION
+# 3. FFNN MODEL DEFINITION
 # ============================================================================
 
-class CNNBlock(nn.Module):
+class FFNN(nn.Module):
     """
-    Single CNN block as described in the paper (Figure 2):
-      1D Conv -> WeightNorm -> ReLU -> Dropout
-    With an optional residual 1D Conv for dimension matching.
+    Feed-forward neural network: Input → Hidden(64, ReLU) → Output(1).
     """
-    def __init__(self, in_channels, out_channels, kernel_size, padding, dropout):
+    def __init__(self, input_dim, hidden_dim, dropout):
         super().__init__()
-        self.conv1 = nn.utils.parametrizations.weight_norm(
-            nn.Conv1d(in_channels, out_channels, kernel_size, padding=padding)
-        )
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
-
-        self.residual_conv = None
-        if in_channels != out_channels:
-            self.residual_conv = nn.Conv1d(in_channels, out_channels, 1)
-
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.relu(out)
-        out = self.dropout(out)
-
-        res = x if self.residual_conv is None else self.residual_conv(x)
-        return out + res
-
-
-class CNNRNN(nn.Module):
-    """
-    CNN-RNN model for crop yield prediction (Section 2.2 of the paper).
-    """
-    def __init__(self, input_dim, cnn_filters, cnn_kernel_size, cnn_padding,
-                 num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden):
-        super().__init__()
-
-        cnn_blocks = []
-        in_ch = input_dim
-        for _ in range(num_cnn_blocks):
-            cnn_blocks.append(CNNBlock(in_ch, cnn_filters, cnn_kernel_size,
-                                       cnn_padding, dropout))
-            in_ch = cnn_filters
-        self.cnn = nn.Sequential(*cnn_blocks)
-
-        self.lstm = nn.LSTM(
-            input_size=cnn_filters,
-            hidden_size=lstm_hidden,
-            num_layers=lstm_layers,
-            batch_first=True,
-            dropout=dropout if lstm_layers > 1 else 0.0
-        )
-
-        self.fc = nn.Sequential(
-            nn.Linear(lstm_hidden, fc_hidden),
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(fc_hidden, 1)
+            nn.Linear(hidden_dim, 1),
         )
 
     def forward(self, x):
-        x = x.permute(0, 2, 1)
-        x = self.cnn(x)
-        x = x.permute(0, 2, 1)
-
-        lstm_out, _ = self.lstm(x)
-        last_out = lstm_out[:, -1, :]
-
-        pred = self.fc(last_out)
-        return pred
+        return self.net(x)
 
 
 # ============================================================================
 # 4. HYPERPARAMETER CONFIGURATION
 # ============================================================================
 
-HYPERPARAMS_PER_GREENHOUSE = {
-    3: {
-        'seq_len': 2,
-        'horizon': 4,
-        'batch_size': 8,
-        # Feature engineering
-        'lag_features': [1],
-        'include_rolling_mean': False,
-        'predict_delta': False,
-        # CNN
-        'cnn_filters': 128,
-        'cnn_kernel_size': 2,
-        'cnn_padding': 0,
-        'num_cnn_blocks': 3,
-        # RNN
-        'lstm_hidden': 128,
-        'lstm_layers': 3,
-        'fc_hidden': 128,
-        # Training
-        'dropout': 0.05,
-        'learning_rate': 2e-3,
-        'weight_decay': 0,
-        'corr_weight': 0.8,
-        'var_weight': 0.0,
-        'peak_weight_alpha': 0.0,
-        'epochs': 500,
-        'patience': 150,
-        'use_scheduler': False,
-        # Multi-seed: try several seeds, keep best
-        'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025],
-    },
-    4: {
-        'seq_len': 2,
-        'horizon': 4,
-        'batch_size': 8,
-        # Feature engineering
-        'lag_features': [1],
-        'include_rolling_mean': False,
-        'predict_delta': False,
-        # CNN
-        'cnn_filters': 128,
-        'cnn_kernel_size': 2,
-        'cnn_padding': 0,
-        'num_cnn_blocks': 3,
-        # RNN
-        'lstm_hidden': 128,
-        'lstm_layers': 3,
-        'fc_hidden': 128,
-        # Training
-        'dropout': 0.05,
-        'learning_rate': 2e-3,
-        'weight_decay': 0,
-        'corr_weight': 0.5,
-        'var_weight': 0.0,
-        'peak_weight_alpha': 0.0,
-        'epochs': 500,
-        'patience': 150,
-        'use_scheduler': False,
-        # Multi-seed: try several seeds, keep best
-        'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025],
-    },
+HYPERPARAMS = {
+    # Data
+    'horizon': 4,              # Prediction horizon: 4 weeks ahead
+    'batch_size': 4,
+
+    # FFNN
+    'hidden_dim': 64,
+
+    # PCA
+    'pca_variance': 0.95,      # Retain 95% of explained variance
+
+    # Training
+    'dropout': 0.3,
+    'learning_rate': 5e-4,
+    'weight_decay': 1e-4,
+    'epochs': 500,
+    'patience': 60,
+
+    # Reproducibility
+    'seed': 42,
 }
 
 
@@ -477,15 +332,10 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
-    """Load data, normalize, split into train/val/test, create DataLoaders."""
-    predict_delta = hp.get('predict_delta', False)
+def prepare_data(invernadero_id, hp):
+    """Load data, normalize, apply PCA, create DataLoaders."""
     train_df, val_df, test_df, feature_cols = build_dataset_for_greenhouse(
-        invernadero_id, horizon=hp['horizon'],
-        lag_features=hp.get('lag_features', [1]),
-        include_rolling_mean=hp.get('include_rolling_mean', False),
-        train_seasons=train_seasons, val_season=val_season,
-        predict_delta=predict_delta,
+        invernadero_id, horizon=hp['horizon']
     )
 
     X_train = train_df[feature_cols].values.astype(np.float32)
@@ -495,9 +345,9 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     X_test = test_df[feature_cols].values.astype(np.float32)
     y_test = test_df['target'].values.astype(np.float32)
 
-    # Min-Max normalization to [-1, 1] for more dynamic range
-    scaler_X = MinMaxScaler(feature_range=(-1, 1))
-    scaler_y = MinMaxScaler(feature_range=(-1, 1))
+    # Min-Max normalization to [0, 1]
+    scaler_X = MinMaxScaler(feature_range=(0, 1))
+    scaler_y = MinMaxScaler(feature_range=(0, 1))
 
     X_train = scaler_X.fit_transform(X_train)
     y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
@@ -509,94 +359,31 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     y_test = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
 
     # PCA dimensionality reduction
-    pca = PCA(n_components=hp.get('pca_variance', 0.95))
+    pca = PCA(n_components=hp['pca_variance'])
     X_train = pca.fit_transform(X_train)
     X_val = pca.transform(X_val)
     X_test = pca.transform(X_test)
     n_components = pca.n_components_
-    print(f'  PCA: {len(feature_cols)} features -> {n_components} components')
+    print(f'  PCA: {len(feature_cols)} features -> {n_components} components '
+          f'({hp["pca_variance"]*100:.0f}% variance explained)')
 
-    peak_alpha = hp.get('peak_weight_alpha', 0.0)
-    train_ds = YieldSequenceDataset(X_train, y_train, hp['seq_len'], peak_weight_alpha=peak_alpha)
-    val_ds = YieldSequenceDataset(X_val, y_val, hp['seq_len'])
-    test_ds = YieldSequenceDataset(X_test, y_test, hp['seq_len'])
+    train_ds = FlatDataset(X_train, y_train)
+    val_ds = FlatDataset(X_val, y_val)
+    test_ds = FlatDataset(X_test, y_test)
 
     train_loader = DataLoader(train_ds, batch_size=hp['batch_size'], shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=hp['batch_size'], shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=hp['batch_size'], shuffle=False)
 
-    # For delta mode: keep raw kg_base and kg_true (absolute) for test reconstruction
-    extra = {}
-    if predict_delta:
-        seq_len = hp['seq_len']
-        # kg_base values aligned with test sequences (last element of each window)
-        test_kg_base = test_df['kg_base'].values[seq_len - 1:]
-        # Absolute true values: kg_base + delta
-        test_kg_true_abs = test_df['kg_base'].values[seq_len - 1:] + \
-                           test_df['target'].values[seq_len - 1:]
-        extra['test_kg_base'] = test_kg_base
-        extra['test_kg_true_abs'] = test_kg_true_abs
-
-    return train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components, extra
-
-
-class CorrMSELoss(nn.Module):
-    """
-    MSE + corr_weight*(1 - Pearson correlation) - var_weight*Var(predictions).
-
-    Three terms working together:
-      - MSE: minimize absolute error
-      - Correlation: force shape-tracking (peaks & valleys)
-      - Variance reward: penalize flat predictions by subtracting pred variance
-        (encourages the model to spread its predictions instead of collapsing to mean)
-    """
-    def __init__(self, corr_weight=0.1, var_weight=0.0):
-        super().__init__()
-        self.corr_weight = corr_weight
-        self.var_weight = var_weight
-
-    def forward(self, pred, target, sample_weights=None):
-        if sample_weights is not None:
-            sq_err = (pred - target) ** 2
-            mse_loss = (sample_weights * sq_err).mean()
-        else:
-            mse_loss = nn.functional.mse_loss(pred, target)
-
-        loss = mse_loss
-
-        if pred.shape[0] >= 4:
-            pred_flat = pred.flatten()
-            target_flat = target.flatten()
-            pred_mean = pred_flat - pred_flat.mean()
-            target_mean = target_flat - target_flat.mean()
-
-            if self.corr_weight > 0:
-                corr = torch.sum(pred_mean * target_mean) / (
-                    torch.sqrt(torch.sum(pred_mean ** 2) + 1e-8) *
-                    torch.sqrt(torch.sum(target_mean ** 2) + 1e-8)
-                )
-                loss = loss + self.corr_weight * (1.0 - corr)
-
-            if self.var_weight > 0:
-                pred_var = torch.var(pred_flat)
-                loss = loss - self.var_weight * pred_var
-
-        return loss
+    return train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components
 
 
 def train_model(model, train_loader, val_loader, hp, model_path):
-    """Train the CNN-RNN model with early stopping on validation loss."""
-    criterion = CorrMSELoss(corr_weight=hp.get('corr_weight', 0.0),
-                               var_weight=hp.get('var_weight', 0.0))
+    """Train the FFNN with early stopping on validation loss."""
+    criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=hp['learning_rate'],
                                  weight_decay=hp['weight_decay'])
-
-    scheduler = None
-    if hp.get('use_scheduler', False):
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='min', factor=0.5, patience=20, min_lr=1e-5
-        )
 
     best_val_loss = float('inf')
     patience_counter = 0
@@ -609,19 +396,13 @@ def train_model(model, train_loader, val_loader, hp, model_path):
         epoch_loss = 0.0
         n_batches = 0
 
-        for X_batch, y_batch, w_batch in train_loader:
+        for X_batch, y_batch in train_loader:
             X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
 
             optimizer.zero_grad()
             pred = model(X_batch)
-            # Only pass sample_weights when peak weighting is active
-            if hp.get('peak_weight_alpha', 0.0) > 0:
-                w_batch = w_batch.to(DEVICE)
-                loss = criterion(pred, y_batch, sample_weights=w_batch)
-            else:
-                loss = criterion(pred, y_batch)
+            loss = criterion(pred, y_batch)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             epoch_loss += loss.item()
@@ -634,39 +415,20 @@ def train_model(model, train_loader, val_loader, hp, model_path):
         model.eval()
         val_loss = 0.0
         val_batches = 0
-        all_val_preds = []
-        all_val_targets = []
         with torch.no_grad():
-            for X_batch, y_batch, _ in val_loader:
+            for X_batch, y_batch in val_loader:
                 X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
                 pred = model(X_batch)
                 loss = criterion(pred, y_batch)
                 val_loss += loss.item()
                 val_batches += 1
-                all_val_preds.append(pred.cpu())
-                all_val_targets.append(y_batch.cpu())
 
         avg_val_loss = val_loss / max(val_batches, 1)
         val_losses.append(avg_val_loss)
 
-        # Compute validation correlation for early stopping
-        val_preds_cat = torch.cat(all_val_preds).flatten()
-        val_targets_cat = torch.cat(all_val_targets).flatten()
-        vp = val_preds_cat - val_preds_cat.mean()
-        vt = val_targets_cat - val_targets_cat.mean()
-        val_corr = (torch.sum(vp * vt) / (
-            torch.sqrt(torch.sum(vp ** 2) + 1e-8) *
-            torch.sqrt(torch.sum(vt ** 2) + 1e-8)
-        )).item()
-
-        # Early stopping: maximize correlation (minimize negative correlation)
-        val_score = avg_val_loss - hp.get('corr_weight', 0.0) * val_corr
-
-        if scheduler is not None:
-            scheduler.step(avg_val_loss)
-
-        if val_score < best_val_loss:
-            best_val_loss = val_score
+        # Early stopping on validation loss
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
             patience_counter = 0
             torch.save(model.state_dict(), model_path)
         else:
@@ -675,15 +437,14 @@ def train_model(model, train_loader, val_loader, hp, model_path):
         if (epoch + 1) % 20 == 0 or epoch == 0:
             print(f'  Epoch {epoch+1:>4d}/{hp["epochs"]} | '
                   f'Train: {avg_train_loss:.6f} | '
-                  f'Val Loss: {avg_val_loss:.6f} | '
-                  f'Val Corr: {val_corr:.4f}')
+                  f'Val: {avg_val_loss:.6f} | '
+                  f'Best Val: {best_val_loss:.6f}')
 
         if patience_counter >= hp['patience']:
             print(f'  Early stopping at epoch {epoch+1}')
             break
 
-    if model_path.exists():
-        model.load_state_dict(torch.load(model_path, weights_only=True))
+    model.load_state_dict(torch.load(model_path, weights_only=True))
     return model, train_losses, val_losses
 
 
@@ -692,10 +453,7 @@ def train_model(model, train_loader, val_loader, hp, model_path):
 # ============================================================================
 
 def compute_metrics(y_true, y_pred):
-    """
-    Compute all metrics from the paper + MAPE:
-      - RMSE, R², NSE, PBIAS, MAPE
-    """
+    """Compute RMSE, R², NSE, PBIAS, MAPE."""
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     r2 = r2_score(y_true, y_pred)
     nse = 1 - np.sum((y_true - y_pred) ** 2) / np.sum((y_true - np.mean(y_true)) ** 2)
@@ -718,7 +476,7 @@ def evaluate_model(model, test_loader, scaler_y):
     all_targets = []
 
     with torch.no_grad():
-        for X_batch, y_batch, *_ in test_loader:
+        for X_batch, y_batch in test_loader:
             X_batch = X_batch.to(DEVICE)
             pred = model(X_batch)
             all_preds.append(pred.cpu().numpy())
@@ -769,9 +527,9 @@ def plot_results_per_greenhouse(results):
                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig(RESULTS_DIR / 'cnn_rnn_results.png', dpi=150, bbox_inches='tight')
+    plt.savefig(RESULTS_DIR / 'ffnn_results.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print(f'Results plot saved to {RESULTS_DIR / "cnn_rnn_results.png"}')
+    print(f'Results plot saved to {RESULTS_DIR / "ffnn_results.png"}')
 
 
 def print_metrics(invernadero_id, metrics):
@@ -791,10 +549,13 @@ def print_metrics(invernadero_id, metrics):
 # ============================================================================
 
 def main():
+    hp = HYPERPARAMS
+    set_seed(hp['seed'])
+
     print('=' * 60)
-    print('  CNN-RNN Greenhouse Yield Prediction')
-    print('  Train: T13-T15 | Val: T16 | Test: T17')
-    print('  Prediction horizon: 4 weeks')
+    print('  FFNN Greenhouse Yield Prediction')
+    print(f'  Hidden: {hp["hidden_dim"]} | PCA: {hp["pca_variance"]*100:.0f}%')
+    print(f'  Train: T13-T15 | Val: T16 | Test: T17 | Horizon: {hp["horizon"]} semanas')
     print('=' * 60)
 
     greenhouses = [3, 4]
@@ -802,72 +563,46 @@ def main():
     all_metrics = []
 
     for inv_id in greenhouses:
-        hp = HYPERPARAMS_PER_GREENHOUSE[inv_id]
-        seeds = hp.get('seeds', [42])
-
         print(f'\n{"─" * 60}')
-        print(f'  INVERNADERO {inv_id} — {len(seeds)} seeds')
+        print(f'  INVERNADERO {inv_id}')
         print(f'{"─" * 60}')
 
-        best_r2 = -float('inf')
-        best_result = None
+        print('\n  [1/4] Cargando y preparando datos...')
+        train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components = \
+            prepare_data(inv_id, hp)
 
-        for seed in seeds:
-            set_seed(seed)
-            print(f'\n  --- Seed {seed} ---')
+        input_dim = n_components
+        print(f'  Input dimension (after PCA): {input_dim}')
 
-            train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components, extra = \
-                prepare_data(inv_id, hp)
+        print('\n  [2/4] Construyendo modelo FFNN...')
+        model = FFNN(
+            input_dim=input_dim,
+            hidden_dim=hp['hidden_dim'],
+            dropout=hp['dropout'],
+        ).to(DEVICE)
 
-            model = CNNRNN(
-                input_dim=n_components,
-                cnn_filters=hp['cnn_filters'],
-                cnn_kernel_size=hp['cnn_kernel_size'],
-                cnn_padding=hp['cnn_padding'],
-                num_cnn_blocks=hp['num_cnn_blocks'],
-                lstm_hidden=hp['lstm_hidden'],
-                lstm_layers=hp['lstm_layers'],
-                dropout=hp['dropout'],
-                fc_hidden=hp['fc_hidden'],
-            ).to(DEVICE)
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f'  Model parameters: {total_params:,}')
 
-            total_params = sum(p.numel() for p in model.parameters())
-            print(f'  Model parameters: {total_params:,}')
+        print('\n  [3/4] Entrenando...')
+        model_path = RESULTS_DIR / f'best_ffnn_inv{inv_id}.pt'
+        model, train_losses, val_losses = train_model(
+            model, train_loader, val_loader, hp, model_path
+        )
 
-            model_path = RESULTS_DIR / f'best_cnn_rnn_inv{inv_id}.pt'
-            model, train_losses, val_losses = train_model(
-                model, train_loader, val_loader, hp, model_path
-            )
+        print('\n  [4/4] Evaluando en test (T17)...')
+        y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y)
+        print_metrics(inv_id, metrics)
 
-            y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y)
+        all_results[inv_id] = {
+            'y_true': y_true,
+            'y_pred': y_pred,
+            'metrics': metrics,
+            'train_losses': train_losses,
+            'val_losses': val_losses,
+        }
 
-            # Delta mode: reconstruct absolute values for final metrics
-            if hp.get('predict_delta', False):
-                kg_base = extra['test_kg_base']
-                y_pred_abs = kg_base + y_pred   # predicted delta + base
-                y_true_abs = extra['test_kg_true_abs']
-                metrics = compute_metrics(y_true_abs, y_pred_abs)
-                y_true = y_true_abs
-                y_pred = y_pred_abs
-
-            print(f'  Seed {seed}: R²={metrics["R²"]:.4f}, MAPE={metrics["MAPE (%)"]:.2f}%')
-
-            if metrics['R²'] > best_r2:
-                best_r2 = metrics['R²']
-                best_result = {
-                    'y_true': y_true,
-                    'y_pred': y_pred,
-                    'metrics': metrics,
-                    'train_losses': train_losses,
-                    'val_losses': val_losses,
-                    'seed': seed,
-                }
-
-        print(f'\n  >>> Best seed: {best_result["seed"]} (R²={best_r2:.4f}) <<<')
-        print_metrics(inv_id, best_result['metrics'])
-
-        all_results[inv_id] = best_result
-        metrics_row = {'invernadero': inv_id, **best_result['metrics']}
+        metrics_row = {'invernadero': inv_id, **metrics}
         all_metrics.append(metrics_row)
 
     # Plot all results
@@ -876,12 +611,12 @@ def main():
 
     # Save metrics to CSV
     metrics_df = pd.DataFrame(all_metrics)
-    metrics_df.to_csv(RESULTS_DIR / 'metrics.csv', index=False)
-    print(f'Metrics saved to {RESULTS_DIR / "metrics.csv"}')
+    metrics_df.to_csv(RESULTS_DIR / 'ffnn_metrics.csv', index=False)
+    print(f'Metrics saved to {RESULTS_DIR / "ffnn_metrics.csv"}')
 
     # Summary table
     print('\n' + '=' * 70)
-    print('  RESUMEN - Predicción a 4 semanas')
+    print('  RESUMEN FFNN - Predicción a 4 semanas')
     print('  Train: T13-T15 | Val: T16 | Test: T17')
     print('=' * 70)
     print(metrics_df.to_string(index=False, float_format='%.4f'))

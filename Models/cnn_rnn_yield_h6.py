@@ -327,13 +327,14 @@ class CNNBlock(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        # Trim conv output to match input length (handles padding > 0)
-        if out.size(2) > x.size(2):
-            out = out[:, :, :x.size(2)]
         out = self.relu(out)
         out = self.dropout(out)
 
         res = x if self.residual_conv is None else self.residual_conv(x)
+        # Match temporal dimensions for residual connection
+        min_len = min(out.size(2), res.size(2))
+        out = out[:, :, :min_len]
+        res = res[:, :, :min_len]
         return out + res
 
 
@@ -404,7 +405,7 @@ def init_weights(model, method='default'):
 HYPERPARAMS_PER_GREENHOUSE = {
     3: {
         'seq_len': 2,
-        'horizon': 4,
+        'horizon': 6,
         'batch_size': 8,
         # Feature engineering
         'lag_features': [1],
@@ -432,7 +433,7 @@ HYPERPARAMS_PER_GREENHOUSE = {
     },
     4: {
         'seq_len': 2,
-        'horizon': 4,
+        'horizon': 6,
         'batch_size': 8,
         # Feature engineering
         'lag_features': [1],
@@ -722,9 +723,9 @@ def plot_results_per_greenhouse(results):
                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig(RESULTS_DIR / 'cnn_rnn_results.png', dpi=150, bbox_inches='tight')
+    plt.savefig(RESULTS_DIR / 'cnn_rnn_h6_results.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print(f'Results plot saved to {RESULTS_DIR / "cnn_rnn_results.png"}')
+    print(f'Results plot saved to {RESULTS_DIR / "cnn_rnn_h6_results.png"}')
 
 
 def print_metrics(invernadero_id, metrics):
@@ -743,94 +744,145 @@ def print_metrics(invernadero_id, metrics):
 # MAIN
 # ============================================================================
 
+def run_config(inv_id, hp, seeds, label=''):
+    """Run a single config with given seeds, return best R² and result."""
+    init_method = hp.get('init_method', 'default')
+    best_r2 = -float('inf')
+    best_result = None
+
+    for seed in seeds:
+        set_seed(seed)
+
+        train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components = \
+            prepare_data(inv_id, hp)
+
+        model = CNNRNN(
+            input_dim=n_components,
+            cnn_filters=hp['cnn_filters'],
+            cnn_kernel_size=hp['cnn_kernel_size'],
+            cnn_padding=hp['cnn_padding'],
+            num_cnn_blocks=hp['num_cnn_blocks'],
+            lstm_hidden=hp['lstm_hidden'],
+            lstm_layers=hp['lstm_layers'],
+            dropout=hp['dropout'],
+            fc_hidden=hp['fc_hidden'],
+        ).to(DEVICE)
+
+        if init_method != 'default':
+            model = model.cpu()
+            init_weights(model, init_method)
+            model = model.to(DEVICE)
+
+        model_path = RESULTS_DIR / f'best_cnn_rnn_h6_inv{inv_id}.pt'
+        model, train_losses, val_losses = train_model(
+            model, train_loader, val_loader, hp, model_path
+        )
+
+        y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y)
+        r2 = metrics['R²']
+        mape = metrics['MAPE (%)']
+        print(f'    s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
+
+        if r2 > best_r2:
+            best_r2 = r2
+            best_result = {
+                'y_true': y_true, 'y_pred': y_pred, 'metrics': metrics,
+                'train_losses': train_losses, 'val_losses': val_losses,
+                'seed': seed,
+            }
+
+    return best_r2, best_result
+
+
 def main():
     print('=' * 60)
-    print('  CNN-RNN Greenhouse Yield Prediction')
+    print('  CNN-RNN h=6 Hyperparameter Tuning')
     print('  Train: T13-T15 | Val: T16 | Test: T17')
-    print('  Prediction horizon: 4 weeks')
+    print('  Prediction horizon: 6 weeks')
     print('=' * 60)
+
+    # Phase 1: Grid search with 5 seeds per config
+    quick_seeds = [42, 7, 123, 99, 2024]
+
+    search_space = {
+        'seq_len': [2, 3, 4],
+        'corr_weight': [0.3, 0.5, 0.8],
+        'lag_features': [[1], [1, 2]],
+        'init_method': ['default', 'xavier'],
+    }
+
+    # Base config (shared)
+    base = {
+        'horizon': 6, 'batch_size': 8, 'include_rolling_mean': False,
+        'cnn_filters': 128, 'cnn_kernel_size': 2, 'cnn_padding': 1,
+        'num_cnn_blocks': 3, 'lstm_hidden': 128, 'lstm_layers': 3,
+        'fc_hidden': 128, 'dropout': 0.05, 'learning_rate': 2e-3,
+        'weight_decay': 0, 'epochs': 500, 'patience': 150,
+    }
 
     greenhouses = [3, 4]
     all_results = {}
     all_metrics = []
 
     for inv_id in greenhouses:
-        hp = HYPERPARAMS_PER_GREENHOUSE[inv_id]
-        seeds = hp.get('seeds', [42])
-        init_method = hp.get('init_method', 'default')
+        print(f'\n{"=" * 60}')
+        print(f'  INVERNADERO {inv_id} — GRID SEARCH (5 seeds per config)')
+        print(f'{"=" * 60}')
+
+        grid_results = []
+
+        for seq_len in search_space['seq_len']:
+            for corr_weight in search_space['corr_weight']:
+                for lag_feats in search_space['lag_features']:
+                    for init_m in search_space['init_method']:
+                        hp = {**base,
+                              'seq_len': seq_len,
+                              'corr_weight': corr_weight,
+                              'lag_features': lag_feats,
+                              'init_method': init_m}
+
+                        label = f'seq={seq_len} corr={corr_weight} lags={lag_feats} init={init_m}'
+                        print(f'\n  --- {label} ---')
+
+                        best_r2, best_res = run_config(inv_id, hp, quick_seeds)
+                        grid_results.append((best_r2, label, hp, best_res))
+                        print(f'  >>> R²={best_r2:.4f} (seed={best_res["seed"]})')
+
+        # Sort by R²
+        grid_results.sort(key=lambda x: x[0], reverse=True)
 
         print(f'\n{"─" * 60}')
-        print(f'  INVERNADERO {inv_id} — init={init_method}, {len(seeds)} seeds')
+        print(f'  TOP 5 CONFIGS for Inv {inv_id}:')
+        print(f'{"─" * 60}')
+        for rank, (r2, label, hp, res) in enumerate(grid_results[:5], 1):
+            print(f'  {rank}. R²={r2:.4f} | {label}')
+
+        # Phase 2: Run best config with 20 seeds
+        best_r2_grid, best_label, best_hp, _ = grid_results[0]
+        full_seeds = [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
+                      0, 1, 2, 3, 4, 5, 6, 8, 9, 10]
+
+        print(f'\n{"─" * 60}')
+        print(f'  BEST CONFIG — 20 seeds: {best_label}')
         print(f'{"─" * 60}')
 
-        best_r2 = -float('inf')
-        best_result = None
-
-        for seed in seeds:
-            set_seed(seed)
-
-            train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components = \
-                prepare_data(inv_id, hp)
-
-            model = CNNRNN(
-                input_dim=n_components,
-                cnn_filters=hp['cnn_filters'],
-                cnn_kernel_size=hp['cnn_kernel_size'],
-                cnn_padding=hp['cnn_padding'],
-                num_cnn_blocks=hp['num_cnn_blocks'],
-                lstm_hidden=hp['lstm_hidden'],
-                lstm_layers=hp['lstm_layers'],
-                dropout=hp['dropout'],
-                fc_hidden=hp['fc_hidden'],
-            ).to(DEVICE)
-
-            # Apply weight initialization (on CPU to avoid MPS limitations)
-            if init_method != 'default':
-                model = model.cpu()
-                init_weights(model, init_method)
-                model = model.to(DEVICE)
-
-            model_path = RESULTS_DIR / f'best_cnn_rnn_inv{inv_id}.pt'
-            model, train_losses, val_losses = train_model(
-                model, train_loader, val_loader, hp, model_path
-            )
-
-            y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y)
-
-            r2 = metrics['R²']
-            mape = metrics['MAPE (%)']
-            print(f'    s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
-
-            if r2 > best_r2:
-                best_r2 = r2
-                best_result = {
-                    'y_true': y_true,
-                    'y_pred': y_pred,
-                    'metrics': metrics,
-                    'train_losses': train_losses,
-                    'val_losses': val_losses,
-                    'seed': seed,
-                }
-
-        print(f'\n  >>> Best seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
+        best_r2_final, best_result = run_config(inv_id, best_hp, full_seeds)
+        print(f'\n  >>> Best seed={best_result["seed"]} (R²={best_r2_final:.4f}) <<<')
         print_metrics(inv_id, best_result['metrics'])
 
         all_results[inv_id] = best_result
-        metrics_row = {'invernadero': inv_id, **best_result['metrics']}
-        all_metrics.append(metrics_row)
+        all_metrics.append({'invernadero': inv_id, **best_result['metrics']})
 
-    # Plot all results
+    # Plot & save
     print('\nGenerando gráficas...')
     plot_results_per_greenhouse(all_results)
 
-    # Save metrics to CSV
     metrics_df = pd.DataFrame(all_metrics)
-    metrics_df.to_csv(RESULTS_DIR / 'metrics.csv', index=False)
-    print(f'Metrics saved to {RESULTS_DIR / "metrics.csv"}')
+    metrics_df.to_csv(RESULTS_DIR / 'cnn_rnn_h6_metrics.csv', index=False)
+    print(f'Metrics saved to {RESULTS_DIR / "cnn_rnn_h6_metrics.csv"}')
 
-    # Summary table
     print('\n' + '=' * 70)
-    print('  RESUMEN - Predicción a 4 semanas')
+    print('  RESUMEN - Predicción a 6 semanas')
     print('  Train: T13-T15 | Val: T16 | Test: T17')
     print('=' * 70)
     print(metrics_df.to_string(index=False, float_format='%.4f'))

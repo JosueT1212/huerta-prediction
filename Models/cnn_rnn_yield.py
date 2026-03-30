@@ -53,6 +53,31 @@ SEASON_NAMES = ['T13', 'T14', 'T15', 'T16', 'T17']
 # 1. DATA LOADING & FEATURE ENGINEERING
 # ============================================================================
 
+def load_transplant_dates():
+    """
+    Load transplant dates per season and greenhouse from 'Fechas de Transplante.xlsx'.
+    Returns a dict: {(temporada, invernadero_id): date}
+    e.g. {('T13', 3): Timestamp('2021-06-30'), ('T13', 4): Timestamp('2021-06-30'), ...}
+    """
+    filepath = DATA_DIR / 'Fechas de Transplante.xlsx'
+    raw = pd.read_excel(filepath, header=None)
+    # Row 0: title; Row 1: column headers; Rows 2-6: seasons T13-T17
+    dates = {}
+    for _, row in raw.iloc[2:].iterrows():
+        season_num = str(row.iloc[0]).strip()
+        temp = f'T{int(float(season_num))}'
+        for inv_id, col_idx in [(3, 1), (4, 2)]:
+            cell = row.iloc[col_idx]
+            if isinstance(cell, (pd.Timestamp, __import__('datetime').datetime)):
+                # Excel already parsed it as a date
+                dates[(temp, inv_id)] = cell
+            else:
+                # Text like "30-jun-2021 y 01-jul-2021" — take first date
+                raw_val = str(cell).strip().split(' y ')[0].strip()
+                dates[(temp, inv_id)] = pd.to_datetime(raw_val, dayfirst=True)
+    return dates
+
+
 def load_internal_variables_all_seasons():
     """Load internal greenhouse 4 sensor data for all 5 seasons."""
     filepath = DATA_DIR / 'Variables internas invernadero 4.xlsx'
@@ -90,6 +115,38 @@ def load_external_variables_all_seasons():
                 df[col] = pd.to_numeric(df[col], errors='coerce')
         df = df.sort_values('fecha').reset_index(drop=True)
         frames.append(df)
+    return pd.concat(frames, ignore_index=True)
+
+
+def load_riego_variables(invernadero_id):
+    """Load irrigation data (riego_total, pH promedio, CE promedio) for a given greenhouse across all seasons."""
+    filepath = DATA_DIR / f'Variables riego invernadero {invernadero_id}.xlsx'
+    xls = pd.ExcelFile(filepath)
+    frames = []
+    for i, sheet in enumerate(xls.sheet_names):
+        df = pd.read_excel(filepath, sheet_name=sheet)
+        df.columns = df.columns.str.strip()
+        rename = {}
+        for col in df.columns:
+            col_lower = col.lower()
+            if 'fecha' in col_lower:
+                rename[col] = 'fecha'
+            elif 'ph' in col_lower:
+                rename[col] = 'ph_promedio'
+            elif 'ce' in col_lower:
+                rename[col] = 'ce_promedio'
+            elif 'riego' in col_lower:
+                rename[col] = 'riego_total'
+        df = df.rename(columns=rename)
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        df['temporada'] = SEASON_NAMES[i]
+        for col in ['ph_promedio', 'ce_promedio', 'riego_total']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        df = df.sort_values('fecha').reset_index(drop=True)
+        keep = ['fecha', 'temporada'] + [c for c in ['riego_total', 'ph_promedio', 'ce_promedio']
+                                         if c in df.columns]
+        frames.append(df[keep])
     return pd.concat(frames, ignore_index=True)
 
 
@@ -139,7 +196,9 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     """
     df_int = load_internal_variables_all_seasons()
     df_ext = load_external_variables_all_seasons()
+    df_riego = load_riego_variables(invernadero_id)
     df_kg = load_production(invernadero_id)
+    transplant_dates = load_transplant_dates()
 
     # Rename internal sensor columns (all lowercased by loader)
     int_rename = {}
@@ -196,12 +255,15 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                                  'humedad_abs_ext']
                     if c in df_ext.columns]
 
+    riego_features = [c for c in ['riego_total', 'ph_promedio', 'ce_promedio'] if c in df_riego.columns]
+
     all_season_frames = []
 
     for temp in SEASON_NAMES:
         # Get daily data for this season
         int_season = df_int[df_int['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
         ext_season = df_ext[df_ext['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
+        riego_season = df_riego[df_riego['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
         kg_season = df_kg[df_kg['temporada'] == temp].reset_index(drop=True)
 
         if len(kg_season) == 0:
@@ -212,15 +274,27 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                          ext_season[['fecha'] + ext_features],
                          on='fecha', how='inner')
 
+        # Merge riego (pH and CE) — left join to keep all days even if missing
+        if riego_features:
+            daily = pd.merge(daily, riego_season[['fecha'] + riego_features],
+                             on='fecha', how='left')
+
+        # Transplant date: from official 'Fechas de Transplante.xlsx'
+        transplant_date = transplant_dates.get((temp, invernadero_id), daily['fecha'].min())
+
         # Assign sequential week index within the season
         daily = daily.sort_values('fecha').reset_index(drop=True)
         daily['week_idx'] = daily.index // 7
 
         # Aggregate daily -> weekly
-        agg_dict = {feat: 'mean' for feat in int_features + ext_features}
-        # Radiation sum should be summed, not averaged
+        agg_dict = {feat: 'mean' for feat in int_features + ext_features + riego_features}
+        # Radiation and total irrigation should be summed, not averaged
         if 'rad_sum' in agg_dict:
             agg_dict['rad_sum'] = 'sum'
+        if 'riego_total' in agg_dict:
+            agg_dict['riego_total'] = 'sum'
+        # Track first fecha per week to compute days since transplant
+        agg_dict['fecha'] = 'first'
 
         weekly_env = daily.groupby('week_idx').agg(agg_dict).reset_index()
 
@@ -237,6 +311,12 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         # Temporal features
         weekly['week_in_season'] = np.arange(len(weekly))
         weekly['week_position'] = weekly['week_in_season'] / len(weekly)
+
+        # Transplant date features: days since transplant and cyclical week-of-year encoding
+        weekly['dias_desde_transplante'] = (weekly['fecha'] - transplant_date).dt.days
+        weekly['semana_sin'] = np.sin(2 * np.pi * weekly['semana'] / 52)
+        weekly['semana_cos'] = np.cos(2 * np.pi * weekly['semana'] / 52)
+        weekly = weekly.drop(columns=['fecha'])
 
         # Lag features
         lags = lag_features if lag_features is not None else [1]

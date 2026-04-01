@@ -29,6 +29,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
+from scipy.stats import boxcox
+from scipy.special import inv_boxcox
 
 import torch
 import torch.nn as nn
@@ -271,7 +273,7 @@ def build_weekly_seasons(invernadero_id):
 
 
 def build_sequences(season_dfs, invernadero_id, encoder_steps, horizon,
-                    scaler_sensor, scaler_temporal, scaler_y, avail_sensor, seasons):
+                    scaler_sensor, scaler_temporal, scaler_y, avail_sensor, seasons, bc_lambda):
     """Build (past_x, future_x, static_x, target_y) tuples per season."""
     samples = []
     static_val = np.float32(0.0 if invernadero_id == 3 else 1.0)
@@ -286,7 +288,8 @@ def build_sequences(season_dfs, invernadero_id, encoder_steps, horizon,
         X_sensor   = scaler_sensor.transform(weekly[avail_sensor].values.astype(np.float32))
         X_temporal = scaler_temporal.transform(weekly[avail_temporal].values.astype(np.float32))
         y_scaled   = scaler_y.transform(
-            weekly['kg_reales'].values.reshape(-1, 1).astype(np.float32)
+            boxcox(weekly['kg_reales'].values.astype(np.float64) + 1.0, lmbda=bc_lambda
+                   ).reshape(-1, 1).astype(np.float32)
         ).flatten()
 
         for i in range(n - encoder_steps - horizon + 1):
@@ -326,8 +329,11 @@ def prepare_data(invernadero_id, hp):
         train_df[avail_sensor].values.astype(np.float32))
     scaler_temporal = MinMaxScaler(feature_range=(-1, 1)).fit(
         train_df[avail_temporal].values.astype(np.float32))
-    scaler_y        = MinMaxScaler(feature_range=(-1, 1)).fit(
-        train_df['kg_reales'].values.reshape(-1, 1).astype(np.float32))
+    train_kg = train_df['kg_reales'].values.astype(np.float64) + 1.0
+    train_kg_bc, bc_lambda = boxcox(train_kg)
+    print(f'  Box-Cox λ = {bc_lambda:.4f}')
+    scaler_y = MinMaxScaler(feature_range=(-1, 1)).fit(
+        train_kg_bc.reshape(-1, 1).astype(np.float32))
 
     n_past    = len(avail_sensor) + 1   # sensors + kg history
     n_future  = len(avail_temporal)
@@ -336,7 +342,7 @@ def prepare_data(invernadero_id, hp):
     def to_loader(seasons, shuffle):
         samps = build_sequences(season_dfs, invernadero_id, enc, horizon,
                                 scaler_sensor, scaler_temporal, scaler_y,
-                                avail_sensor, seasons)
+                                avail_sensor, seasons, bc_lambda)
         if not samps:
             raise ValueError(f'No valid sequences for {seasons}')
         past_t   = torch.FloatTensor(np.array([s[0] for s in samps]))   # [N, T, n_past]
@@ -355,7 +361,7 @@ def prepare_data(invernadero_id, hp):
     print(f'    Past features:   {n_past}  (sensors={len(avail_sensor)} + kg=1)')
     print(f'    Future features: {n_future}')
 
-    return train_loader, val_loader, test_loader, scaler_y, n_past, n_future, n_static
+    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_past, n_future, n_static
 
 
 # ============================================================================
@@ -746,31 +752,7 @@ def train_model(model, train_loader, val_loader, hp, model_path):
     return model, train_losses, val_losses
 
 
-def fit_variance_scale(model, val_loader, scaler_y):
-    """Estimate variance scale factor from validation set (median quantile)."""
-    model.eval()
-    all_pred, all_true = [], []
-    with torch.no_grad():
-        for past_x, future_x, static_x, target in val_loader:
-            past_x, future_x, static_x = (
-                past_x.to(DEVICE), future_x.to(DEVICE), static_x.to(DEVICE)
-            )
-            pred = model(past_x, future_x, static_x)
-            all_pred.append(pred[:, -1, 1].cpu().numpy())
-            all_true.append(target[:, -1].numpy())
-    y_pred_val = scaler_y.inverse_transform(np.concatenate(all_pred).reshape(-1, 1)).flatten()
-    y_true_val = scaler_y.inverse_transform(np.concatenate(all_true).reshape(-1, 1)).flatten()
-    pred_std = y_pred_val.std()
-    if pred_std < 1e-6:
-        return 1.0
-    val_corr = float(np.corrcoef(y_pred_val, y_true_val)[0, 1])
-    if val_corr <= 0:
-        return 1.0
-    alpha = 1.3
-    return float((y_true_val.std() / pred_std) ** alpha)
-
-
-def evaluate_model(model, test_loader, scaler_y, horizon, var_scale=1.0):
+def evaluate_model(model, test_loader, scaler_y, bc_lambda, horizon):
     """Evaluate on test set using median quantile (q=0.5, index 1)."""
     model.eval()
     all_pred, all_true = [], []
@@ -780,19 +762,17 @@ def evaluate_model(model, test_loader, scaler_y, horizon, var_scale=1.0):
                 past_x.to(DEVICE), future_x.to(DEVICE), static_x.to(DEVICE)
             )
             pred = model(past_x, future_x, static_x)   # [B, H, Q]
-            # Use median (q=0.5) at last horizon step for comparison
-            all_pred.append(pred[:, -1, 1].cpu().numpy())   # index 1 = q0.5
+            all_pred.append(pred[:, -1, 1].cpu().numpy())   # median q=0.5
             all_true.append(target[:, -1].numpy())
 
     y_pred_norm = np.concatenate(all_pred)
     y_true_norm = np.concatenate(all_true)
 
-    y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
-    y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
-
-    # Variance scaling: stretch predictions around their mean
-    if abs(var_scale - 1.0) > 1e-4:
-        y_pred = y_pred.mean() + var_scale * (y_pred - y_pred.mean())
+    # Inverse MinMaxScaler → Box-Cox space, then inv_boxcox - 1 → original kg
+    y_pred_bc = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
+    y_true_bc = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+    y_pred = inv_boxcox(y_pred_bc, bc_lambda) - 1.0
+    y_true = inv_boxcox(y_true_bc, bc_lambda) - 1.0
 
     rmse  = np.sqrt(mean_squared_error(y_true, y_pred))
     r2    = r2_score(y_true, y_pred)
@@ -891,7 +871,7 @@ def main():
         print(f'  INVERNADERO {inv_id}  ({n_runs} runs: {len(HP["seeds"])} seeds × {len(HP.get("init_methods", ["default"]))} inits)')
         print(f'{"─"*60}')
 
-        train_loader, val_loader, test_loader, scaler_y, n_past, n_future, n_static = \
+        train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_past, n_future, n_static = \
             prepare_data(inv_id, HP)
 
         best_r2     = -float('inf')
@@ -916,11 +896,10 @@ def main():
                     model, train_loader, val_loader, HP, model_path
                 )
 
-                var_scale = fit_variance_scale(model, val_loader, scaler_y)
-                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, HP['horizon'], var_scale)
+                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda, HP['horizon'])
                 r2   = metrics['R²']
                 mape = metrics['MAPE (%)']
-                print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%, scale={var_scale:.2f}')
+                print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
 
                 if r2 > best_r2:
                     best_r2     = r2

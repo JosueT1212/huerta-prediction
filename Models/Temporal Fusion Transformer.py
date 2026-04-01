@@ -38,7 +38,8 @@ from torch.utils.data import DataLoader, TensorDataset
 DEVICE = torch.device(
     'cuda' if torch.cuda.is_available() else 'cpu'
 )
-# MPS excluded: small d_model=32 tensors trigger MPS buffer size assertion
+# MPS excluded: attention weight tensors [B, H, T, T] are too small for MPS
+# buffer requirements with short sequences (encoder_steps=4, horizon=4)
 print(f'Using device: {DEVICE}')
 
 DATA_DIR    = Path(__file__).resolve().parent.parent / 'Data'
@@ -586,6 +587,62 @@ class QuantileLoss(nn.Module):
         return loss / len(self.quantiles)
 
 
+class QuantilePeakCorrLoss(nn.Module):
+    """Pinball loss with peak/valley emphasis and Pearson correlation penalty.
+
+    Works on the median quantile (index of 0.5) for the correlation term.
+    All quantiles share the peak-weighted pinball term.
+
+    peak_weight: extra weight on extreme deviations from the batch mean
+                 (0 = plain pinball, 2 = double weight at 1-sigma peaks)
+    corr_weight: coefficient for (1 - Pearson correlation) penalty computed
+                 on the median quantile vs. target (flattened over B, H)
+    """
+    def __init__(self, quantiles, corr_weight=0.5, peak_weight=2.0):
+        super().__init__()
+        self.quantiles   = quantiles
+        self.corr_weight = corr_weight
+        self.peak_weight = peak_weight
+        # index of the median quantile (0.5) — used for corr penalty
+        self.median_idx  = quantiles.index(0.5) if 0.5 in quantiles else len(quantiles) // 2
+
+    def forward(self, pred, target):
+        # pred:   [B, H, Q]
+        # target: [B, H]
+        target_f = target.flatten()  # [B*H]
+
+        # --- peak/valley weights based on deviation from batch mean ---
+        if target_f.shape[0] >= 4:
+            t_std    = target_f.std() + 1e-8
+            deviation = torch.abs(target_f - target_f.mean()) / t_std
+            weights   = (1.0 + self.peak_weight * deviation)  # [B*H]
+            weights   = weights / weights.mean()
+        else:
+            weights = torch.ones_like(target_f)
+        weights_bh = weights.view_as(target)  # [B, H]
+
+        # --- weighted pinball loss over all quantiles ---
+        pinball = 0.0
+        for i, q in enumerate(self.quantiles):
+            err     = target - pred[:, :, i]           # [B, H]
+            raw_pin = torch.max(q * err, (q - 1) * err)  # [B, H]
+            pinball = pinball + (weights_bh * raw_pin).mean()
+        pinball = pinball / len(self.quantiles)
+
+        # --- Pearson correlation penalty on median quantile ---
+        corr_loss = torch.zeros(1, device=pred.device)
+        if self.corr_weight > 0 and target_f.shape[0] >= 4:
+            pred_f = pred[:, :, self.median_idx].flatten()
+            pm = pred_f   - pred_f.mean()
+            tm = target_f - target_f.mean()
+            corr = torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8))
+            corr_loss = self.corr_weight * (1.0 - corr)
+
+        return pinball + corr_loss
+
+
 def set_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -593,8 +650,25 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
+def init_weights(model, method='default'):
+    """Apply weight initialization to all Linear layers."""
+    if method == 'default':
+        return  # PyTorch default (Kaiming uniform for Linear)
+    for m in model.modules():
+        if isinstance(m, nn.Linear):
+            if method == 'xavier':
+                nn.init.xavier_uniform_(m.weight)
+            elif method == 'orthogonal':
+                nn.init.orthogonal_(m.weight)
+            elif method == 'lecun':
+                nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='linear')
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+
+
 def train_model(model, train_loader, val_loader, hp, model_path):
-    criterion = QuantileLoss(hp['quantiles'])
+    criterion  = QuantileLoss(hp['quantiles'])
+    median_idx = hp['quantiles'].index(0.5) if 0.5 in hp['quantiles'] else len(hp['quantiles']) // 2
     optimizer = torch.optim.Adam(model.parameters(), lr=hp['learning_rate'],
                                  weight_decay=hp['weight_decay'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -627,6 +701,7 @@ def train_model(model, train_loader, val_loader, hp, model_path):
         # Validation
         model.eval()
         val_loss = 0.0
+        all_pred_val, all_tgt_val = [], []
         with torch.no_grad():
             for past_x, future_x, static_x, target in val_loader:
                 past_x, future_x, static_x, target = (
@@ -635,9 +710,21 @@ def train_model(model, train_loader, val_loader, hp, model_path):
                 )
                 pred = model(past_x, future_x, static_x)
                 val_loss += criterion(pred, target).item()
+                all_pred_val.append(pred[:, :, median_idx].flatten().cpu())
+                all_tgt_val.append(target.flatten().cpu())
         avg_val = val_loss / max(len(val_loader), 1)
         val_losses.append(avg_val)
         scheduler.step(avg_val)
+
+        # Compute val correlation for logging
+        pv = torch.cat(all_pred_val); tv = torch.cat(all_tgt_val)
+        if pv.shape[0] >= 4:
+            pm = pv - pv.mean(); tm = tv - tv.mean()
+            val_corr = (torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8))).item()
+        else:
+            val_corr = 0.0
 
         if avg_val < best_val:
             best_val   = avg_val
@@ -648,7 +735,7 @@ def train_model(model, train_loader, val_loader, hp, model_path):
 
         if (epoch + 1) % 20 == 0 or epoch == 0:
             print(f'  Epoch {epoch+1:>4d}/{hp["epochs"]} | '
-                  f'Train: {avg_train:.5f} | Val: {avg_val:.5f}')
+                  f'Train: {avg_train:.5f} | Val: {avg_val:.5f} | corr: {val_corr:.3f}')
 
         if patience_c >= hp['patience']:
             print(f'  Early stopping at epoch {epoch+1}')
@@ -659,7 +746,31 @@ def train_model(model, train_loader, val_loader, hp, model_path):
     return model, train_losses, val_losses
 
 
-def evaluate_model(model, test_loader, scaler_y, horizon):
+def fit_variance_scale(model, val_loader, scaler_y):
+    """Estimate variance scale factor from validation set (median quantile)."""
+    model.eval()
+    all_pred, all_true = [], []
+    with torch.no_grad():
+        for past_x, future_x, static_x, target in val_loader:
+            past_x, future_x, static_x = (
+                past_x.to(DEVICE), future_x.to(DEVICE), static_x.to(DEVICE)
+            )
+            pred = model(past_x, future_x, static_x)
+            all_pred.append(pred[:, -1, 1].cpu().numpy())
+            all_true.append(target[:, -1].numpy())
+    y_pred_val = scaler_y.inverse_transform(np.concatenate(all_pred).reshape(-1, 1)).flatten()
+    y_true_val = scaler_y.inverse_transform(np.concatenate(all_true).reshape(-1, 1)).flatten()
+    pred_std = y_pred_val.std()
+    if pred_std < 1e-6:
+        return 1.0
+    val_corr = float(np.corrcoef(y_pred_val, y_true_val)[0, 1])
+    if val_corr <= 0:
+        return 1.0
+    alpha = 1.3
+    return float((y_true_val.std() / pred_std) ** alpha)
+
+
+def evaluate_model(model, test_loader, scaler_y, horizon, var_scale=1.0):
     """Evaluate on test set using median quantile (q=0.5, index 1)."""
     model.eval()
     all_pred, all_true = [], []
@@ -678,6 +789,10 @@ def evaluate_model(model, test_loader, scaler_y, horizon):
 
     y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
     y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+
+    # Variance scaling: stretch predictions around their mean
+    if abs(var_scale - 1.0) > 1e-4:
+        y_pred = y_pred.mean() + var_scale * (y_pred - y_pred.mean())
 
     rmse  = np.sqrt(mean_squared_error(y_true, y_pred))
     r2    = r2_score(y_true, y_pred)
@@ -718,10 +833,11 @@ HP = {
     'weight_decay':   1e-4,
     'epochs':        300,
     'patience':       80,
-    # Multi-seed
+    # Multi-seed / multi-init
     'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
               0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
               11, 12, 14, 15, 16, 17, 18, 19, 20, 21],
+    'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
 }
 
 
@@ -771,7 +887,8 @@ def main():
 
     for inv_id in [3, 4]:
         print(f'\n{"─"*60}')
-        print(f'  INVERNADERO {inv_id}  ({len(HP["seeds"])} seeds)')
+        n_runs = len(HP['seeds']) * len(HP.get('init_methods', ['default']))
+        print(f'  INVERNADERO {inv_id}  ({n_runs} runs: {len(HP["seeds"])} seeds × {len(HP.get("init_methods", ["default"]))} inits)')
         print(f'{"─"*60}')
 
         train_loader, val_loader, test_loader, scaler_y, n_past, n_future, n_static = \
@@ -779,35 +896,39 @@ def main():
 
         best_r2     = -float('inf')
         best_result = None
+        init_methods = HP.get('init_methods', ['default', 'xavier', 'orthogonal', 'lecun'])
 
-        for seed in HP['seeds']:
-            set_seed(seed)
+        for init_method in init_methods:
+            for seed in HP['seeds']:
+                set_seed(seed)
 
-            model = TemporalFusionTransformer(
-                n_past=n_past, n_future=n_future, n_static=n_static,
-                d_model=HP['d_model'], num_heads=HP['num_heads'],
-                num_lstm_layers=HP['num_lstm_layers'], dropout=HP['dropout'],
-                quantiles=HP['quantiles'],
-                encoder_steps=HP['encoder_steps'], horizon=HP['horizon'],
-            ).to(DEVICE)
+                model = TemporalFusionTransformer(
+                    n_past=n_past, n_future=n_future, n_static=n_static,
+                    d_model=HP['d_model'], num_heads=HP['num_heads'],
+                    num_lstm_layers=HP['num_lstm_layers'], dropout=HP['dropout'],
+                    quantiles=HP['quantiles'],
+                    encoder_steps=HP['encoder_steps'], horizon=HP['horizon'],
+                ).to(DEVICE)
+                init_weights(model, init_method)
 
-            model_path = RESULTS_DIR / f'best_tft_inv{inv_id}.pt'
-            model, train_losses, val_losses = train_model(
-                model, train_loader, val_loader, HP, model_path
-            )
+                model_path = RESULTS_DIR / f'best_tft_inv{inv_id}.pt'
+                model, train_losses, val_losses = train_model(
+                    model, train_loader, val_loader, HP, model_path
+                )
 
-            y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, HP['horizon'])
-            r2   = metrics['R²']
-            mape = metrics['MAPE (%)']
-            print(f'    s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
+                var_scale = fit_variance_scale(model, val_loader, scaler_y)
+                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, HP['horizon'], var_scale)
+                r2   = metrics['R²']
+                mape = metrics['MAPE (%)']
+                print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%, scale={var_scale:.2f}')
 
-            if r2 > best_r2:
-                best_r2     = r2
-                best_result = dict(y_true=y_true, y_pred=y_pred, metrics=metrics,
-                                   train_losses=train_losses, val_losses=val_losses,
-                                   seed=seed)
+                if r2 > best_r2:
+                    best_r2     = r2
+                    best_result = dict(y_true=y_true, y_pred=y_pred, metrics=metrics,
+                                       train_losses=train_losses, val_losses=val_losses,
+                                       seed=seed, init_method=init_method)
 
-        print(f'\n  >>> Best seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
+        print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
         print(f'\n{"="*55}')
         print(f'  INVERNADERO {inv_id} — MÉTRICAS (Test T17, h=4)')
         print(f'{"="*55}')

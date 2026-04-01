@@ -37,7 +37,7 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percenta
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else
                        'mps' if torch.backends.mps.is_available() else 'cpu')
@@ -54,14 +54,9 @@ SEASON_NAMES = ['T13', 'T14', 'T15', 'T16', 'T17']
 # ============================================================================
 
 def load_transplant_dates():
-    """
-    Load transplant dates per season and greenhouse from 'Fechas de Transplante.xlsx'.
-    Returns a dict: {(temporada, invernadero_id): date}
-    e.g. {('T13', 3): Timestamp('2021-06-30'), ('T13', 4): Timestamp('2021-06-30'), ...}
-    """
+    """Load official transplant dates per season per greenhouse from Excel."""
     filepath = DATA_DIR / 'Fechas de Transplante.xlsx'
     raw = pd.read_excel(filepath, header=None)
-    # Row 0: title; Row 1: column headers; Rows 2-6: seasons T13-T17
     dates = {}
     for _, row in raw.iloc[2:].iterrows():
         season_num = str(row.iloc[0]).strip()
@@ -69,13 +64,38 @@ def load_transplant_dates():
         for inv_id, col_idx in [(3, 1), (4, 2)]:
             cell = row.iloc[col_idx]
             if isinstance(cell, (pd.Timestamp, __import__('datetime').datetime)):
-                # Excel already parsed it as a date
                 dates[(temp, inv_id)] = cell
             else:
-                # Text like "30-jun-2021 y 01-jul-2021" — take first date
                 raw_val = str(cell).strip().split(' y ')[0].strip()
                 dates[(temp, inv_id)] = pd.to_datetime(raw_val, dayfirst=True)
     return dates
+
+
+def load_riego_variables(invernadero_id):
+    """Load irrigation variables (riego_total, pH, CE) for all seasons."""
+    filepath = DATA_DIR / f'Variables riego invernadero {invernadero_id}.xlsx'
+    xls = pd.ExcelFile(filepath)
+    frames = []
+    for i, sheet in enumerate(xls.sheet_names):
+        df = pd.read_excel(filepath, sheet_name=sheet)
+        df.columns = df.columns.str.strip()
+        rename = {}
+        for col in df.columns:
+            col_lower = col.lower()
+            if 'fecha' in col_lower: rename[col] = 'fecha'
+            elif 'ph' in col_lower: rename[col] = 'ph_promedio'
+            elif 'ce' in col_lower: rename[col] = 'ce_promedio'
+            elif 'riego' in col_lower: rename[col] = 'riego_total'
+        df = df.rename(columns=rename)
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        df['temporada'] = SEASON_NAMES[i]
+        for col in ['ph_promedio', 'ce_promedio', 'riego_total']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        df = df.sort_values('fecha').reset_index(drop=True)
+        keep = ['fecha', 'temporada'] + [c for c in ['riego_total', 'ph_promedio', 'ce_promedio'] if c in df.columns]
+        frames.append(df[keep])
+    return pd.concat(frames, ignore_index=True)
 
 
 def load_internal_variables_all_seasons():
@@ -115,38 +135,6 @@ def load_external_variables_all_seasons():
                 df[col] = pd.to_numeric(df[col], errors='coerce')
         df = df.sort_values('fecha').reset_index(drop=True)
         frames.append(df)
-    return pd.concat(frames, ignore_index=True)
-
-
-def load_riego_variables(invernadero_id):
-    """Load irrigation data (riego_total, pH promedio, CE promedio) for a given greenhouse across all seasons."""
-    filepath = DATA_DIR / f'Variables riego invernadero {invernadero_id}.xlsx'
-    xls = pd.ExcelFile(filepath)
-    frames = []
-    for i, sheet in enumerate(xls.sheet_names):
-        df = pd.read_excel(filepath, sheet_name=sheet)
-        df.columns = df.columns.str.strip()
-        rename = {}
-        for col in df.columns:
-            col_lower = col.lower()
-            if 'fecha' in col_lower:
-                rename[col] = 'fecha'
-            elif 'ph' in col_lower:
-                rename[col] = 'ph_promedio'
-            elif 'ce' in col_lower:
-                rename[col] = 'ce_promedio'
-            elif 'riego' in col_lower:
-                rename[col] = 'riego_total'
-        df = df.rename(columns=rename)
-        df['fecha'] = pd.to_datetime(df['fecha'])
-        df['temporada'] = SEASON_NAMES[i]
-        for col in ['ph_promedio', 'ce_promedio', 'riego_total']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-        df = df.sort_values('fecha').reset_index(drop=True)
-        keep = ['fecha', 'temporada'] + [c for c in ['riego_total', 'ph_promedio', 'ce_promedio']
-                                         if c in df.columns]
-        frames.append(df[keep])
     return pd.concat(frames, ignore_index=True)
 
 
@@ -196,8 +184,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     """
     df_int = load_internal_variables_all_seasons()
     df_ext = load_external_variables_all_seasons()
-    df_riego = load_riego_variables(invernadero_id)
     df_kg = load_production(invernadero_id)
+    df_riego = load_riego_variables(invernadero_id)
     transplant_dates = load_transplant_dates()
 
     # Rename internal sensor columns (all lowercased by loader)
@@ -255,7 +243,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                                  'humedad_abs_ext']
                     if c in df_ext.columns]
 
-    riego_features = [c for c in ['riego_total', 'ph_promedio', 'ce_promedio'] if c in df_riego.columns]
+    riego_features = [c for c in ['riego_total', 'ph_promedio', 'ce_promedio']
+                      if c in df_riego.columns]
 
     all_season_frames = []
 
@@ -263,7 +252,6 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         # Get daily data for this season
         int_season = df_int[df_int['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
         ext_season = df_ext[df_ext['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
-        riego_season = df_riego[df_riego['temporada'] == temp].sort_values('fecha').reset_index(drop=True)
         kg_season = df_kg[df_kg['temporada'] == temp].reset_index(drop=True)
 
         if len(kg_season) == 0:
@@ -274,27 +262,31 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                          ext_season[['fecha'] + ext_features],
                          on='fecha', how='inner')
 
-        # Merge riego (pH and CE) — left join to keep all days even if missing
-        if riego_features:
-            daily = pd.merge(daily, riego_season[['fecha'] + riego_features],
-                             on='fecha', how='left')
-
-        # Transplant date: from official 'Fechas de Transplante.xlsx'
-        transplant_date = transplant_dates.get((temp, invernadero_id), daily['fecha'].min())
+        # Merge riego data on fecha
+        riego_season = df_riego[df_riego['temporada'] == temp][['fecha'] + riego_features]
+        daily = pd.merge(daily, riego_season, on='fecha', how='left')
 
         # Assign sequential week index within the season
         daily = daily.sort_values('fecha').reset_index(drop=True)
         daily['week_idx'] = daily.index // 7
 
+        # Add dias_desde_transplante
+        tp_key = (temp, invernadero_id)
+        if tp_key in transplant_dates:
+            tp_date = transplant_dates[tp_key]
+            daily['dias_desde_transplante'] = (daily['fecha'] - tp_date).dt.days
+
         # Aggregate daily -> weekly
-        agg_dict = {feat: 'mean' for feat in int_features + ext_features + riego_features}
-        # Radiation and total irrigation should be summed, not averaged
+        agg_dict = {feat: 'mean' for feat in int_features + ext_features}
+        # Radiation sum should be summed, not averaged
         if 'rad_sum' in agg_dict:
             agg_dict['rad_sum'] = 'sum'
-        if 'riego_total' in agg_dict:
-            agg_dict['riego_total'] = 'sum'
-        # Track first fecha per week to compute days since transplant
-        agg_dict['fecha'] = 'first'
+        # Riego: total is sum, pH and CE are mean
+        for rf in riego_features:
+            agg_dict[rf] = 'sum' if rf == 'riego_total' else 'mean'
+        # dias_desde_transplante: take mean of the week
+        if 'dias_desde_transplante' in daily.columns:
+            agg_dict['dias_desde_transplante'] = 'mean'
 
         weekly_env = daily.groupby('week_idx').agg(agg_dict).reset_index()
 
@@ -312,11 +304,10 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         weekly['week_in_season'] = np.arange(len(weekly))
         weekly['week_position'] = weekly['week_in_season'] / len(weekly)
 
-        # Transplant date features: days since transplant and cyclical week-of-year encoding
-        weekly['dias_desde_transplante'] = (weekly['fecha'] - transplant_date).dt.days
-        weekly['semana_sin'] = np.sin(2 * np.pi * weekly['semana'] / 52)
-        weekly['semana_cos'] = np.cos(2 * np.pi * weekly['semana'] / 52)
-        weekly = weekly.drop(columns=['fecha'])
+        # Multi-harmonic Fourier encoding of ISO week number
+        for period in [52, 26, 13]:
+            weekly[f'week_sin_{period}'] = np.sin(2 * np.pi * weekly['semana'] / period)
+            weekly[f'week_cos_{period}'] = np.cos(2 * np.pi * weekly['semana'] / period)
 
         # Lag features
         lags = lag_features if lag_features is not None else [1]
@@ -341,8 +332,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     # Drop rows with NaN from lagging or target shift
     df_all = df_all.dropna().reset_index(drop=True)
 
-    # Feature columns
-    exclude = ['week_idx', 'kg_reales', 'temporada', 'target']
+    # Feature columns (all go through same pipeline)
+    exclude = ['week_idx', 'kg_reales', 'temporada', 'target', 'fecha', 'semana']
     feature_cols = [c for c in df_all.columns if c not in exclude]
 
     train_df = df_all[df_all['temporada'].isin(train_seasons)].reset_index(drop=True)
@@ -363,24 +354,23 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 # 2. DATASET & DATALOADER
 # ============================================================================
 
-class YieldSequenceDataset(Dataset):
+def make_sequences_per_season(X, y, temporadas, seq_len):
     """
-    Creates sequences of length `seq_len` from the weekly data.
-    Each sample is a window of `seq_len` weeks of features -> predict the
-    target (kg_reales h weeks ahead) of the last week in the window.
+    Build (seq_len, n_features) windows strictly within each season.
+    No window ever crosses a season boundary — each season is treated
+    as an independent time series.
     """
-    def __init__(self, features, targets, seq_len):
-        self.features = features
-        self.targets = targets
-        self.seq_len = seq_len
-
-    def __len__(self):
-        return len(self.features) - self.seq_len + 1
-
-    def __getitem__(self, idx):
-        x = self.features[idx:idx + self.seq_len]
-        y = self.targets[idx + self.seq_len - 1]
-        return torch.FloatTensor(x), torch.FloatTensor([y])
+    seqs_X, seqs_y = [], []
+    for temp in pd.Series(temporadas).unique():
+        mask = np.array(temporadas) == temp
+        X_s = X[mask]
+        y_s = y[mask]
+        for i in range(len(X_s) - seq_len + 1):
+            seqs_X.append(X_s[i:i + seq_len])
+            seqs_y.append(y_s[i + seq_len - 1])
+    if len(seqs_X) == 0:
+        raise ValueError('No sequences built — check seq_len vs season length.')
+    return np.array(seqs_X, dtype=np.float32), np.array(seqs_y, dtype=np.float32)
 
 
 # ============================================================================
@@ -508,7 +498,11 @@ HYPERPARAMS_PER_GREENHOUSE = {
         'init_method': 'default',
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
-                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10],
+                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
+                  11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
+                  22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                  32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+                  100, 200, 500, 1000],
     },
     4: {
         'seq_len': 2,
@@ -536,7 +530,11 @@ HYPERPARAMS_PER_GREENHOUSE = {
         'init_method': 'xavier',
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
-                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10],
+                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
+                  11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
+                  22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                  32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+                  100, 200, 500, 1000],
     },
 }
 
@@ -589,13 +587,19 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     n_components = pca.n_components_
     print(f'  PCA: {len(feature_cols)} features -> {n_components} components')
 
-    train_ds = YieldSequenceDataset(X_train, y_train, hp['seq_len'])
-    val_ds = YieldSequenceDataset(X_val, y_val, hp['seq_len'])
-    test_ds = YieldSequenceDataset(X_test, y_test, hp['seq_len'])
+    # Build sequences per season (no cross-boundary windows)
+    seq_len = hp['seq_len']
+    X_tr, y_tr = make_sequences_per_season(X_train, y_train, train_df['temporada'].values, seq_len)
+    X_va, y_va = make_sequences_per_season(X_val, y_val, val_df['temporada'].values, seq_len)
+    X_te, y_te = make_sequences_per_season(X_test, y_test, test_df['temporada'].values, seq_len)
+    print(f'  Sequences — train: {len(X_tr)}, val: {len(X_va)}, test: {len(X_te)}')
 
-    train_loader = DataLoader(train_ds, batch_size=hp['batch_size'], shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=hp['batch_size'], shuffle=False)
-    test_loader = DataLoader(test_ds, batch_size=hp['batch_size'], shuffle=False)
+    def to_ds(X, y):
+        return TensorDataset(torch.FloatTensor(X), torch.FloatTensor(y).unsqueeze(1))
+
+    train_loader = DataLoader(to_ds(X_tr, y_tr), batch_size=hp['batch_size'], shuffle=True)
+    val_loader   = DataLoader(to_ds(X_va, y_va), batch_size=hp['batch_size'], shuffle=False)
+    test_loader  = DataLoader(to_ds(X_te, y_te), batch_size=hp['batch_size'], shuffle=False)
 
     return train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components
 

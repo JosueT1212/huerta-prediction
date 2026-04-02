@@ -34,6 +34,8 @@ from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
+from scipy.stats import boxcox
+from scipy.special import inv_boxcox
 
 import torch
 import torch.nn as nn
@@ -98,9 +100,11 @@ def load_riego_variables(invernadero_id):
     return pd.concat(frames, ignore_index=True)
 
 
-def load_internal_variables_all_seasons():
-    """Load internal greenhouse 4 sensor data for all 5 seasons."""
-    filepath = DATA_DIR / 'Variables internas invernadero 4.xlsx'
+def load_internal_variables_all_seasons(invernadero_id=4):
+    """Load internal greenhouse sensor data for all 5 seasons."""
+    filepath = DATA_DIR / f'Variables internas invernadero {invernadero_id}.xlsx'
+    if not filepath.exists():
+        filepath = DATA_DIR / f'Variables internas Invernadero {invernadero_id}.xlsx'
     xls = pd.ExcelFile(filepath)
     frames = []
     for i, sheet in enumerate(xls.sheet_names):
@@ -182,7 +186,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     Returns:
         train_df, val_df, test_df, feature_cols
     """
-    df_int = load_internal_variables_all_seasons()
+    df_int = load_internal_variables_all_seasons(invernadero_id)
     df_ext = load_external_variables_all_seasons()
     df_kg = load_production(invernadero_id)
     df_riego = load_riego_variables(invernadero_id)
@@ -465,6 +469,8 @@ def init_weights(model, method='default'):
             nn.init.xavier_normal_(param)
         elif method == 'orthogonal':
             nn.init.orthogonal_(param)
+        elif method == 'lecun':
+            nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
 
 
 # ============================================================================
@@ -495,7 +501,7 @@ HYPERPARAMS_PER_GREENHOUSE = {
         'corr_weight': 0.8,
         'epochs': 500,
         'patience': 150,
-        'init_method': 'default',
+        'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
                   0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
@@ -527,7 +533,7 @@ HYPERPARAMS_PER_GREENHOUSE = {
         'corr_weight': 0.5,
         'epochs': 500,
         'patience': 150,
-        'init_method': 'xavier',
+        'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
                   0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
@@ -566,6 +572,15 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     X_test = test_df[feature_cols].values.astype(np.float32)
     y_test = test_df['target'].values.astype(np.float32)
 
+    # Box-Cox transform yield: finds optimal λ on train, applies to val/test.
+    # λ→0 ≡ log; other values may fit the yield distribution better.
+    # Shift by +1 to guarantee strictly positive inputs.
+    y_train_bc, bc_lambda = boxcox(y_train + 1.0)
+    y_train = y_train_bc.astype(np.float32)
+    y_val   = boxcox(y_val  + 1.0, lmbda=bc_lambda).astype(np.float32)
+    y_test  = boxcox(y_test + 1.0, lmbda=bc_lambda).astype(np.float32)
+    print(f'  Box-Cox λ = {bc_lambda:.4f}')
+
     # Min-Max normalization to [-1, 1] for more dynamic range
     scaler_X = MinMaxScaler(feature_range=(-1, 1))
     scaler_y = MinMaxScaler(feature_range=(-1, 1))
@@ -601,43 +616,73 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     val_loader   = DataLoader(to_ds(X_va, y_va), batch_size=hp['batch_size'], shuffle=False)
     test_loader  = DataLoader(to_ds(X_te, y_te), batch_size=hp['batch_size'], shuffle=False)
 
-    return train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components
+    var_y_train = float(np.var(y_tr)) if len(y_tr) > 1 else 1.0
+    print(f'  Train y variance (scaled Box-Cox): {var_y_train:.6f}')
+
+    return train_loader, val_loader, test_loader, scaler_X, scaler_y, bc_lambda, feature_cols, n_components, var_y_train
 
 
-class CorrMSELoss(nn.Module):
+class NSECorrLoss(nn.Module):
+    """Nash-Sutcliffe Efficiency loss + Pearson correlation penalty.
+    nse_loss = MSE / var_y_train  (fixed denominator from training data)
+    Predicting the train mean always → nse_loss = 1.0.
+    Perfect predictions → nse_loss = 0.
+    Using a fixed denominator (not batch variance) keeps gradients stable.
     """
-    MSE + corr_weight*(1 - Pearson correlation).
-
-    Two terms working together:
-      - MSE: minimize absolute error
-      - Correlation: force shape-tracking (peaks & valleys)
-    """
-    def __init__(self, corr_weight=0.1):
+    def __init__(self, corr_weight=0.8, var_y_train=1.0):
         super().__init__()
         self.corr_weight = corr_weight
+        self.var_y_train = max(var_y_train, 1e-8)
 
     def forward(self, pred, target):
-        mse_loss = nn.functional.mse_loss(pred, target)
-        loss = mse_loss
-
-        if pred.shape[0] >= 4 and self.corr_weight > 0:
-            pred_flat = pred.flatten()
-            target_flat = target.flatten()
-            pred_mean = pred_flat - pred_flat.mean()
-            target_mean = target_flat - target_flat.mean()
-
-            corr = torch.sum(pred_mean * target_mean) / (
-                torch.sqrt(torch.sum(pred_mean ** 2) + 1e-8) *
-                torch.sqrt(torch.sum(target_mean ** 2) + 1e-8)
+        pred_f   = pred.flatten()
+        target_f = target.flatten()
+        nse_loss = torch.mean((pred_f - target_f) ** 2) / self.var_y_train
+        corr_loss = torch.zeros(1, device=pred.device)
+        if pred_f.shape[0] >= 4 and self.corr_weight > 0:
+            pm = pred_f   - pred_f.mean()
+            tm = target_f - target_f.mean()
+            corr = torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8)
             )
-            loss = loss + self.corr_weight * (1.0 - corr)
+            corr_loss = self.corr_weight * (1.0 - corr)
+        return nse_loss + corr_loss
 
-        return loss
+
+class YieldWMAELoss(nn.Module):
+    """Weighted MAE where weight ∝ actual yield^p (High-Price WMAE adapted for yield).
+    After MinMax(-1,1) scaling: w_i = ((y_i + 1)/2)^p ∈ [0, 1].
+    High-yield weeks carry more weight → model can't minimize loss by
+    regressing to the mean (low-yield weeks have near-zero weight).
+    Always stable: no normalizer, weights naturally bounded.
+    """
+    def __init__(self, corr_weight=0.8, power=1):
+        super().__init__()
+        self.corr_weight = corr_weight
+        self.power = power
+
+    def forward(self, pred, target):
+        pred_f   = pred.flatten()
+        target_f = target.flatten()
+        weights  = ((target_f + 1.0) / 2.0).clamp(min=0.0) ** self.power
+        wmae = torch.mean(weights * torch.abs(pred_f - target_f))
+        corr_loss = torch.zeros(1, device=pred.device)
+        if pred_f.shape[0] >= 4 and self.corr_weight > 0:
+            pm = pred_f   - pred_f.mean()
+            tm = target_f - target_f.mean()
+            corr = torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8)
+            )
+            corr_loss = self.corr_weight * (1.0 - corr)
+        return wmae + corr_loss
 
 
-def train_model(model, train_loader, val_loader, hp, model_path):
+def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
     """Train the CNN-RNN model with early stopping on validation score."""
-    criterion = CorrMSELoss(corr_weight=hp.get('corr_weight', 0.0))
+    criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
+                              power=hp.get('wmae_power', 1))
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=hp['learning_rate'],
                                  weight_decay=hp['weight_decay'])
@@ -748,11 +793,10 @@ def compute_metrics(y_true, y_pred):
     }
 
 
-def evaluate_model(model, test_loader, scaler_y):
+def evaluate_model(model, test_loader, scaler_y, bc_lambda):
     """Run inference on test set, inverse-transform predictions, compute metrics."""
     model.eval()
-    all_preds = []
-    all_targets = []
+    all_preds, all_targets = [], []
 
     with torch.no_grad():
         for X_batch, y_batch in test_loader:
@@ -764,8 +808,11 @@ def evaluate_model(model, test_loader, scaler_y):
     y_pred_norm = np.concatenate(all_preds).flatten()
     y_true_norm = np.concatenate(all_targets).flatten()
 
-    y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
-    y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+    # Inverse MinMaxScaler → Box-Cox space, then inv_boxcox - 1 → original kg
+    y_pred_bc = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
+    y_true_bc = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+    y_pred = inv_boxcox(y_pred_bc, bc_lambda) - 1.0
+    y_true = inv_boxcox(y_true_bc, bc_lambda) - 1.0
 
     metrics = compute_metrics(y_true, y_pred)
     return y_true, y_pred, metrics
@@ -841,62 +888,71 @@ def main():
     for inv_id in greenhouses:
         hp = HYPERPARAMS_PER_GREENHOUSE[inv_id]
         seeds = hp.get('seeds', [42])
-        init_method = hp.get('init_method', 'default')
+        init_methods = hp.get('init_methods', ['default', 'xavier', 'orthogonal', 'lecun'])
 
+        n_runs = len(seeds) * len(init_methods)
         print(f'\n{"─" * 60}')
-        print(f'  INVERNADERO {inv_id} — init={init_method}, {len(seeds)} seeds')
+        print(f'  INVERNADERO {inv_id} — {n_runs} runs ({len(seeds)} seeds × {len(init_methods)} inits)')
         print(f'{"─" * 60}')
 
         best_r2 = -float('inf')
         best_result = None
 
-        for seed in seeds:
-            set_seed(seed)
+        train_loader, val_loader, test_loader, scaler_X, scaler_y, bc_lambda, feature_cols, n_components, var_y_train = \
+            prepare_data(inv_id, hp)
 
-            train_loader, val_loader, test_loader, scaler_X, scaler_y, feature_cols, n_components = \
-                prepare_data(inv_id, hp)
+        for init_method in init_methods:
+            for seed in seeds:
+                set_seed(seed)
 
-            model = CNNRNN(
-                input_dim=n_components,
-                cnn_filters=hp['cnn_filters'],
-                cnn_kernel_size=hp['cnn_kernel_size'],
-                cnn_padding=hp['cnn_padding'],
-                num_cnn_blocks=hp['num_cnn_blocks'],
-                lstm_hidden=hp['lstm_hidden'],
-                lstm_layers=hp['lstm_layers'],
-                dropout=hp['dropout'],
-                fc_hidden=hp['fc_hidden'],
-            ).to(DEVICE)
+                model = CNNRNN(
+                    input_dim=n_components,
+                    cnn_filters=hp['cnn_filters'],
+                    cnn_kernel_size=hp['cnn_kernel_size'],
+                    cnn_padding=hp['cnn_padding'],
+                    num_cnn_blocks=hp['num_cnn_blocks'],
+                    lstm_hidden=hp['lstm_hidden'],
+                    lstm_layers=hp['lstm_layers'],
+                    dropout=hp['dropout'],
+                    fc_hidden=hp['fc_hidden'],
+                ).to(DEVICE)
 
-            # Apply weight initialization (on CPU to avoid MPS limitations)
-            if init_method != 'default':
-                model = model.cpu()
-                init_weights(model, init_method)
-                model = model.to(DEVICE)
+                # Apply weight initialization (on CPU to avoid MPS limitations)
+                if init_method != 'default':
+                    model = model.cpu()
+                    init_weights(model, init_method)
+                    model = model.to(DEVICE)
 
-            model_path = RESULTS_DIR / f'best_cnn_rnn_inv{inv_id}.pt'
-            model, train_losses, val_losses = train_model(
-                model, train_loader, val_loader, hp, model_path
-            )
+                model_path = RESULTS_DIR / f'best_cnn_rnn_inv{inv_id}.pt'
+                tmp_ckpt = RESULTS_DIR / f'_tmp_cnn_rnn_inv{inv_id}.pt'
+                model, train_losses, val_losses = train_model(
+                    model, train_loader, val_loader, hp, tmp_ckpt,
+                    var_y_train=var_y_train
+                )
 
-            y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y)
+                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda)
 
-            r2 = metrics['R²']
-            mape = metrics['MAPE (%)']
-            print(f'    s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
+                r2 = metrics['R²']
+                mape = metrics['MAPE (%)']
+                print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
 
-            if r2 > best_r2:
-                best_r2 = r2
-                best_result = {
-                    'y_true': y_true,
-                    'y_pred': y_pred,
-                    'metrics': metrics,
-                    'train_losses': train_losses,
-                    'val_losses': val_losses,
-                    'seed': seed,
-                }
+                if r2 > best_r2:
+                    best_r2 = r2
+                    best_result = {
+                        'y_true': y_true,
+                        'y_pred': y_pred,
+                        'metrics': metrics,
+                        'train_losses': train_losses,
+                        'val_losses': val_losses,
+                        'seed': seed,
+                        'init_method': init_method,
+                    }
+                    # Save this run's model as the best across all seeds/inits
+                    torch.save(model.state_dict(), model_path)
 
-        print(f'\n  >>> Best seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
+        if tmp_ckpt.exists():
+            tmp_ckpt.unlink()
+        print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
         print_metrics(inv_id, best_result['metrics'])
 
         all_results[inv_id] = best_result

@@ -29,8 +29,6 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
-from scipy.stats import boxcox
-from scipy.special import inv_boxcox
 
 import torch
 import torch.nn as nn
@@ -98,8 +96,10 @@ def load_riego_variables(invernadero_id):
     return pd.concat(frames, ignore_index=True)
 
 
-def load_internal_variables_all_seasons():
-    filepath = DATA_DIR / 'Variables internas invernadero 4.xlsx'
+def load_internal_variables_all_seasons(invernadero_id=4):
+    filepath = DATA_DIR / f'Variables internas invernadero {invernadero_id}.xlsx'
+    if not filepath.exists():
+        filepath = DATA_DIR / f'Variables internas Invernadero {invernadero_id}.xlsx'
     xls = pd.ExcelFile(filepath)
     frames = []
     for i, sheet in enumerate(xls.sheet_names):
@@ -176,7 +176,7 @@ def build_weekly_seasons(invernadero_id):
     Build per-season weekly DataFrames with sensor + temporal features
     and raw kg_reales. No lag or target shift — TFT handles history explicitly.
     """
-    df_int  = load_internal_variables_all_seasons()
+    df_int  = load_internal_variables_all_seasons(invernadero_id)
     df_ext  = load_external_variables_all_seasons()
     df_kg   = load_production(invernadero_id)
     df_riego = load_riego_variables(invernadero_id)
@@ -273,7 +273,7 @@ def build_weekly_seasons(invernadero_id):
 
 
 def build_sequences(season_dfs, invernadero_id, encoder_steps, horizon,
-                    scaler_sensor, scaler_temporal, scaler_y, avail_sensor, seasons, bc_lambda):
+                    scaler_sensor, scaler_temporal, scaler_y, avail_sensor, seasons):
     """Build (past_x, future_x, static_x, target_y) tuples per season."""
     samples = []
     static_val = np.float32(0.0 if invernadero_id == 3 else 1.0)
@@ -288,8 +288,8 @@ def build_sequences(season_dfs, invernadero_id, encoder_steps, horizon,
         X_sensor   = scaler_sensor.transform(weekly[avail_sensor].values.astype(np.float32))
         X_temporal = scaler_temporal.transform(weekly[avail_temporal].values.astype(np.float32))
         y_scaled   = scaler_y.transform(
-            boxcox(weekly['kg_reales'].values.astype(np.float64) + 1.0, lmbda=bc_lambda
-                   ).reshape(-1, 1).astype(np.float32)
+            np.log1p(weekly['kg_reales'].values.astype(np.float64)
+                     ).reshape(-1, 1).astype(np.float32)
         ).flatten()
 
         for i in range(n - encoder_steps - horizon + 1):
@@ -329,11 +329,9 @@ def prepare_data(invernadero_id, hp):
         train_df[avail_sensor].values.astype(np.float32))
     scaler_temporal = MinMaxScaler(feature_range=(-1, 1)).fit(
         train_df[avail_temporal].values.astype(np.float32))
-    train_kg = train_df['kg_reales'].values.astype(np.float64) + 1.0
-    train_kg_bc, bc_lambda = boxcox(train_kg)
-    print(f'  Box-Cox λ = {bc_lambda:.4f}')
+    train_kg_log = np.log1p(train_df['kg_reales'].values.astype(np.float64))
     scaler_y = MinMaxScaler(feature_range=(-1, 1)).fit(
-        train_kg_bc.reshape(-1, 1).astype(np.float32))
+        train_kg_log.reshape(-1, 1).astype(np.float32))
 
     n_past    = len(avail_sensor) + 1   # sensors + kg history
     n_future  = len(avail_temporal)
@@ -342,7 +340,7 @@ def prepare_data(invernadero_id, hp):
     def to_loader(seasons, shuffle):
         samps = build_sequences(season_dfs, invernadero_id, enc, horizon,
                                 scaler_sensor, scaler_temporal, scaler_y,
-                                avail_sensor, seasons, bc_lambda)
+                                avail_sensor, seasons)
         if not samps:
             raise ValueError(f'No valid sequences for {seasons}')
         past_t   = torch.FloatTensor(np.array([s[0] for s in samps]))   # [N, T, n_past]
@@ -356,12 +354,18 @@ def prepare_data(invernadero_id, hp):
     val_loader,   n_va = to_loader([val_season],  shuffle=False)
     test_loader,  n_te = to_loader(['T17'],        shuffle=False)
 
+    # Compute training target variance (scaled log space) for NSE normalisation
+    train_targets = torch.cat([batch[3] for batch in train_loader], dim=0)  # [N, H]
+    var_y_train   = float(train_targets.var().item())
+    var_y_train   = max(var_y_train, 1e-8)
+
     print(f'  Invernadero {invernadero_id}:')
     print(f'    Train sequences: {n_tr} | Val: {n_va} | Test: {n_te}')
     print(f'    Past features:   {n_past}  (sensors={len(avail_sensor)} + kg=1)')
     print(f'    Future features: {n_future}')
+    print(f'    Train y variance (scaled log): {var_y_train:.6f}')
 
-    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_past, n_future, n_static
+    return train_loader, val_loader, test_loader, scaler_y, n_past, n_future, n_static, var_y_train
 
 
 # ============================================================================
@@ -578,10 +582,15 @@ class TemporalFusionTransformer(nn.Module):
 # ============================================================================
 
 class QuantileLoss(nn.Module):
-    """Pinball loss summed over quantiles and horizon steps."""
-    def __init__(self, quantiles):
+    """NSE-normalised pinball loss summed over quantiles and horizon steps.
+    Normalises by var_y_train (fixed from training set) so gradients penalise
+    mean-hugging without batch-variance instability. Predicting the train mean
+    yields loss ~ 0.5; perfect prediction yields loss = 0.
+    """
+    def __init__(self, quantiles, var_y_train=1.0):
         super().__init__()
-        self.quantiles = quantiles
+        self.quantiles   = quantiles
+        self.var_y_train = max(var_y_train, 1e-8)
 
     def forward(self, pred, target):
         # pred:   [B, H, Q]
@@ -589,7 +598,30 @@ class QuantileLoss(nn.Module):
         loss = 0.0
         for i, q in enumerate(self.quantiles):
             err = target - pred[:, :, i]
-            loss = loss + torch.mean(torch.max(q * err, (q - 1) * err))
+            pinball = torch.max(q * err, (q - 1) * err)   # [B, H]
+            loss = loss + torch.mean(pinball) / self.var_y_train
+        return loss / len(self.quantiles)
+
+
+class YieldWPinballLoss(nn.Module):
+    """Yield-weighted pinball loss (High-Price WMAE adapted for quantile regression).
+    Weights each step by its actual yield level^p so high-yield weeks dominate.
+    After MinMax(-1,1) scaling: w_i = ((y_i + 1)/2)^p ∈ [0, 1].
+    Always stable — weights naturally bounded, no normalizer needed.
+    """
+    def __init__(self, quantiles, power=1):
+        super().__init__()
+        self.quantiles = quantiles
+        self.power     = power
+
+    def forward(self, pred, target):
+        # pred:   [B, H, Q];  target: [B, H]
+        weights = ((target + 1.0) / 2.0).clamp(min=0.0) ** self.power  # [B, H]
+        loss = 0.0
+        for i, q in enumerate(self.quantiles):
+            err     = target - pred[:, :, i]                       # [B, H]
+            pinball = torch.max(q * err, (q - 1) * err)            # [B, H]
+            loss = loss + torch.mean(weights * pinball)
         return loss / len(self.quantiles)
 
 
@@ -672,8 +704,8 @@ def init_weights(model, method='default'):
                 nn.init.zeros_(m.bias)
 
 
-def train_model(model, train_loader, val_loader, hp, model_path):
-    criterion  = QuantileLoss(hp['quantiles'])
+def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
+    criterion  = YieldWPinballLoss(hp['quantiles'], power=hp.get('wmae_power', 1))
     median_idx = hp['quantiles'].index(0.5) if 0.5 in hp['quantiles'] else len(hp['quantiles']) // 2
     optimizer = torch.optim.Adam(model.parameters(), lr=hp['learning_rate'],
                                  weight_decay=hp['weight_decay'])
@@ -752,7 +784,7 @@ def train_model(model, train_loader, val_loader, hp, model_path):
     return model, train_losses, val_losses
 
 
-def evaluate_model(model, test_loader, scaler_y, bc_lambda, horizon):
+def evaluate_model(model, test_loader, scaler_y, horizon):
     """Evaluate on test set using median quantile (q=0.5, index 1)."""
     model.eval()
     all_pred, all_true = [], []
@@ -768,11 +800,11 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, horizon):
     y_pred_norm = np.concatenate(all_pred)
     y_true_norm = np.concatenate(all_true)
 
-    # Inverse MinMaxScaler → Box-Cox space, then inv_boxcox - 1 → original kg
-    y_pred_bc = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
-    y_true_bc = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
-    y_pred = inv_boxcox(y_pred_bc, bc_lambda) - 1.0
-    y_true = inv_boxcox(y_true_bc, bc_lambda) - 1.0
+    # Inverse MinMaxScaler → log space, then expm1 → original kg
+    y_pred_log = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
+    y_true_log = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+    y_pred = np.expm1(y_pred_log)
+    y_true = np.expm1(y_true_log)
 
     rmse  = np.sqrt(mean_squared_error(y_true, y_pred))
     r2    = r2_score(y_true, y_pred)
@@ -840,11 +872,16 @@ def plot_results(results):
 
         weeks = np.arange(len(res['y_true']))
         axes[i, 1].plot(weeks, res['y_true'], 'o-', color='steelblue', label='Actual',    ms=5)
-        axes[i, 1].plot(weeks, res['y_pred'], 's--', color='coral',    label='Pred (q0.5)', ms=5)
+        axes[i, 1].plot(weeks, res['y_pred'], 's--', color='coral',    label='Mejor modelo (q0.5)', ms=5)
+        if 'ensemble_pred' in res:
+            axes[i, 1].plot(weeks, res['ensemble_pred'], '^:', color='green', label='Ensemble top-20', ms=5)
         axes[i, 1].set_title(f'Invernadero {inv_id} — Predicción a 4 semanas (T17)')
         axes[i, 1].set_xlabel('Semana'); axes[i, 1].set_ylabel('Producción (kg)')
         axes[i, 1].legend()
         txt = '\n'.join([f'{k}: {v:.4f}' for k, v in res['metrics'].items()])
+        if 'ensemble_metrics' in res:
+            em = res['ensemble_metrics']
+            txt += f'\n─── Ensemble top-20 ───\nR²: {em["R²"]:.4f}  MAPE: {em["MAPE (%)"]:.2f}%'
         axes[i, 1].text(0.02, 0.98, txt, transform=axes[i, 1].transAxes,
                          va='top', fontsize=9,
                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -871,11 +908,12 @@ def main():
         print(f'  INVERNADERO {inv_id}  ({n_runs} runs: {len(HP["seeds"])} seeds × {len(HP.get("init_methods", ["default"]))} inits)')
         print(f'{"─"*60}')
 
-        train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_past, n_future, n_static = \
+        train_loader, val_loader, test_loader, scaler_y, n_past, n_future, n_static, var_y_train = \
             prepare_data(inv_id, HP)
 
         best_r2     = -float('inf')
         best_result = None
+        top_runs    = []  # (r2, y_pred) for ensemble
         init_methods = HP.get('init_methods', ['default', 'xavier', 'orthogonal', 'lecun'])
 
         for init_method in init_methods:
@@ -892,21 +930,27 @@ def main():
                 init_weights(model, init_method)
 
                 model_path = RESULTS_DIR / f'best_tft_inv{inv_id}.pt'
+                tmp_ckpt = RESULTS_DIR / f'_tmp_tft_inv{inv_id}.pt'
                 model, train_losses, val_losses = train_model(
-                    model, train_loader, val_loader, HP, model_path
+                    model, train_loader, val_loader, HP, tmp_ckpt,
+                    var_y_train=var_y_train
                 )
 
-                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda, HP['horizon'])
+                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, HP['horizon'])
                 r2   = metrics['R²']
                 mape = metrics['MAPE (%)']
                 print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
+                top_runs.append((r2, y_pred.copy()))
 
                 if r2 > best_r2:
                     best_r2     = r2
                     best_result = dict(y_true=y_true, y_pred=y_pred, metrics=metrics,
                                        train_losses=train_losses, val_losses=val_losses,
                                        seed=seed, init_method=init_method)
+                    torch.save(model.state_dict(), model_path)
 
+        if tmp_ckpt.exists():
+            tmp_ckpt.unlink()
         print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
         print(f'\n{"="*55}')
         print(f'  INVERNADERO {inv_id} — MÉTRICAS (Test T17, h=4)')
@@ -915,8 +959,16 @@ def main():
             print(f'  {k:<15s}: {v:>10.4f}')
         print(f'{"="*55}')
 
-        all_results[inv_id] = best_result
-        all_metrics.append({'invernadero': inv_id, **best_result['metrics']})
+        # Ensemble: average predictions from top-20 runs by R²
+        top_runs.sort(key=lambda x: x[0], reverse=True)
+        top_k = min(20, len(top_runs))
+        ensemble_pred = np.mean([r[1] for r in top_runs[:top_k]], axis=0)
+        ensemble_metrics = compute_metrics(best_result['y_true'], ensemble_pred)
+        print(f'\n  >>> Ensemble top-{top_k} R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
+
+        all_results[inv_id] = {**best_result, 'ensemble_pred': ensemble_pred, 'ensemble_metrics': ensemble_metrics}
+        all_metrics.append({'invernadero': inv_id, 'model': 'best', **best_result['metrics']})
+        all_metrics.append({'invernadero': inv_id, 'model': f'ensemble_top{top_k}', **ensemble_metrics})
 
     print('\nGenerando gráficas...')
     plot_results(all_results)

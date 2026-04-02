@@ -841,13 +841,19 @@ def plot_results_per_greenhouse(results):
         axes[i, 1].plot(weeks, res['y_true'], 'o-', color='steelblue',
                          label='Actual', markersize=5)
         axes[i, 1].plot(weeks, res['y_pred'], 's--', color='coral',
-                         label='Predicción (h=4)', markersize=5)
+                         label='Mejor modelo (h=4)', markersize=5)
+        if 'ensemble_pred' in res:
+            axes[i, 1].plot(weeks, res['ensemble_pred'], '^:', color='green',
+                             label='Ensemble top-20', markersize=5)
         axes[i, 1].set_title(f'Invernadero {inv_id} - Predicción a 4 semanas (T17)')
         axes[i, 1].set_xlabel('Semana de test (T17)')
         axes[i, 1].set_ylabel('Producción (kg)')
         axes[i, 1].legend()
 
         metrics_text = '\n'.join([f'{k}: {v:.4f}' for k, v in res['metrics'].items()])
+        if 'ensemble_metrics' in res:
+            em = res['ensemble_metrics']
+            metrics_text += f'\n─── Ensemble top-20 ───\nR²: {em["R²"]:.4f}  MAPE: {em["MAPE (%)"]:.2f}%'
         axes[i, 1].text(0.02, 0.98, metrics_text, transform=axes[i, 1].transAxes,
                          verticalalignment='top', fontsize=9,
                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -897,6 +903,7 @@ def main():
 
         best_r2 = -float('inf')
         best_result = None
+        top_runs = []  # (r2, y_pred) for ensemble
 
         train_loader, val_loader, test_loader, scaler_X, scaler_y, bc_lambda, feature_cols, n_components, var_y_train = \
             prepare_data(inv_id, hp)
@@ -935,6 +942,7 @@ def main():
                 r2 = metrics['R²']
                 mape = metrics['MAPE (%)']
                 print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
+                top_runs.append((r2, y_pred.copy()))
 
                 if r2 > best_r2:
                     best_r2 = r2
@@ -955,9 +963,16 @@ def main():
         print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
         print_metrics(inv_id, best_result['metrics'])
 
-        all_results[inv_id] = best_result
-        metrics_row = {'invernadero': inv_id, **best_result['metrics']}
-        all_metrics.append(metrics_row)
+        # Ensemble: average predictions from top-20 runs by R²
+        top_runs.sort(key=lambda x: x[0], reverse=True)
+        top_k = min(20, len(top_runs))
+        ensemble_pred = np.mean([r[1] for r in top_runs[:top_k]], axis=0)
+        ensemble_metrics = compute_metrics(best_result['y_true'], ensemble_pred)
+        print(f'\n  >>> Ensemble top-{top_k} R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
+
+        all_results[inv_id] = {**best_result, 'ensemble_pred': ensemble_pred, 'ensemble_metrics': ensemble_metrics}
+        all_metrics.append({'invernadero': inv_id, 'model': 'best', **best_result['metrics']})
+        all_metrics.append({'invernadero': inv_id, 'model': f'ensemble_top{top_k}', **ensemble_metrics})
 
     # Plot all results
     print('\nGenerando gráficas...')

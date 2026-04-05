@@ -306,12 +306,6 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 
         # Temporal features
         weekly['week_in_season'] = np.arange(len(weekly))
-        weekly['week_position'] = weekly['week_in_season'] / len(weekly)
-
-        # Multi-harmonic Fourier encoding of ISO week number
-        for period in [52, 26, 13]:
-            weekly[f'week_sin_{period}'] = np.sin(2 * np.pi * weekly['semana'] / period)
-            weekly[f'week_cos_{period}'] = np.cos(2 * np.pi * weekly['semana'] / period)
 
         # Lag features
         lags = lag_features if lag_features is not None else [1]
@@ -331,6 +325,36 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 
     # Split: configurable train/val seasons, T17 always test
     train_seasons = train_seasons if train_seasons is not None else ['T13', 'T14', 'T15']
+
+    # Historical average kg per week position — leave-one-out for train seasons, full avg for val/test
+    full_hist_avg = (df_all[df_all['temporada'].isin(train_seasons)]
+                     .groupby('week_in_season')['kg_reales'].mean())
+
+    def get_loo_hist_avg(season):
+        """For train seasons: average of the OTHER train seasons (leave-one-out)."""
+        if season in train_seasons:
+            other = [s for s in train_seasons if s != season]
+            return (df_all[df_all['temporada'].isin(other)]
+                    .groupby('week_in_season')['kg_reales'].mean())
+        return full_hist_avg  # val/test use full train average
+
+    df_all['kg_hist_avg'] = np.nan
+    for season in df_all['temporada'].unique():
+        mask = df_all['temporada'] == season
+        avg = get_loo_hist_avg(season)
+        df_all.loc[mask, 'kg_hist_avg'] = df_all.loc[mask, 'week_in_season'].map(avg)
+
+    # Use full_hist_avg as the series for future-week lookups (test-time reference)
+    kg_hist_avg = full_hist_avg
+
+    # Known future temporal features: only kg_hist_avg for weeks +1 through +h
+    for k in range(1, horizon + 1):
+        df_all[f'kg_hist_avg_+{k}'] = np.nan
+        for season in df_all['temporada'].unique():
+            mask = df_all['temporada'] == season
+            avg = get_loo_hist_avg(season)
+            df_all.loc[mask, f'kg_hist_avg_+{k}'] = (df_all.loc[mask, 'week_in_season'] + k).map(avg)
+
     val_season = val_season if val_season is not None else 'T16'
 
     # Drop rows with NaN from lagging or target shift
@@ -392,6 +416,7 @@ class CNNBlock(nn.Module):
         self.conv1 = nn.utils.parametrizations.weight_norm(
             nn.Conv1d(in_channels, out_channels, kernel_size, padding=padding)
         )
+        self.bn = nn.BatchNorm1d(out_channels)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
 
@@ -404,6 +429,7 @@ class CNNBlock(nn.Module):
         # Trim conv output to match input length (handles padding > 0)
         if out.size(2) > x.size(2):
             out = out[:, :, :x.size(2)]
+        out = self.bn(out)
         out = self.relu(out)
         out = self.dropout(out)
 
@@ -411,16 +437,38 @@ class CNNBlock(nn.Module):
         return out + res
 
 
+# Features that bypass the CNN and go straight to the LSTM (clean temporal signal)
+TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_', 'kg_hist_avg_+')
+TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season', 'kg_hist_avg'}
+
+
+def split_features(feature_cols):
+    """Split feature list into sensor (→ CNN) and temporal (→ LSTM directly)."""
+    temporal, sensor = [], []
+    for c in feature_cols:
+        if c in TEMPORAL_FEATURE_NAMES or any(c.startswith(p) for p in TEMPORAL_FEATURE_PREFIXES):
+            temporal.append(c)
+        else:
+            sensor.append(c)
+    return sensor, temporal
+
+
 class CNNRNN(nn.Module):
     """
-    CNN-RNN model for crop yield prediction (Section 2.2 of the paper).
+    CNN-RNN model for crop yield prediction.
+    Sensor features go through the CNN; temporal features (calendar encodings,
+    lag features) bypass the CNN and are concatenated at the LSTM input.
+
+      x_sensor  → CNN → (batch, seq_len, cnn_filters)  ─┐
+                                                          cat → LSTM → FC → (batch, 1)
+      x_temporal (clean) ──────────────────────────────  ─┘
     """
-    def __init__(self, input_dim, cnn_filters, cnn_kernel_size, cnn_padding,
+    def __init__(self, n_sensor, n_temporal, cnn_filters, cnn_kernel_size, cnn_padding,
                  num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden):
         super().__init__()
 
         cnn_blocks = []
-        in_ch = input_dim
+        in_ch = n_sensor
         for _ in range(num_cnn_blocks):
             cnn_blocks.append(CNNBlock(in_ch, cnn_filters, cnn_kernel_size,
                                        cnn_padding, dropout))
@@ -428,7 +476,7 @@ class CNNRNN(nn.Module):
         self.cnn = nn.Sequential(*cnn_blocks)
 
         self.lstm = nn.LSTM(
-            input_size=cnn_filters,
+            input_size=cnn_filters + n_temporal,
             hidden_size=lstm_hidden,
             num_layers=lstm_layers,
             batch_first=True,
@@ -442,16 +490,16 @@ class CNNRNN(nn.Module):
             nn.Linear(fc_hidden, 1)
         )
 
-    def forward(self, x):
-        x = x.permute(0, 2, 1)
-        x = self.cnn(x)
-        x = x.permute(0, 2, 1)
+    def forward(self, x_sensor, x_temporal):
+        # x_sensor:  (batch, seq_len, n_sensor)
+        # x_temporal:(batch, seq_len, n_temporal)
+        x = x_sensor.permute(0, 2, 1)          # (batch, n_sensor, seq_len)
+        x = self.cnn(x)                          # (batch, cnn_filters, seq_len)
+        x = x.permute(0, 2, 1)                  # (batch, seq_len, cnn_filters)
+        x = torch.cat([x, x_temporal], dim=-1)  # (batch, seq_len, cnn_filters + n_temporal)
 
         lstm_out, _ = self.lstm(x)
-        last_out = lstm_out[:, -1, :]
-
-        pred = self.fc(last_out)
-        return pred
+        return self.fc(lstm_out[:, -1, :])
 
 
 def init_weights(model, method='default'):
@@ -479,28 +527,29 @@ def init_weights(model, method='default'):
 
 HYPERPARAMS_PER_GREENHOUSE = {
     3: {
-        'seq_len': 2,
-        'horizon': 4,
-        'batch_size': 8,
+        'seq_len': 1,
+        'horizon': 6,
+        'batch_size': 16,
         # Feature engineering
-        'lag_features': [1],
+        'lag_features': [],
         'include_rolling_mean': False,
         # CNN
-        'cnn_filters': 128,
+        'cnn_filters': 64,
         'cnn_kernel_size': 2,
-        'cnn_padding': 0,
-        'num_cnn_blocks': 3,
+        'cnn_padding': 1,
+        'num_cnn_blocks': 1,
         # RNN
-        'lstm_hidden': 128,
-        'lstm_layers': 3,
-        'fc_hidden': 128,
+        'lstm_hidden': 64,
+        'lstm_layers': 1,
+        'fc_hidden': 64,
         # Training
-        'dropout': 0.05,
-        'learning_rate': 2e-3,
-        'weight_decay': 0,
+        'dropout': 0.1,
+        'learning_rate': 5e-4,
+        'weight_decay': 1e-4,
+        'wmae_power': 4,
         'corr_weight': 0.8,
         'epochs': 500,
-        'patience': 150,
+        'patience': 250,
         'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
@@ -511,28 +560,29 @@ HYPERPARAMS_PER_GREENHOUSE = {
                   100, 200, 500, 1000],
     },
     4: {
-        'seq_len': 2,
-        'horizon': 4,
-        'batch_size': 8,
+        'seq_len': 1,
+        'horizon': 6,
+        'batch_size': 16,
         # Feature engineering
-        'lag_features': [1],
+        'lag_features': [],
         'include_rolling_mean': False,
         # CNN
-        'cnn_filters': 128,
+        'cnn_filters': 64,
         'cnn_kernel_size': 2,
-        'cnn_padding': 0,
-        'num_cnn_blocks': 3,
+        'cnn_padding': 1,
+        'num_cnn_blocks': 1,
         # RNN
-        'lstm_hidden': 128,
-        'lstm_layers': 3,
-        'fc_hidden': 128,
+        'lstm_hidden': 64,
+        'lstm_layers': 1,
+        'fc_hidden': 64,
         # Training
-        'dropout': 0.05,
-        'learning_rate': 2e-3,
-        'weight_decay': 0,
+        'dropout': 0.1,
+        'learning_rate': 5e-4,
+        'weight_decay': 1e-4,
+        'wmae_power': 4,
         'corr_weight': 0.5,
         'epochs': 500,
-        'patience': 150,
+        'patience': 250,
         'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
         # Multi-seed: try several seeds, keep best
         'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
@@ -565,61 +615,81 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
         train_seasons=train_seasons, val_season=val_season,
     )
 
-    X_train = train_df[feature_cols].values.astype(np.float32)
-    y_train = train_df['target'].values.astype(np.float32)
-    X_val = val_df[feature_cols].values.astype(np.float32)
-    y_val = val_df['target'].values.astype(np.float32)
-    X_test = test_df[feature_cols].values.astype(np.float32)
-    y_test = test_df['target'].values.astype(np.float32)
+    sensor_cols, temporal_cols = split_features(feature_cols)
+    print(f'  Sensor features ({len(sensor_cols)}): {sensor_cols}')
+    print(f'  Temporal features ({len(temporal_cols)}): {temporal_cols}')
 
-    # Box-Cox transform yield: finds optimal λ on train, applies to val/test.
-    # λ→0 ≡ log; other values may fit the yield distribution better.
-    # Shift by +1 to guarantee strictly positive inputs.
+    # ── Targets: Box-Cox + MinMax ──
+    y_train = train_df['target'].values.astype(np.float32)
+    y_val   = val_df['target'].values.astype(np.float32)
+    y_test  = test_df['target'].values.astype(np.float32)
+
     y_train_bc, bc_lambda = boxcox(y_train + 1.0)
     y_train = y_train_bc.astype(np.float32)
     y_val   = boxcox(y_val  + 1.0, lmbda=bc_lambda).astype(np.float32)
     y_test  = boxcox(y_test + 1.0, lmbda=bc_lambda).astype(np.float32)
     print(f'  Box-Cox λ = {bc_lambda:.4f}')
 
-    # Min-Max normalization to [-1, 1] for more dynamic range
-    scaler_X = MinMaxScaler(feature_range=(-1, 1))
     scaler_y = MinMaxScaler(feature_range=(-1, 1))
-
-    X_train = scaler_X.fit_transform(X_train)
     y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
+    y_val   = scaler_y.transform(y_val.reshape(-1, 1)).flatten()
+    y_test  = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
 
-    X_val = scaler_X.transform(X_val)
-    y_val = scaler_y.transform(y_val.reshape(-1, 1)).flatten()
+    # ── Sensor features: scale + PCA ──
+    Xs_tr = train_df[sensor_cols].values.astype(np.float32)
+    Xs_va = val_df[sensor_cols].values.astype(np.float32)
+    Xs_te = test_df[sensor_cols].values.astype(np.float32)
 
-    X_test = scaler_X.transform(X_test)
-    y_test = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
+    scaler_Xs = MinMaxScaler(feature_range=(-1, 1))
+    Xs_tr = scaler_Xs.fit_transform(Xs_tr)
+    Xs_va = scaler_Xs.transform(Xs_va)
+    Xs_te = scaler_Xs.transform(Xs_te)
 
-    # PCA dimensionality reduction
     pca = PCA(n_components=hp.get('pca_variance', 0.95))
-    X_train = pca.fit_transform(X_train)
-    X_val = pca.transform(X_val)
-    X_test = pca.transform(X_test)
-    n_components = pca.n_components_
-    print(f'  PCA: {len(feature_cols)} features -> {n_components} components')
+    Xs_tr = pca.fit_transform(Xs_tr)
+    Xs_va = pca.transform(Xs_va)
+    Xs_te = pca.transform(Xs_te)
+    n_sensor_pca = pca.n_components_
+    print(f'  PCA (sensor only): {len(sensor_cols)} -> {n_sensor_pca} components')
 
-    # Build sequences per season (no cross-boundary windows)
-    seq_len = hp['seq_len']
-    X_tr, y_tr = make_sequences_per_season(X_train, y_train, train_df['temporada'].values, seq_len)
-    X_va, y_va = make_sequences_per_season(X_val, y_val, val_df['temporada'].values, seq_len)
-    X_te, y_te = make_sequences_per_season(X_test, y_test, test_df['temporada'].values, seq_len)
-    print(f'  Sequences — train: {len(X_tr)}, val: {len(X_va)}, test: {len(X_te)}')
+    # ── Temporal features: Box-Cox on kg_hist_avg cols (same space as target), then scale ──
+    Xt_tr = train_df[temporal_cols].values.astype(np.float32)
+    Xt_va = val_df[temporal_cols].values.astype(np.float32)
+    Xt_te = test_df[temporal_cols].values.astype(np.float32)
 
-    def to_ds(X, y):
-        return TensorDataset(torch.FloatTensor(X), torch.FloatTensor(y).unsqueeze(1))
+    scaler_Xt = MinMaxScaler(feature_range=(-1, 1))
+    Xt_tr = scaler_Xt.fit_transform(Xt_tr)
+    Xt_va = scaler_Xt.transform(Xt_va)
+    Xt_te = scaler_Xt.transform(Xt_te)
+    n_temporal = len(temporal_cols)
 
-    train_loader = DataLoader(to_ds(X_tr, y_tr), batch_size=hp['batch_size'], shuffle=True)
-    val_loader   = DataLoader(to_ds(X_va, y_va), batch_size=hp['batch_size'], shuffle=False)
-    test_loader  = DataLoader(to_ds(X_te, y_te), batch_size=hp['batch_size'], shuffle=False)
+    # ── Sequences ──
+    seq_len   = hp['seq_len']
+    temps_tr  = train_df['temporada'].values
+    temps_va  = val_df['temporada'].values
+    temps_te  = test_df['temporada'].values
+
+    Xs_tr_seq, y_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len)
+    Xt_tr_seq, _    = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len)
+    Xs_va_seq, y_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len)
+    Xt_va_seq, _    = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len)
+    Xs_te_seq, y_te = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len)
+    Xt_te_seq, _    = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len)
+    print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}')
+
+    def to_ds(Xs, Xt, y):
+        return TensorDataset(torch.FloatTensor(Xs), torch.FloatTensor(Xt),
+                             torch.FloatTensor(y).unsqueeze(1))
+
+    bs = hp['batch_size']
+    train_loader = DataLoader(to_ds(Xs_tr_seq, Xt_tr_seq, y_tr), batch_size=bs, shuffle=True, drop_last=True)
+    val_loader   = DataLoader(to_ds(Xs_va_seq, Xt_va_seq, y_va), batch_size=bs, shuffle=False)
+    test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te), batch_size=bs, shuffle=False)
 
     var_y_train = float(np.var(y_tr)) if len(y_tr) > 1 else 1.0
     print(f'  Train y variance (scaled Box-Cox): {var_y_train:.6f}')
 
-    return train_loader, val_loader, test_loader, scaler_X, scaler_y, bc_lambda, feature_cols, n_components, var_y_train
+    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train
 
 
 class NSECorrLoss(nn.Module):
@@ -651,32 +721,17 @@ class NSECorrLoss(nn.Module):
 
 
 class YieldWMAELoss(nn.Module):
-    """Weighted MAE where weight ∝ actual yield^p (High-Price WMAE adapted for yield).
-    After MinMax(-1,1) scaling: w_i = ((y_i + 1)/2)^p ∈ [0, 1].
-    High-yield weeks carry more weight → model can't minimize loss by
-    regressing to the mean (low-yield weeks have near-zero weight).
-    Always stable: no normalizer, weights naturally bounded.
-    """
+    """Weighted MAE — weight ∝ |target - mean(target)|^p, emphasizes both peaks and valleys."""
     def __init__(self, corr_weight=0.8, power=1):
         super().__init__()
-        self.corr_weight = corr_weight
         self.power = power
 
     def forward(self, pred, target):
         pred_f   = pred.flatten()
         target_f = target.flatten()
-        weights  = ((target_f + 1.0) / 2.0).clamp(min=0.0) ** self.power
-        wmae = torch.mean(weights * torch.abs(pred_f - target_f))
-        corr_loss = torch.zeros(1, device=pred.device)
-        if pred_f.shape[0] >= 4 and self.corr_weight > 0:
-            pm = pred_f   - pred_f.mean()
-            tm = target_f - target_f.mean()
-            corr = torch.sum(pm * tm) / (
-                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
-                torch.sqrt(torch.sum(tm ** 2) + 1e-8)
-            )
-            corr_loss = self.corr_weight * (1.0 - corr)
-        return wmae + corr_loss
+        weights = (torch.abs(target_f - target_f.mean()) + 1e-6) ** self.power
+        weights = weights / weights.mean()  # normalize so mean weight = 1
+        return torch.mean(weights * torch.abs(pred_f - target_f))
 
 
 def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
@@ -698,11 +753,11 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         epoch_loss = 0.0
         n_batches = 0
 
-        for X_batch, y_batch in train_loader:
-            X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
+        for Xs_batch, Xt_batch, y_batch in train_loader:
+            Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
 
             optimizer.zero_grad()
-            pred = model(X_batch)
+            pred = model(Xs_batch, Xt_batch)
             loss = criterion(pred, y_batch)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -721,9 +776,9 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         all_val_preds = []
         all_val_targets = []
         with torch.no_grad():
-            for X_batch, y_batch in val_loader:
-                X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
-                pred = model(X_batch)
+            for Xs_batch, Xt_batch, y_batch in val_loader:
+                Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
+                pred = model(Xs_batch, Xt_batch)
                 loss = criterion(pred, y_batch)
                 val_loss += loss.item()
                 val_batches += 1
@@ -793,32 +848,39 @@ def compute_metrics(y_true, y_pred):
     }
 
 
-def evaluate_model(model, test_loader, scaler_y, bc_lambda):
+def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     """Run inference on test set, inverse-transform predictions, compute metrics."""
     model.eval()
     all_preds, all_targets = [], []
 
     with torch.no_grad():
-        for X_batch, y_batch in test_loader:
-            X_batch = X_batch.to(DEVICE)
-            pred = model(X_batch)
+        for Xs_batch, Xt_batch, y_batch in test_loader:
+            pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
             all_preds.append(pred.cpu().numpy())
             all_targets.append(y_batch.numpy())
 
     y_pred_norm = np.concatenate(all_preds).flatten()
     y_true_norm = np.concatenate(all_targets).flatten()
 
-    # Inverse MinMaxScaler → Box-Cox space, then inv_boxcox - 1 → original kg
-    y_pred_bc = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
-    y_true_bc = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
-    y_pred = inv_boxcox(y_pred_bc, bc_lambda) - 1.0
-    y_true = inv_boxcox(y_true_bc, bc_lambda) - 1.0
+    # Inverse MinMaxScaler
+    y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
+    y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+
+    if bc_lambda is not None:
+        # Inverse Box-Cox and remove +1 offset → original kg
+        y_pred = inv_boxcox(y_pred, bc_lambda) - 1.0
+        y_true = inv_boxcox(y_true, bc_lambda) - 1.0
+    else:
+        # Residual mode: add back historical average → actual kg
+        if hist_te is not None:
+            y_pred = y_pred + hist_te
+            y_true = y_true + hist_te
 
     metrics = compute_metrics(y_true, y_pred)
     return y_true, y_pred, metrics
 
 
-def plot_results_per_greenhouse(results):
+def plot_results_per_greenhouse(results, horizon=6):
     """Plot training/validation loss and predictions for each greenhouse."""
     n_greenhouses = len(results)
     fig, axes = plt.subplots(n_greenhouses, 2, figsize=(16, 5 * n_greenhouses))
@@ -841,11 +903,11 @@ def plot_results_per_greenhouse(results):
         axes[i, 1].plot(weeks, res['y_true'], 'o-', color='steelblue',
                          label='Actual', markersize=5)
         axes[i, 1].plot(weeks, res['y_pred'], 's--', color='coral',
-                         label='Mejor modelo (h=4)', markersize=5)
+                         label=f'Mejor modelo (h={horizon})', markersize=5)
         if 'ensemble_pred' in res:
             axes[i, 1].plot(weeks, res['ensemble_pred'], '^:', color='green',
                              label='Ensemble top-20', markersize=5)
-        axes[i, 1].set_title(f'Invernadero {inv_id} - Predicción a 4 semanas (T17)')
+        axes[i, 1].set_title(f'Invernadero {inv_id} - Predicción a {horizon} semanas (T17)')
         axes[i, 1].set_xlabel('Semana de test (T17)')
         axes[i, 1].set_ylabel('Producción (kg)')
         axes[i, 1].legend()
@@ -864,10 +926,10 @@ def plot_results_per_greenhouse(results):
     print(f'Results plot saved to {RESULTS_DIR / "cnn_rnn_results.png"}')
 
 
-def print_metrics(invernadero_id, metrics):
+def print_metrics(invernadero_id, metrics, horizon=6):
     """Pretty-print evaluation metrics."""
     print(f'\n{"=" * 55}')
-    print(f'  INVERNADERO {invernadero_id} - MÉTRICAS (Test: T17, h=4 semanas)')
+    print(f'  INVERNADERO {invernadero_id} - MÉTRICAS (Test: T17, h={horizon} semanas)')
     print(f'{"=" * 55}')
     for name, value in metrics.items():
         print(f'  {name:<15s}: {value:>10.4f}')
@@ -884,7 +946,7 @@ def main():
     print('=' * 60)
     print('  CNN-RNN Greenhouse Yield Prediction')
     print('  Train: T13-T15 | Val: T16 | Test: T17')
-    print('  Prediction horizon: 4 weeks')
+    print(f'  Prediction horizon: {HYPERPARAMS_PER_GREENHOUSE[3]["horizon"]} weeks')
     print('=' * 60)
 
     greenhouses = [3, 4]
@@ -905,7 +967,7 @@ def main():
         best_result = None
         top_runs = []  # (r2, y_pred) for ensemble
 
-        train_loader, val_loader, test_loader, scaler_X, scaler_y, bc_lambda, feature_cols, n_components, var_y_train = \
+        train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train = \
             prepare_data(inv_id, hp)
 
         for init_method in init_methods:
@@ -913,7 +975,8 @@ def main():
                 set_seed(seed)
 
                 model = CNNRNN(
-                    input_dim=n_components,
+                    n_sensor=n_sensor_pca,
+                    n_temporal=n_temporal,
                     cnn_filters=hp['cnn_filters'],
                     cnn_kernel_size=hp['cnn_kernel_size'],
                     cnn_padding=hp['cnn_padding'],
@@ -961,7 +1024,7 @@ def main():
         if tmp_ckpt.exists():
             tmp_ckpt.unlink()
         print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
-        print_metrics(inv_id, best_result['metrics'])
+        print_metrics(inv_id, best_result['metrics'], horizon=hp['horizon'])
 
         # Ensemble: average predictions from top-20 runs by R²
         top_runs.sort(key=lambda x: x[0], reverse=True)
@@ -976,7 +1039,7 @@ def main():
 
     # Plot all results
     print('\nGenerando gráficas...')
-    plot_results_per_greenhouse(all_results)
+    plot_results_per_greenhouse(all_results, horizon=HYPERPARAMS_PER_GREENHOUSE[3]['horizon'])
 
     # Save metrics to CSV
     metrics_df = pd.DataFrame(all_metrics)
@@ -985,7 +1048,7 @@ def main():
 
     # Summary table
     print('\n' + '=' * 70)
-    print('  RESUMEN - Predicción a 4 semanas')
+    print(f'  RESUMEN - Predicción a {HYPERPARAMS_PER_GREENHOUSE[3]["horizon"]} semanas')
     print('  Train: T13-T15 | Val: T16 | Test: T17')
     print('=' * 70)
     print(metrics_df.to_string(index=False, float_format='%.4f'))

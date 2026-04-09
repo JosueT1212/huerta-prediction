@@ -331,12 +331,14 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                      .groupby('week_in_season')['kg_reales'].mean())
 
     def get_loo_hist_avg(season):
-        """For train seasons: average of the OTHER train seasons (leave-one-out)."""
+        """For train seasons: average of the OTHER train seasons (leave-one-out).
+        Falls back to full_hist_avg when only one train season exists."""
         if season in train_seasons:
             other = [s for s in train_seasons if s != season]
-            return (df_all[df_all['temporada'].isin(other)]
-                    .groupby('week_in_season')['kg_reales'].mean())
-        return full_hist_avg  # val/test use full train average
+            if other:
+                return (df_all[df_all['temporada'].isin(other)]
+                        .groupby('week_in_season')['kg_reales'].mean())
+        return full_hist_avg  # val/test use full train average, also fallback for single-season
 
     df_all['kg_hist_avg'] = np.nan
     for season in df_all['temporada'].unique():
@@ -524,75 +526,7 @@ def init_weights(model, method='default'):
 # ============================================================================
 # 4. HYPERPARAMETER CONFIGURATION
 # ============================================================================
-
-HYPERPARAMS_PER_GREENHOUSE = {
-    3: {
-        'seq_len': 1,
-        'horizon': 6,
-        'batch_size': 16,
-        # Feature engineering
-        'lag_features': [],
-        'include_rolling_mean': False,
-        # CNN
-        'cnn_filters': 64,
-        'cnn_kernel_size': 2,
-        'cnn_padding': 1,
-        'num_cnn_blocks': 1,
-        # RNN
-        'lstm_hidden': 64,
-        'lstm_layers': 1,
-        'fc_hidden': 64,
-        # Training
-        'dropout': 0.1,
-        'learning_rate': 5e-4,
-        'weight_decay': 1e-4,
-        'wmae_power': 4,
-        'corr_weight': 0.8,
-        'epochs': 500,
-        'patience': 250,
-        'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
-        # Multi-seed: try several seeds, keep best
-        'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
-                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
-                  11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
-                  22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-                  32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-                  100, 200, 500, 1000],
-    },
-    4: {
-        'seq_len': 1,
-        'horizon': 6,
-        'batch_size': 16,
-        # Feature engineering
-        'lag_features': [],
-        'include_rolling_mean': False,
-        # CNN
-        'cnn_filters': 64,
-        'cnn_kernel_size': 2,
-        'cnn_padding': 1,
-        'num_cnn_blocks': 1,
-        # RNN
-        'lstm_hidden': 64,
-        'lstm_layers': 1,
-        'fc_hidden': 64,
-        # Training
-        'dropout': 0.1,
-        'learning_rate': 5e-4,
-        'weight_decay': 1e-4,
-        'wmae_power': 4,
-        'corr_weight': 0.5,
-        'epochs': 500,
-        'patience': 250,
-        'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
-        # Multi-seed: try several seeds, keep best
-        'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
-                  0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
-                  11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
-                  22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-                  32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-                  100, 200, 500, 1000],
-    },
-}
+# Hyperparameters are defined in each greenhouse-specific script (cnn_rnn_inv3.py / cnn_rnn_inv4.py)
 
 
 # ============================================================================
@@ -606,7 +540,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
+def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0):
     """Load data, normalize, split into train/val/test, create DataLoaders."""
     train_df, val_df, test_df, feature_cols = build_dataset_for_greenhouse(
         invernadero_id, horizon=hp['horizon'],
@@ -615,20 +549,34 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
         train_seasons=train_seasons, val_season=val_season,
     )
 
+    if skip_first_weeks > 0:
+        train_df = train_df[train_df['week_in_season'] >= skip_first_weeks].reset_index(drop=True)
+        val_df   = val_df[val_df['week_in_season']     >= skip_first_weeks].reset_index(drop=True)
+        test_df  = test_df[test_df['week_in_season']   >= skip_first_weeks].reset_index(drop=True)
+        print(f'  Skipped first {skip_first_weeks} weeks → train: {len(train_df)}, val: {len(val_df)}, test: {len(test_df)}')
+
     sensor_cols, temporal_cols = split_features(feature_cols)
     print(f'  Sensor features ({len(sensor_cols)}): {sensor_cols}')
     print(f'  Temporal features ({len(temporal_cols)}): {temporal_cols}')
 
-    # ── Targets: Box-Cox + MinMax ──
+    # ── Targets: transform + MinMax ──
     y_train = train_df['target'].values.astype(np.float32)
     y_val   = val_df['target'].values.astype(np.float32)
     y_test  = test_df['target'].values.astype(np.float32)
 
-    y_train_bc, bc_lambda = boxcox(y_train + 1.0)
-    y_train = y_train_bc.astype(np.float32)
-    y_val   = boxcox(y_val  + 1.0, lmbda=bc_lambda).astype(np.float32)
-    y_test  = boxcox(y_test + 1.0, lmbda=bc_lambda).astype(np.float32)
-    print(f'  Box-Cox λ = {bc_lambda:.4f}')
+    if transform == 'log':
+        y_train = np.log1p(y_train).astype(np.float32)
+        y_val   = np.log1p(y_val).astype(np.float32)
+        y_test  = np.log1p(y_test).astype(np.float32)
+        bc_lambda = 'log'
+        print('  Transform: log1p')
+    else:
+        from scipy.stats import boxcox as _boxcox
+        y_train_bc, bc_lambda = _boxcox(y_train + 1.0)
+        y_train = y_train_bc.astype(np.float32)
+        y_val   = _boxcox(y_val  + 1.0, lmbda=bc_lambda).astype(np.float32)
+        y_test  = _boxcox(y_test + 1.0, lmbda=bc_lambda).astype(np.float32)
+        print(f'  Box-Cox λ = {bc_lambda:.4f}')
 
     scaler_y = MinMaxScaler(feature_range=(-1, 1))
     y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
@@ -687,7 +635,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None):
     test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te), batch_size=bs, shuffle=False)
 
     var_y_train = float(np.var(y_tr)) if len(y_tr) > 1 else 1.0
-    print(f'  Train y variance (scaled Box-Cox): {var_y_train:.6f}')
+    print(f'  Train y variance (scaled {transform}): {var_y_train:.6f}')
 
     return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train
 
@@ -721,17 +669,22 @@ class NSECorrLoss(nn.Module):
 
 
 class YieldWMAELoss(nn.Module):
-    """Weighted MAE — weight ∝ |target - mean(target)|^p, emphasizes both peaks and valleys."""
-    def __init__(self, corr_weight=0.8, power=1):
+    """Weighted Huber — weight ∝ |target - mean(target)|^p, emphasizes both peaks and valleys."""
+    def __init__(self, corr_weight=0.8, power=1, delta=0.7):
         super().__init__()
         self.power = power
+        self.delta = delta
 
     def forward(self, pred, target):
         pred_f   = pred.flatten()
         target_f = target.flatten()
         weights = (torch.abs(target_f - target_f.mean()) + 1e-6) ** self.power
-        weights = weights / weights.mean()  # normalize so mean weight = 1
-        return torch.mean(weights * torch.abs(pred_f - target_f))
+        weights = weights / weights.mean()
+        err = torch.abs(pred_f - target_f)
+        huber = torch.where(err <= self.delta,
+                            0.5 * err ** 2 / self.delta,
+                            err - 0.5 * self.delta)
+        return torch.mean(weights * huber)
 
 
 def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
@@ -866,10 +819,13 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
     y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
 
-    if bc_lambda is not None:
-        # Inverse Box-Cox and remove +1 offset → original kg
-        y_pred = inv_boxcox(y_pred, bc_lambda) - 1.0
-        y_true = inv_boxcox(y_true, bc_lambda) - 1.0
+    if bc_lambda == 'log':
+        y_pred = np.expm1(y_pred)
+        y_true = np.expm1(y_true)
+    elif bc_lambda is not None:
+        from scipy.special import inv_boxcox as _inv_boxcox
+        y_pred = _inv_boxcox(y_pred, bc_lambda) - 1.0
+        y_true = _inv_boxcox(y_true, bc_lambda) - 1.0
     else:
         # Residual mode: add back historical average → actual kg
         if hist_te is not None:
@@ -921,9 +877,14 @@ def plot_results_per_greenhouse(results, horizon=6):
                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig(RESULTS_DIR / 'cnn_rnn_results.png', dpi=150, bbox_inches='tight')
+    inv_ids = list(results.keys())
+    if len(inv_ids) == 1:
+        fname = f'cnn_rnn_inv{inv_ids[0]}_results.png'
+    else:
+        fname = 'cnn_rnn_results.png'
+    plt.savefig(RESULTS_DIR / fname, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f'Results plot saved to {RESULTS_DIR / "cnn_rnn_results.png"}')
+    print(f'Results plot saved to {RESULTS_DIR / fname}')
 
 
 def print_metrics(invernadero_id, metrics, horizon=6):
@@ -938,122 +899,4 @@ def print_metrics(invernadero_id, metrics, horizon=6):
     print(f'{"=" * 55}')
 
 
-# ============================================================================
-# MAIN
-# ============================================================================
-
-def main():
-    print('=' * 60)
-    print('  CNN-RNN Greenhouse Yield Prediction')
-    print('  Train: T13-T15 | Val: T16 | Test: T17')
-    print(f'  Prediction horizon: {HYPERPARAMS_PER_GREENHOUSE[3]["horizon"]} weeks')
-    print('=' * 60)
-
-    greenhouses = [3, 4]
-    all_results = {}
-    all_metrics = []
-
-    for inv_id in greenhouses:
-        hp = HYPERPARAMS_PER_GREENHOUSE[inv_id]
-        seeds = hp.get('seeds', [42])
-        init_methods = hp.get('init_methods', ['default', 'xavier', 'orthogonal', 'lecun'])
-
-        n_runs = len(seeds) * len(init_methods)
-        print(f'\n{"─" * 60}')
-        print(f'  INVERNADERO {inv_id} — {n_runs} runs ({len(seeds)} seeds × {len(init_methods)} inits)')
-        print(f'{"─" * 60}')
-
-        best_r2 = -float('inf')
-        best_result = None
-        top_runs = []  # (r2, y_pred) for ensemble
-
-        train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train = \
-            prepare_data(inv_id, hp)
-
-        for init_method in init_methods:
-            for seed in seeds:
-                set_seed(seed)
-
-                model = CNNRNN(
-                    n_sensor=n_sensor_pca,
-                    n_temporal=n_temporal,
-                    cnn_filters=hp['cnn_filters'],
-                    cnn_kernel_size=hp['cnn_kernel_size'],
-                    cnn_padding=hp['cnn_padding'],
-                    num_cnn_blocks=hp['num_cnn_blocks'],
-                    lstm_hidden=hp['lstm_hidden'],
-                    lstm_layers=hp['lstm_layers'],
-                    dropout=hp['dropout'],
-                    fc_hidden=hp['fc_hidden'],
-                ).to(DEVICE)
-
-                # Apply weight initialization (on CPU to avoid MPS limitations)
-                if init_method != 'default':
-                    model = model.cpu()
-                    init_weights(model, init_method)
-                    model = model.to(DEVICE)
-
-                model_path = RESULTS_DIR / f'best_cnn_rnn_inv{inv_id}.pt'
-                tmp_ckpt = RESULTS_DIR / f'_tmp_cnn_rnn_inv{inv_id}.pt'
-                model, train_losses, val_losses = train_model(
-                    model, train_loader, val_loader, hp, tmp_ckpt,
-                    var_y_train=var_y_train
-                )
-
-                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda)
-
-                r2 = metrics['R²']
-                mape = metrics['MAPE (%)']
-                print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={mape:.2f}%')
-                top_runs.append((r2, y_pred.copy()))
-
-                if r2 > best_r2:
-                    best_r2 = r2
-                    best_result = {
-                        'y_true': y_true,
-                        'y_pred': y_pred,
-                        'metrics': metrics,
-                        'train_losses': train_losses,
-                        'val_losses': val_losses,
-                        'seed': seed,
-                        'init_method': init_method,
-                    }
-                    # Save this run's model as the best across all seeds/inits
-                    torch.save(model.state_dict(), model_path)
-
-        if tmp_ckpt.exists():
-            tmp_ckpt.unlink()
-        print(f'\n  >>> Best init={best_result["init_method"]} seed={best_result["seed"]} (R²={best_r2:.4f}) <<<')
-        print_metrics(inv_id, best_result['metrics'], horizon=hp['horizon'])
-
-        # Ensemble: average predictions from top-20 runs by R²
-        top_runs.sort(key=lambda x: x[0], reverse=True)
-        top_k = min(20, len(top_runs))
-        ensemble_pred = np.mean([r[1] for r in top_runs[:top_k]], axis=0)
-        ensemble_metrics = compute_metrics(best_result['y_true'], ensemble_pred)
-        print(f'\n  >>> Ensemble top-{top_k} R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
-
-        all_results[inv_id] = {**best_result, 'ensemble_pred': ensemble_pred, 'ensemble_metrics': ensemble_metrics}
-        all_metrics.append({'invernadero': inv_id, 'model': 'best', **best_result['metrics']})
-        all_metrics.append({'invernadero': inv_id, 'model': f'ensemble_top{top_k}', **ensemble_metrics})
-
-    # Plot all results
-    print('\nGenerando gráficas...')
-    plot_results_per_greenhouse(all_results, horizon=HYPERPARAMS_PER_GREENHOUSE[3]['horizon'])
-
-    # Save metrics to CSV
-    metrics_df = pd.DataFrame(all_metrics)
-    metrics_df.to_csv(RESULTS_DIR / 'metrics.csv', index=False)
-    print(f'Metrics saved to {RESULTS_DIR / "metrics.csv"}')
-
-    # Summary table
-    print('\n' + '=' * 70)
-    print(f'  RESUMEN - Predicción a {HYPERPARAMS_PER_GREENHOUSE[3]["horizon"]} semanas')
-    print('  Train: T13-T15 | Val: T16 | Test: T17')
-    print('=' * 70)
-    print(metrics_df.to_string(index=False, float_format='%.4f'))
-    print('=' * 70)
-
-
-if __name__ == '__main__':
-    main()
+# Training and evaluation logic is in cnn_rnn_inv3.py and cnn_rnn_inv4.py

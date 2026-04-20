@@ -24,27 +24,32 @@ from cnn_rnn_yield import (
 INV_ID = 4
 
 HP = {
-    'seq_len': 1,
-    'horizon': 6,
+    'alignment': 'positional',
+    'resolution': 'daily',
+    'seq_len': 34,               # June 28 → July 31 (33 days, 34 timesteps) of daily context
+    'horizon': 0,                # predict current paired prod week (~11-week calendar lead)
     'batch_size': 16,
     'lag_features': [],
     'include_rolling_mean': False,
+    'early_season_lag': 0,
+    'temporal_keep': ['dias_desde_transplante', 'week_in_season', 'kg_hist_avg'],
     # CNN
-    'cnn_filters': 64,
-    'cnn_kernel_size': 2,
-    'cnn_padding': 1,
-    'num_cnn_blocks': 1,
+    'cnn_filters': 32,
+    'cnn_kernel_size': 7,
+    'cnn_padding': 'same',
+    'num_cnn_blocks': 3,
     # RNN
     'lstm_hidden': 64,
     'lstm_layers': 1,
-    'fc_hidden': 64,
+    'fc_hidden': 32,
     # Training
-    'dropout': 0.1,
+    'dropout': 0.2,
     'learning_rate': 5e-4,
     'weight_decay': 1e-4,
     'wmae_power': 3,
-    'corr_weight': 0.8,
-    'epochs': 500,
+    'under_penalty': 0.5,
+    'corr_weight': 0.3,
+    'epochs': 1000,
     'patience': 250,
     'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
     'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,

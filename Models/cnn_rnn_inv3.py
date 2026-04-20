@@ -2,7 +2,7 @@
 CNN-RNN — Invernadero 3
 =======================
 Train: T13-T15 | Val: T16 | Test: T17
-Best configuration: R²=0.79
+Best configuration: R²=0.79 (pre-alignment-fix)
 """
 
 import warnings
@@ -25,35 +25,37 @@ from cnn_rnn_yield import (
 INV_ID = 3
 
 HP = {
-    'seq_len': 1,
-    'horizon': 6,
+    'alignment': 'positional',    # sensor day i → production row i//7 (natural max lead)
+    'resolution': 'daily',       # raw daily sensor resolution
+    'seq_len': 34,               # June 28 → July 31 (33 days, 34 timesteps) of daily context
+    'horizon': 0,                # predict current paired prod week (~11-week calendar lead)
     'batch_size': 16,
     'lag_features': [],
     'include_rolling_mean': False,
-    # CNN
-    'cnn_filters': 64,
-    'cnn_kernel_size': 2,
-    'cnn_padding': 1,
-    'num_cnn_blocks': 1,
+    'early_season_lag': 0,
+    'temporal_keep': ['dias_desde_transplante', 'week_in_season', 'kg_hist_avg'],
+    # CNN — kernel_size 7 captures one full week of daily pattern
+    'cnn_filters': 16,
+    'cnn_kernel_size': 5,
+    'cnn_padding': 'same',
+    'num_cnn_blocks': 2,
     # RNN
-    'lstm_hidden': 64,
+    'lstm_hidden': 32,
     'lstm_layers': 1,
-    'fc_hidden': 64,
+    'fc_hidden': 16,
     # Training
-    'dropout': 0.1,
-    'learning_rate': 5e-4,
+    'dropout': 0.2,
+    'learning_rate': 1e-4,
     'weight_decay': 1e-4,
-    'wmae_power': 3,
+    'wmae_power': 2,   
+    'under_penalty': 1,
     'corr_weight': 0.8,
-    'epochs': 500,
+    'epochs': 1000,
     'patience': 250,
     'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
     'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
               0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
-              11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
-              22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-              32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-              100, 200, 500, 1000],
+              11, 12, 14, 15, 16, 17, 18, 19, 20, 21],
 }
 
 TRAIN_SEASONS = ['T13', 'T14', 'T15']

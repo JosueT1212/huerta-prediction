@@ -31,7 +31,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
 from scipy.stats import boxcox
@@ -51,9 +51,56 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 SEASON_NAMES = ['T13', 'T14', 'T15', 'T16', 'T17']
 
+# Phenology feature columns (from Monitoreo de Fenologia files)
+PHENO_FEATURE_COLS = [
+    'CANTIDAD DE TOMATES',
+    'RACIMOS PUESTOS',
+    'Nº DE RACIMO EN COSECHA',
+    'TOMATES MADUROS (COLOR 2)',
+    'CRECIMIENTO PLANTA (cm)',
+]
+PHENO_FEATURE_NAMES = set(PHENO_FEATURE_COLS)
+
 # ============================================================================
 # 1. DATA LOADING & FEATURE ENGINEERING
 # ============================================================================
+
+def load_phenology_features(invernadero_id):
+    """Load weekly plant phenology features for a given greenhouse across all seasons.
+
+    Reads 'BD TOMATE' sheet from each Monitoreo de Fenologia file, coerces
+    PHENO_FEATURE_COLS to numeric, and averages across plants per week.
+
+    Returns DataFrame with columns: [temporada, semana, *PHENO_FEATURE_COLS]
+    where 'semana' = SEMANA DEL AÑO (ISO week).
+    """
+    frames = []
+    for i, season_num in enumerate(range(13, 18)):
+        filepath = DATA_DIR / f'Monitoreo de Fenologia - Temporada {season_num}.xlsx'
+        if not filepath.exists():
+            continue
+        df = pd.read_excel(filepath, sheet_name='BD TOMATE', header=1)
+
+        # Coerce invernadero column and filter
+        inv_col = 'INVERNADERO'
+        df[inv_col] = pd.to_numeric(df[inv_col], errors='coerce')
+        df = df[df[inv_col] == invernadero_id].copy()
+
+        # Coerce each phenology feature to numeric (handles typos like 'f27', '25}')
+        present = [c for c in PHENO_FEATURE_COLS if c in df.columns]
+        for col in present:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        week_col = 'SEMANA DEL AÑO'
+        weekly = df.groupby(week_col)[present].mean().reset_index()
+        weekly = weekly.rename(columns={week_col: 'semana'})
+        weekly['temporada'] = SEASON_NAMES[i]
+        frames.append(weekly)
+
+    if not frames:
+        return pd.DataFrame(columns=['temporada', 'semana'] + PHENO_FEATURE_COLS)
+    return pd.concat(frames, ignore_index=True)
+
 
 def load_transplant_dates():
     """Load official transplant dates per season per greenhouse from Excel."""
@@ -176,7 +223,9 @@ def aggregate_daily_to_weekly(df_daily, temporada):
 
 def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                                  include_rolling_mean=False,
-                                 train_seasons=None, val_season=None):
+                                 train_seasons=None, val_season=None,
+                                 early_season_lag=0, resolution='weekly',
+                                 alignment='iso', sensor_lead_weeks=None):
     """
     Build feature matrix for a single greenhouse using all 5 seasons.
 
@@ -191,6 +240,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     df_kg = load_production(invernadero_id)
     df_riego = load_riego_variables(invernadero_id)
     transplant_dates = load_transplant_dates()
+    df_pheno = load_phenology_features(invernadero_id)
+    pheno_feat_cols = [c for c in PHENO_FEATURE_COLS if c in df_pheno.columns]
 
     # Rename internal sensor columns (all lowercased by loader)
     int_rename = {}
@@ -270,9 +321,13 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         riego_season = df_riego[df_riego['temporada'] == temp][['fecha'] + riego_features]
         daily = pd.merge(daily, riego_season, on='fecha', how='left')
 
-        # Assign sequential week index within the season
+        # Assign ISO calendar week key (year*100 + iso_week) so sensor aggregation
+        # aligns with the calendar-week semana column in the production file.
         daily = daily.sort_values('fecha').reset_index(drop=True)
-        daily['week_idx'] = daily.index // 7
+        _iso = daily['fecha'].dt.isocalendar()
+        daily['iso_year'] = _iso['year'].values.astype(int)
+        daily['iso_week'] = _iso['week'].values.astype(int)
+        daily['week_key'] = daily['iso_year'] * 100 + daily['iso_week']
 
         # Add dias_desde_transplante
         tp_key = (temp, invernadero_id)
@@ -280,7 +335,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             tp_date = transplant_dates[tp_key]
             daily['dias_desde_transplante'] = (daily['fecha'] - tp_date).dt.days
 
-        # Aggregate daily -> weekly
+        # Aggregate daily -> weekly (by calendar week)
         agg_dict = {feat: 'mean' for feat in int_features + ext_features}
         # Radiation sum should be summed, not averaged
         if 'rad_sum' in agg_dict:
@@ -292,43 +347,204 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         if 'dias_desde_transplante' in daily.columns:
             agg_dict['dias_desde_transplante'] = 'mean'
 
-        weekly_env = daily.groupby('week_idx').agg(agg_dict).reset_index()
+        if alignment == 'positional':
+            # ── POSITIONAL alignment (intentional old behavior, correct sensor dates) ──
+            # Build weekly_env with ISO aggregation so sensor dates are correct
+            # (June/July start of season), then pair with production by position:
+            # sensor row 0 (June/July) → production row 0 (September/October).
+            # This intentionally feeds the model pre-production vegetative sensor
+            # data for the first production weeks.
+            weekly_env = daily.groupby('week_key').agg(agg_dict).reset_index()
+            weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
 
-        # Align with production data by sequential week number
-        n_weeks = min(len(weekly_env), len(kg_season))
-        weekly_env = weekly_env.iloc[:n_weeks].copy()
-        kg_vals = kg_season.iloc[:n_weeks].copy()
+            # Keep production in original Excel order (chronological across year boundary)
+            # DO NOT sort by semana — seasons span 52→1, so numeric sort reverses them.
+            kg_sorted = kg_season.reset_index(drop=True)
+            # Assign correct week_keys to production rows (year-transition safe)
+            kg_semanas = kg_sorted['semana'].astype(int).values
+            first_s = int(kg_semanas[0])
+            match = daily[daily['iso_week'] == first_s]
+            start_year = int(match['iso_year'].iloc[0]) if len(match) else int(daily['iso_year'].iloc[0])
+            semana_years = []
+            cur_year = start_year
+            for i, s in enumerate(kg_semanas):
+                if i > 0 and s < kg_semanas[i - 1]:
+                    cur_year += 1
+                semana_years.append(cur_year)
+            kg_sorted = kg_sorted.copy()
+            kg_sorted['week_key'] = [y * 100 + s for y, s in zip(semana_years, kg_semanas)]
 
-        weekly = weekly_env.copy()
-        weekly['kg_reales'] = kg_vals['kg_reales'].values
-        weekly['temporada'] = temp
-        weekly['semana'] = kg_vals['semana'].values
+            # Compute sensor offset so that sensor row 0 is `sensor_lead_weeks` before
+            # the first production week.  When sensor_lead_weeks is None, start from
+            # the very first available sensor week (maximum available lead).
+            if sensor_lead_weeks is not None and sensor_lead_weeks > 0:
+                wk_to_pos = {wk: i for i, wk in enumerate(weekly_env['week_key'])}
+                first_prod_wk = kg_sorted['week_key'].iloc[0]
+                prod_start_pos = wk_to_pos.get(first_prod_wk, 0)
+                offset = max(0, prod_start_pos - sensor_lead_weeks)
+            else:
+                offset = 0  # start from the beginning of sensor data
 
-        # Temporal features
-        weekly['week_in_season'] = np.arange(len(weekly))
+            # Pair by position: sensor week (offset + i) ↔ production week i
+            n = min(len(weekly_env) - offset, len(kg_sorted))
+            weekly = weekly_env.iloc[offset:offset + n].reset_index(drop=True).copy()
+            weekly['kg_reales']      = kg_sorted['kg_reales'].values[:n]
+            weekly['semana']         = kg_sorted['semana'].values[:n]
+            # Keep production week_key as reference; sensor week_key already in weekly from weekly_env
+            weekly['prod_week_key']  = kg_sorted['week_key'].values[:n]
+            weekly['temporada']      = temp
+            weekly['week_in_season'] = np.arange(n)
 
-        # Lag features
-        lags = lag_features if lag_features is not None else [1]
-        for lag in lags:
-            weekly[f'kg_lag_{lag}'] = weekly['kg_reales'].shift(lag)
+            # Merge phenology features (measured during production season, aligned by semana)
+            if pheno_feat_cols:
+                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols]
+                weekly = weekly.merge(pheno_season, on='semana', how='left')
+                for col in pheno_feat_cols:
+                    weekly[col] = weekly[col].ffill().bfill()
 
-        # Rolling statistics (optional)
-        if include_rolling_mean:
-            weekly['kg_roll_mean_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).mean()
+            lags = lag_features if lag_features is not None else [1]
+            for lag in lags:
+                weekly[f'kg_lag_{lag}'] = weekly['kg_reales'].shift(lag)
+            if include_rolling_mean:
+                weekly['kg_roll_mean_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).mean()
 
-        # Target: absolute yield h weeks ahead
-        weekly['target'] = weekly['kg_reales'].shift(-horizon)
+            weekly['target'] = weekly['kg_reales'].shift(-horizon)
 
-        all_season_frames.append(weekly)
+            if resolution == 'daily':
+                # For daily: each sensor day i → production row i//7.
+                # daily rows 0-6 (June/July week 0) → production row 0 (September),
+                # inheriting its target and temporal features.
+                sensor_daily_cols = [c for c in int_features + ext_features if c in daily.columns]
+                for rc in riego_features:
+                    if rc in daily.columns:
+                        sensor_daily_cols.append(rc)
+
+                # Assign positional week index to daily rows, then apply offset so
+                # that daily rows from sensor week (offset) become production week 0.
+                daily['pos_week'] = np.arange(len(daily)) // 7
+                daily_trunc = daily[
+                    (daily['pos_week'] >= offset) &
+                    (daily['pos_week'] < offset + n)
+                ].copy()
+                daily_trunc['pos_week'] = daily_trunc['pos_week'] - offset  # remap to 0…n-1
+
+                weekly_only_pos = [c for c in weekly.columns
+                                   if c not in sensor_daily_cols
+                                   and c not in ('temporada', 'week_key')]
+                weekly['pos_week'] = np.arange(len(weekly))
+
+                daily_frame = pd.merge(
+                    daily_trunc[['fecha', 'temporada', 'pos_week'] + sensor_daily_cols],
+                    weekly[['pos_week'] + weekly_only_pos],
+                    on='pos_week', how='inner'
+                ).sort_values('fecha').reset_index(drop=True)
+                all_season_frames.append(daily_frame)
+            else:
+                all_season_frames.append(weekly)
+
+        else:
+            # ── ISO calendar alignment (default) ─────────────────────────────
+            weekly_env = daily.groupby('week_key').agg(agg_dict).reset_index()
+
+            # Build week_key for the production rows.
+            # The semana column is ISO calendar week; the season may span two calendar years
+            # (e.g. semana 32-52 in year Y, then semana 1-10 in year Y+1).
+            # Detect the year transition whenever semana decreases.
+            kg_semanas = kg_season['semana'].astype(int).values
+            # Start year = iso_year of the first sensor day whose iso_week == first production semana
+            first_s = int(kg_semanas[0])
+            match = daily[daily['iso_week'] == first_s]
+            start_year = int(match['iso_year'].iloc[0]) if len(match) else int(daily['iso_year'].iloc[0])
+            semana_years = []
+            cur_year = start_year
+            for i, s in enumerate(kg_semanas):
+                if i > 0 and s < kg_semanas[i - 1]:   # semana wrapped (52 → 1)
+                    cur_year += 1
+                semana_years.append(cur_year)
+            kg_season = kg_season.copy()
+            kg_season['week_key'] = [y * 100 + s for y, s in zip(semana_years, kg_semanas)]
+
+            # Inner join: only keep weeks present in both sensor aggregates and production
+            weekly = pd.merge(weekly_env, kg_season[['week_key', 'semana', 'kg_reales']],
+                              on='week_key', how='inner').sort_values('week_key').reset_index(drop=True)
+            weekly['temporada'] = temp
+
+            # Temporal features
+            weekly['week_in_season'] = np.arange(len(weekly))
+
+            # Early-season sensor features: for each production week, include sensor
+            # readings from `early_season_lag` weeks earlier (pre-production summer period).
+            # Use positional shift in weekly_env (sorted by week_key) to avoid broken
+            # week_key arithmetic across ISO year boundaries.
+            if early_season_lag and early_season_lag > 0:
+                sensor_feat_cols = [c for c in int_features + ext_features if c in weekly_env.columns]
+                env_sorted = weekly_env.sort_values('week_key').reset_index(drop=True)
+                wk_to_pos  = {wk: pos for pos, wk in enumerate(env_sorted['week_key'])}
+                for col in sensor_feat_cols:
+                    env_vals = env_sorted[col].values
+                    def _lookup(wk, _ev=env_vals, _m=wk_to_pos, _lag=early_season_lag):
+                        pos = _m.get(wk)
+                        if pos is None:
+                            return np.nan
+                        early_pos = pos - _lag
+                        return float(_ev[early_pos]) if early_pos >= 0 else np.nan
+                    weekly[f'{col}_early'] = weekly['week_key'].map(_lookup)
+
+            # Merge phenology features (measured during production season, aligned by semana)
+            if pheno_feat_cols:
+                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols]
+                weekly = weekly.merge(pheno_season, on='semana', how='left')
+                for col in pheno_feat_cols:
+                    weekly[col] = weekly[col].ffill().bfill()
+
+            # Lag features
+            lags = lag_features if lag_features is not None else [1]
+            for lag in lags:
+                weekly[f'kg_lag_{lag}'] = weekly['kg_reales'].shift(lag)
+
+            # Rolling statistics (optional)
+            if include_rolling_mean:
+                weekly['kg_roll_mean_4'] = weekly['kg_reales'].shift(1).rolling(4, min_periods=1).mean()
+
+            # Target: absolute yield h weeks ahead
+            weekly['target'] = weekly['kg_reales'].shift(-horizon)
+
+            if resolution == 'daily':
+                # For daily modality: each production week expands into its 7 daily rows.
+                # Daily rows inherit the target and temporal features from their parent week.
+                # Sensor features come from the raw daily data (not weekly aggregates).
+                sensor_daily_cols = [c for c in int_features + ext_features
+                                     if c in daily.columns]
+                for rc in riego_features:
+                    if rc in daily.columns:
+                        sensor_daily_cols.append(rc)
+
+                # Columns to copy from weekly → daily (temporal + target, no sensor aggregates)
+                weekly_only = [c for c in weekly.columns
+                               if c not in sensor_daily_cols
+                               and c not in ('fecha', 'temporada', 'iso_year', 'iso_week')]
+
+                # daily already has week_key; merge to get temporal + target per day
+                daily_frame = pd.merge(
+                    daily[['fecha', 'temporada', 'week_key'] + sensor_daily_cols],
+                    weekly[weekly_only],
+                    on='week_key', how='inner'
+                ).sort_values('fecha').reset_index(drop=True)
+
+                all_season_frames.append(daily_frame)
+            else:
+                all_season_frames.append(weekly)
 
     df_all = pd.concat(all_season_frames, ignore_index=True)
 
     # Split: configurable train/val seasons, T17 always test
     train_seasons = train_seasons if train_seasons is not None else ['T13', 'T14', 'T15']
 
-    # Historical average kg per week position — leave-one-out for train seasons, full avg for val/test
+    # Historical average/median kg per week position — leave-one-out for train seasons, full stat for val/test
     full_hist_avg = (df_all[df_all['temporada'].isin(train_seasons)]
                      .groupby('week_in_season')['kg_reales'].mean())
+    full_hist_median = (df_all[df_all['temporada'].isin(train_seasons)]
+                        .groupby('week_in_season')['kg_reales'].median())
 
     def get_loo_hist_avg(season):
         """For train seasons: average of the OTHER train seasons (leave-one-out).
@@ -340,22 +556,38 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                         .groupby('week_in_season')['kg_reales'].mean())
         return full_hist_avg  # val/test use full train average, also fallback for single-season
 
+    def get_loo_hist_median(season):
+        """Leave-one-out median; falls back to full_hist_median for val/test or single-season."""
+        if season in train_seasons:
+            other = [s for s in train_seasons if s != season]
+            if other:
+                return (df_all[df_all['temporada'].isin(other)]
+                        .groupby('week_in_season')['kg_reales'].median())
+        return full_hist_median
+
     df_all['kg_hist_avg'] = np.nan
+    df_all['kg_hist_median'] = np.nan
     for season in df_all['temporada'].unique():
         mask = df_all['temporada'] == season
         avg = get_loo_hist_avg(season)
-        df_all.loc[mask, 'kg_hist_avg'] = df_all.loc[mask, 'week_in_season'].map(avg)
+        med = get_loo_hist_median(season)
+        df_all.loc[mask, 'kg_hist_avg']    = df_all.loc[mask, 'week_in_season'].map(avg)
+        df_all.loc[mask, 'kg_hist_median'] = df_all.loc[mask, 'week_in_season'].map(med)
 
-    # Use full_hist_avg as the series for future-week lookups (test-time reference)
-    kg_hist_avg = full_hist_avg
+    # Use full_hist_avg/median as the series for future-week lookups (test-time reference)
+    kg_hist_avg    = full_hist_avg
+    kg_hist_median = full_hist_median
 
-    # Known future temporal features: only kg_hist_avg for weeks +1 through +h
+    # Known future temporal features: kg_hist_avg and kg_hist_median for weeks +1 through +h
     for k in range(1, horizon + 1):
-        df_all[f'kg_hist_avg_+{k}'] = np.nan
+        df_all[f'kg_hist_avg_+{k}']    = np.nan
+        df_all[f'kg_hist_median_+{k}'] = np.nan
         for season in df_all['temporada'].unique():
             mask = df_all['temporada'] == season
-            avg = get_loo_hist_avg(season)
-            df_all.loc[mask, f'kg_hist_avg_+{k}'] = (df_all.loc[mask, 'week_in_season'] + k).map(avg)
+            avg  = get_loo_hist_avg(season)
+            med  = get_loo_hist_median(season)
+            df_all.loc[mask, f'kg_hist_avg_+{k}']    = (df_all.loc[mask, 'week_in_season'] + k).map(avg)
+            df_all.loc[mask, f'kg_hist_median_+{k}'] = (df_all.loc[mask, 'week_in_season'] + k).map(med)
 
     val_season = val_season if val_season is not None else 'T16'
 
@@ -363,7 +595,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     df_all = df_all.dropna().reset_index(drop=True)
 
     # Feature columns (all go through same pipeline)
-    exclude = ['week_idx', 'kg_reales', 'temporada', 'target', 'fecha', 'semana']
+    exclude = ['week_idx', 'week_key', 'pos_week', 'prod_week_key', 'kg_reales',
+               'temporada', 'target', 'fecha', 'semana', 'iso_year', 'iso_week']
     feature_cols = [c for c in df_all.columns if c not in exclude]
 
     train_df = df_all[df_all['temporada'].isin(train_seasons)].reset_index(drop=True)
@@ -384,20 +617,24 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 # 2. DATASET & DATALOADER
 # ============================================================================
 
-def make_sequences_per_season(X, y, temporadas, seq_len):
+def make_sequences_per_season(X, y, temporadas, seq_len, stride=1):
     """
     Build (seq_len, n_features) windows strictly within each season.
     No window ever crosses a season boundary — each season is treated
     as an independent time series.
+
+    stride=1  : dense sliding window (weekly resolution default)
+    stride=7  : one window per production week (daily resolution) — avoids
+                building 7 identical-target sequences per week.
     """
     seqs_X, seqs_y = [], []
     for temp in pd.Series(temporadas).unique():
         mask = np.array(temporadas) == temp
         X_s = X[mask]
         y_s = y[mask]
-        for i in range(len(X_s) - seq_len + 1):
+        for i in range(0, len(X_s) - seq_len + 1, stride):
             seqs_X.append(X_s[i:i + seq_len])
-            seqs_y.append(y_s[i + seq_len - 1])
+            seqs_y.append(y_s[i])
     if len(seqs_X) == 0:
         raise ValueError('No sequences built — check seq_len vs season length.')
     return np.array(seqs_X, dtype=np.float32), np.array(seqs_y, dtype=np.float32)
@@ -428,8 +665,9 @@ class CNNBlock(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        # Trim conv output to match input length (handles padding > 0)
-        if out.size(2) > x.size(2):
+        # Trim conv output to match input length (handles integer padding > 0).
+        # With padding='same' output already equals input length — no trim needed.
+        if out.size(2) != x.size(2):
             out = out[:, :, :x.size(2)]
         out = self.bn(out)
         out = self.relu(out)
@@ -440,19 +678,21 @@ class CNNBlock(nn.Module):
 
 
 # Features that bypass the CNN and go straight to the LSTM (clean temporal signal)
-TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_', 'kg_hist_avg_+')
-TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season', 'kg_hist_avg'}
+TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_', 'kg_hist_avg_+', 'kg_hist_median_+')
+TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season', 'kg_hist_avg', 'kg_hist_median'}
 
 
 def split_features(feature_cols):
-    """Split feature list into sensor (→ CNN) and temporal (→ LSTM directly)."""
-    temporal, sensor = [], []
+    """Split feature list into sensor (→ CNN+PCA), pheno (→ independent Conv1D), temporal (→ LSTM)."""
+    temporal, pheno, sensor = [], [], []
     for c in feature_cols:
         if c in TEMPORAL_FEATURE_NAMES or any(c.startswith(p) for p in TEMPORAL_FEATURE_PREFIXES):
             temporal.append(c)
+        elif c in PHENO_FEATURE_NAMES:
+            pheno.append(c)
         else:
             sensor.append(c)
-    return sensor, temporal
+    return sensor, pheno, temporal
 
 
 class CNNRNN(nn.Module):
@@ -547,6 +787,10 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         lag_features=hp.get('lag_features', [1]),
         include_rolling_mean=hp.get('include_rolling_mean', False),
         train_seasons=train_seasons, val_season=val_season,
+        early_season_lag=hp.get('early_season_lag', 0),
+        resolution=hp.get('resolution', 'weekly'),
+        alignment=hp.get('alignment', 'iso'),
+        sensor_lead_weeks=hp.get('sensor_lead_weeks', None),
     )
 
     if skip_first_weeks > 0:
@@ -555,11 +799,21 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         test_df  = test_df[test_df['week_in_season']   >= skip_first_weeks].reset_index(drop=True)
         print(f'  Skipped first {skip_first_weeks} weeks → train: {len(train_df)}, val: {len(val_df)}, test: {len(test_df)}')
 
-    sensor_cols, temporal_cols = split_features(feature_cols)
+    sensor_cols, pheno_cols, temporal_cols = split_features(feature_cols)
+    if hp.get('temporal_keep'):
+        temporal_cols = [c for c in temporal_cols if c in hp['temporal_keep']]
+        print(f'  Temporal features kept ({len(temporal_cols)}): {temporal_cols}')
+    else:
+        print(f'  Temporal features ({len(temporal_cols)}): {temporal_cols}')
     print(f'  Sensor features ({len(sensor_cols)}): {sensor_cols}')
-    print(f'  Temporal features ({len(temporal_cols)}): {temporal_cols}')
+    print(f'  Phenology features ({len(pheno_cols)}): {pheno_cols}')
 
-    # ── Targets: transform + MinMax ──
+    _s = hp.get('scaler', 'robust' if hp.get('use_robust_scaler') else 'minmax')
+    _scaler = {'minmax': lambda: MinMaxScaler(feature_range=(-1, 1)),
+               'robust': RobustScaler,
+               'standard': StandardScaler}.get(_s, lambda: MinMaxScaler(feature_range=(-1, 1)))
+
+    # ── Targets: transform + scaler ──
     y_train = train_df['target'].values.astype(np.float32)
     y_val   = val_df['target'].values.astype(np.float32)
     y_test  = test_df['target'].values.astype(np.float32)
@@ -578,7 +832,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         y_test  = _boxcox(y_test + 1.0, lmbda=bc_lambda).astype(np.float32)
         print(f'  Box-Cox λ = {bc_lambda:.4f}')
 
-    scaler_y = MinMaxScaler(feature_range=(-1, 1))
+    scaler_y = _scaler()
     y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
     y_val   = scaler_y.transform(y_val.reshape(-1, 1)).flatten()
     y_test  = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
@@ -588,7 +842,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     Xs_va = val_df[sensor_cols].values.astype(np.float32)
     Xs_te = test_df[sensor_cols].values.astype(np.float32)
 
-    scaler_Xs = MinMaxScaler(feature_range=(-1, 1))
+    scaler_Xs = _scaler()
     Xs_tr = scaler_Xs.fit_transform(Xs_tr)
     Xs_va = scaler_Xs.transform(Xs_va)
     Xs_te = scaler_Xs.transform(Xs_te)
@@ -600,30 +854,46 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     n_sensor_pca = pca.n_components_
     print(f'  PCA (sensor only): {len(sensor_cols)} -> {n_sensor_pca} components')
 
-    # ── Temporal features: Box-Cox on kg_hist_avg cols (same space as target), then scale ──
+    # ── Phenology features: MinMax scale only (no PCA), concatenate with sensor PCA ──
+    if pheno_cols:
+        scaler_Xp = MinMaxScaler(feature_range=(-1, 1))
+        Xp_tr = scaler_Xp.fit_transform(train_df[pheno_cols].values.astype(np.float32))
+        Xp_va = scaler_Xp.transform(val_df[pheno_cols].values.astype(np.float32))
+        Xp_te = scaler_Xp.transform(test_df[pheno_cols].values.astype(np.float32))
+        Xs_tr = np.hstack([Xs_tr, Xp_tr])
+        Xs_va = np.hstack([Xs_va, Xp_va])
+        Xs_te = np.hstack([Xs_te, Xp_te])
+        print(f'  CNN input: {n_sensor_pca} PCA + {len(pheno_cols)} pheno = {Xs_tr.shape[1]} channels')
+    n_sensor_pca = Xs_tr.shape[1]
+
+    # ── Temporal features: each gets its own RobustScaler (or MinMaxScaler) ──
     Xt_tr = train_df[temporal_cols].values.astype(np.float32)
     Xt_va = val_df[temporal_cols].values.astype(np.float32)
     Xt_te = test_df[temporal_cols].values.astype(np.float32)
 
-    scaler_Xt = MinMaxScaler(feature_range=(-1, 1))
+    scaler_Xt = _scaler()
     Xt_tr = scaler_Xt.fit_transform(Xt_tr)
     Xt_va = scaler_Xt.transform(Xt_va)
     Xt_te = scaler_Xt.transform(Xt_te)
     n_temporal = len(temporal_cols)
 
     # ── Sequences ──
-    seq_len   = hp['seq_len']
-    temps_tr  = train_df['temporada'].values
-    temps_va  = val_df['temporada'].values
-    temps_te  = test_df['temporada'].values
+    seq_len  = hp['seq_len']
+    # stride=7 for daily resolution: one 42-day window per production week,
+    # avoiding 7 overlapping sequences that share the same weekly target.
+    stride   = hp.get('stride', 7 if hp.get('resolution') == 'daily' else 1)
+    temps_tr = train_df['temporada'].values
+    temps_va = val_df['temporada'].values
+    temps_te = test_df['temporada'].values
 
-    Xs_tr_seq, y_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len)
-    Xt_tr_seq, _    = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len)
-    Xs_va_seq, y_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len)
-    Xt_va_seq, _    = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len)
-    Xs_te_seq, y_te = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len)
-    Xt_te_seq, _    = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len)
-    print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}')
+    Xs_tr_seq, y_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len, stride)
+    Xt_tr_seq, _    = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len, stride)
+    Xs_va_seq, y_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len, stride)
+    Xt_va_seq, _    = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len, stride)
+    Xs_te_seq, y_te = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len, stride)
+    Xt_te_seq, _    = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len, stride)
+    print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
+          + (f' (stride={stride})' if stride > 1 else ''))
 
     def to_ds(Xs, Xt, y):
         return TensorDataset(torch.FloatTensor(Xs), torch.FloatTensor(Xt),
@@ -669,11 +939,13 @@ class NSECorrLoss(nn.Module):
 
 
 class YieldWMAELoss(nn.Module):
-    """Weighted Huber — weight ∝ |target - mean(target)|^p, emphasizes both peaks and valleys."""
-    def __init__(self, corr_weight=0.8, power=1, delta=0.7):
+    """Weighted Huber — weight ∝ |target - mean(target)|^p, emphasizes both peaks and valleys.
+    under_penalty > 0 penalizes underestimates extra: effective weight = 1 + under_penalty when pred < target."""
+    def __init__(self, corr_weight=0.8, power=1, delta=0.7, under_penalty=0.0):
         super().__init__()
         self.power = power
         self.delta = delta
+        self.under_penalty = under_penalty
 
     def forward(self, pred, target):
         pred_f   = pred.flatten()
@@ -684,13 +956,21 @@ class YieldWMAELoss(nn.Module):
         huber = torch.where(err <= self.delta,
                             0.5 * err ** 2 / self.delta,
                             err - 0.5 * self.delta)
+        if self.under_penalty > 0.0:
+            under_mask = (pred_f < target_f).float()
+            weights = weights * (1.0 + self.under_penalty * under_mask)
         return torch.mean(weights * huber)
 
 
 def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
     """Train the CNN-RNN model with early stopping on validation score."""
-    criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
-                              power=hp.get('wmae_power', 1))
+    loss_type = hp.get('loss_type', 'wmae')
+    if loss_type == 'huber':
+        criterion = nn.HuberLoss(delta=hp.get('huber_delta', 1.0))
+    else:
+        criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
+                                  power=hp.get('wmae_power', 1),
+                                  under_penalty=hp.get('under_penalty', 0.0))
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=hp['learning_rate'],
                                  weight_decay=hp['weight_decay'])

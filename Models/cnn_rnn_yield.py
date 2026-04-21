@@ -943,6 +943,7 @@ class YieldWMAELoss(nn.Module):
     under_penalty > 0 penalizes underestimates extra: effective weight = 1 + under_penalty when pred < target."""
     def __init__(self, corr_weight=0.8, power=1, delta=0.7, under_penalty=0.0):
         super().__init__()
+        self.corr_weight = corr_weight
         self.power = power
         self.delta = delta
         self.under_penalty = under_penalty
@@ -959,7 +960,17 @@ class YieldWMAELoss(nn.Module):
         if self.under_penalty > 0.0:
             under_mask = (pred_f < target_f).float()
             weights = weights * (1.0 + self.under_penalty * under_mask)
-        return torch.mean(weights * huber)
+        wmae = torch.mean(weights * huber)
+        corr_loss = torch.zeros(1, device=pred.device)
+        if pred_f.shape[0] >= 4 and self.corr_weight > 0:
+            pm = pred_f - pred_f.mean()
+            tm = target_f - target_f.mean()
+            corr = torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8)
+            )
+            corr_loss = self.corr_weight * (1.0 - corr)
+        return wmae + corr_loss
 
 
 def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
@@ -967,6 +978,9 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
     loss_type = hp.get('loss_type', 'wmae')
     if loss_type == 'huber':
         criterion = nn.HuberLoss(delta=hp.get('huber_delta', 1.0))
+    elif loss_type == 'nse_corr':
+        criterion = NSECorrLoss(corr_weight=hp.get('corr_weight', 0.8),
+                                var_y_train=var_y_train)
     else:
         criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
                                   power=hp.get('wmae_power', 1),
@@ -1104,6 +1118,8 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
         y_true = np.expm1(y_true)
     elif bc_lambda is not None:
         from scipy.special import inv_boxcox as _inv_boxcox
+        if bc_lambda > 0:
+            y_pred = np.clip(y_pred, -1.0 / bc_lambda + 1e-6, None)
         y_pred = _inv_boxcox(y_pred, bc_lambda) - 1.0
         y_true = _inv_boxcox(y_true, bc_lambda) - 1.0
     else:

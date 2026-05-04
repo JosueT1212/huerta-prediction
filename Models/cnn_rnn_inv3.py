@@ -19,7 +19,7 @@ from cnn_rnn_yield import (
     DEVICE, RESULTS_DIR,
     prepare_data, set_seed, init_weights,
     CNNRNN, train_model, evaluate_model, compute_metrics, print_metrics,
-    plot_results_per_greenhouse,
+    plot_results_per_greenhouse, compute_cptc_intervals,
 )
 
 INV_ID = 3
@@ -66,7 +66,7 @@ def main():
     print(f'  Horizon: {HP["horizon"]} semanas')
     print('=' * 60)
 
-    train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train = \
+    train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys = \
         prepare_data(INV_ID, HP, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON)
 
     n_runs = len(HP['seeds']) * len(HP['init_methods'])
@@ -120,11 +120,27 @@ def main():
     best_result['ensemble_pred']    = ensemble_pred
     best_result['ensemble_metrics'] = ensemble_metrics
 
+    # CPTC Prediction Intervals
+    best_model = CNNRNN(
+        n_sensor=n_sensor_pca, n_temporal=n_temporal,
+        cnn_filters=HP['cnn_filters'], cnn_kernel_size=HP['cnn_kernel_size'],
+        cnn_padding=HP['cnn_padding'], num_cnn_blocks=HP['num_cnn_blocks'],
+        lstm_hidden=HP['lstm_hidden'], lstm_layers=HP['lstm_layers'],
+        dropout=HP['dropout'], fc_hidden=HP['fc_hidden'],
+    ).to(DEVICE)
+    best_model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=True))
+    y_val_true, y_val_pred, _ = evaluate_model(best_model, val_loader, scaler_y, bc_lambda)
+    lower, upper, val_cov, avg_w = compute_cptc_intervals(y_val_true, y_val_pred, best_result['y_pred'])
+    best_result['pi_lower'] = lower
+    best_result['pi_upper'] = upper
+    print(f'  90% PI (CPTC): val_coverage={val_cov:.3f}, avg_width={avg_w:.1f} kg')
+
     print(f'\n  >>> Best: [{best_result["init_method"]}] seed={best_result["seed"]}  R²={best_r2:.4f} <<<')
     print(f'  >>> Ensemble top-{top_k}: R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
     print_metrics(INV_ID, best_result['metrics'], horizon=HP['horizon'])
 
-    plot_results_per_greenhouse({INV_ID: best_result}, horizon=HP['horizon'])
+    plot_results_per_greenhouse({INV_ID: best_result}, horizon=HP['horizon'],
+                                intervals={INV_ID: (lower, upper)})
 
     # Top-25 R² statistics
     all_r2s = sorted([r[0] for r in top_runs], reverse=True)
@@ -138,10 +154,23 @@ def main():
         {'invernadero': INV_ID, 'model': f'ensemble_top{top_k}', **ensemble_metrics},
         {'invernadero': INV_ID, 'model': 'top25_mean', 'R²': top25_mean, 'R²_std': top25_std,
          'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
+        {'invernadero': INV_ID, 'model': 'cptc_pi', 'pi_coverage': val_cov, 'pi_avg_width': avg_w,
+         'R²': None, 'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
     ]
     pd.DataFrame(metrics_rows).to_csv(RESULTS_DIR / 'cnn_rnn_inv3_metrics.csv', index=False)
+
+    np.savez_compressed(
+        RESULTS_DIR / 'cnn_rnn_inv3_predictions.npz',
+        y_true=best_result['y_true'],
+        y_pred=best_result['y_pred'],
+        ensemble_pred=best_result['ensemble_pred'],
+        pi_lower=lower,
+        pi_upper=upper,
+        week_keys=test_week_keys,
+    )
     print(f'\nBest model → results/best_cnn_rnn_inv3.pt')
     print(f'Metrics    → results/cnn_rnn_inv3_metrics.csv')
+    print(f'Predictions → results/cnn_rnn_inv3_predictions.npz')
 
 
 if __name__ == '__main__':

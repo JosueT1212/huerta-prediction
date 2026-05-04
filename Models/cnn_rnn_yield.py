@@ -376,7 +376,8 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 
             # Compute sensor offset so that sensor row 0 is `sensor_lead_weeks` before
             # the first production week.  When sensor_lead_weeks is None, start from
-            # the very first available sensor week (maximum available lead).
+            # the very first a
+            # vailable sensor week (maximum available lead).
             if sensor_lead_weeks is not None and sensor_lead_weeks > 0:
                 wk_to_pos = {wk: i for i, wk in enumerate(weekly_env['week_key'])}
                 first_prod_wk = kg_sorted['week_key'].iloc[0]
@@ -395,10 +396,13 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             weekly['temporada']      = temp
             weekly['week_in_season'] = np.arange(n)
 
-            # Merge phenology features (measured during production season, aligned by semana)
+            # Merge phenology features aligned to sensor ISO week (not production week)
             if pheno_feat_cols:
-                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols]
-                weekly = weekly.merge(pheno_season, on='semana', how='left')
+                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols].copy()
+                pheno_season = pheno_season.rename(columns={'semana': '_sensor_semana'})
+                weekly['_sensor_semana'] = (weekly['week_key'] % 100).astype(int)
+                weekly = weekly.merge(pheno_season, on='_sensor_semana', how='left')
+                weekly = weekly.drop(columns=['_sensor_semana'])
                 for col in pheno_feat_cols:
                     weekly[col] = weekly[col].ffill().bfill()
 
@@ -490,10 +494,13 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                         return float(_ev[early_pos]) if early_pos >= 0 else np.nan
                     weekly[f'{col}_early'] = weekly['week_key'].map(_lookup)
 
-            # Merge phenology features (measured during production season, aligned by semana)
+            # Merge phenology features aligned to sensor ISO week (not production week)
             if pheno_feat_cols:
-                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols]
-                weekly = weekly.merge(pheno_season, on='semana', how='left')
+                pheno_season = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols].copy()
+                pheno_season = pheno_season.rename(columns={'semana': '_sensor_semana'})
+                weekly['_sensor_semana'] = (weekly['week_key'] % 100).astype(int)
+                weekly = weekly.merge(pheno_season, on='_sensor_semana', how='left')
+                weekly = weekly.drop(columns=['_sensor_semana'])
                 for col in pheno_feat_cols:
                     weekly[col] = weekly[col].ffill().bfill()
 
@@ -626,18 +633,26 @@ def make_sequences_per_season(X, y, temporadas, seq_len, stride=1):
     stride=1  : dense sliding window (weekly resolution default)
     stride=7  : one window per production week (daily resolution) — avoids
                 building 7 identical-target sequences per week.
+
+    Returns seqs_X, seqs_y, seqs_pos where seqs_pos is the 0-indexed
+    position of each sequence within its season (used for week-weighted loss).
     """
-    seqs_X, seqs_y = [], []
+    seqs_X, seqs_y, seqs_pos = [], [], []
     for temp in pd.Series(temporadas).unique():
         mask = np.array(temporadas) == temp
         X_s = X[mask]
         y_s = y[mask]
+        seq_idx = 0
         for i in range(0, len(X_s) - seq_len + 1, stride):
             seqs_X.append(X_s[i:i + seq_len])
             seqs_y.append(y_s[i])
+            seqs_pos.append(seq_idx)
+            seq_idx += 1
     if len(seqs_X) == 0:
         raise ValueError('No sequences built — check seq_len vs season length.')
-    return np.array(seqs_X, dtype=np.float32), np.array(seqs_y, dtype=np.float32)
+    return (np.array(seqs_X, dtype=np.float32),
+            np.array(seqs_y, dtype=np.float32),
+            np.array(seqs_pos, dtype=np.int32))
 
 
 # ============================================================================
@@ -886,28 +901,43 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     temps_va = val_df['temporada'].values
     temps_te = test_df['temporada'].values
 
-    Xs_tr_seq, y_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len, stride)
-    Xt_tr_seq, _    = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len, stride)
-    Xs_va_seq, y_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len, stride)
-    Xt_va_seq, _    = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len, stride)
-    Xs_te_seq, y_te = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len, stride)
-    Xt_te_seq, _    = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len, stride)
+    Xs_tr_seq, y_tr, pos_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len, stride)
+    Xt_tr_seq, _,    _      = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len, stride)
+    Xs_va_seq, y_va, pos_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len, stride)
+    Xt_va_seq, _,    _      = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len, stride)
+    Xs_te_seq, y_te, _      = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len, stride)
+    Xt_te_seq, _,    _      = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len, stride)
     print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
           + (f' (stride={stride})' if stride > 1 else ''))
 
-    def to_ds(Xs, Xt, y):
+    # Week-weighted loss: early-season sequences get higher weight
+    early_w  = hp.get('early_week_weight', 1.0)
+    early_n  = hp.get('early_weeks', 4)
+
+    def make_week_weights(pos):
+        w = np.where(pos < early_n, early_w, 1.0).astype(np.float32)
+        return w
+
+    w_tr = make_week_weights(pos_tr)
+    w_va = np.ones(len(y_va), dtype=np.float32)
+
+    def to_ds(Xs, Xt, y, w):
         return TensorDataset(torch.FloatTensor(Xs), torch.FloatTensor(Xt),
-                             torch.FloatTensor(y).unsqueeze(1))
+                             torch.FloatTensor(y).unsqueeze(1),
+                             torch.FloatTensor(w))
 
     bs = hp['batch_size']
-    train_loader = DataLoader(to_ds(Xs_tr_seq, Xt_tr_seq, y_tr), batch_size=bs, shuffle=True, drop_last=True)
-    val_loader   = DataLoader(to_ds(Xs_va_seq, Xt_va_seq, y_va), batch_size=bs, shuffle=False)
-    test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te), batch_size=bs, shuffle=False)
+    w_te = np.ones(len(y_te), dtype=np.float32)
+    train_loader = DataLoader(to_ds(Xs_tr_seq, Xt_tr_seq, y_tr, w_tr), batch_size=bs, shuffle=True, drop_last=True)
+    val_loader   = DataLoader(to_ds(Xs_va_seq, Xt_va_seq, y_va, w_va), batch_size=bs, shuffle=False)
+    test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te, w_te), batch_size=bs, shuffle=False)
 
     var_y_train = float(np.var(y_tr)) if len(y_tr) > 1 else 1.0
     print(f'  Train y variance (scaled {transform}): {var_y_train:.6f}')
 
-    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train
+    _has_wk = 'prod_week_key' in test_df.columns
+    test_week_keys = test_df['prod_week_key'].values[:len(y_te)] if _has_wk else np.arange(len(y_te))
+    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys
 
 
 class NSECorrLoss(nn.Module):
@@ -948,7 +978,7 @@ class YieldWMAELoss(nn.Module):
         self.delta = delta
         self.under_penalty = under_penalty
 
-    def forward(self, pred, target):
+    def forward(self, pred, target, sample_weights=None):
         pred_f   = pred.flatten()
         target_f = target.flatten()
         weights = (torch.abs(target_f - target_f.mean()) + 1e-6) ** self.power
@@ -960,6 +990,8 @@ class YieldWMAELoss(nn.Module):
         if self.under_penalty > 0.0:
             under_mask = (pred_f < target_f).float()
             weights = weights * (1.0 + self.under_penalty * under_mask)
+        if sample_weights is not None:
+            weights = weights * sample_weights.flatten().to(pred.device)
         wmae = torch.mean(weights * huber)
         corr_loss = torch.zeros(1, device=pred.device)
         if pred_f.shape[0] >= 4 and self.corr_weight > 0:
@@ -1000,12 +1032,13 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         epoch_loss = 0.0
         n_batches = 0
 
-        for Xs_batch, Xt_batch, y_batch in train_loader:
+        for Xs_batch, Xt_batch, y_batch, w_batch in train_loader:
             Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
 
             optimizer.zero_grad()
             pred = model(Xs_batch, Xt_batch)
-            loss = criterion(pred, y_batch)
+            sw = w_batch if isinstance(criterion, YieldWMAELoss) else None
+            loss = criterion(pred, y_batch) if sw is None else criterion(pred, y_batch, sw)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -1023,7 +1056,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         all_val_preds = []
         all_val_targets = []
         with torch.no_grad():
-            for Xs_batch, Xt_batch, y_batch in val_loader:
+            for Xs_batch, Xt_batch, y_batch, _ in val_loader:
                 Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
                 pred = model(Xs_batch, Xt_batch)
                 loss = criterion(pred, y_batch)
@@ -1101,7 +1134,7 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     all_preds, all_targets = [], []
 
     with torch.no_grad():
-        for Xs_batch, Xt_batch, y_batch in test_loader:
+        for Xs_batch, Xt_batch, y_batch, *_ in test_loader:
             pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
             all_preds.append(pred.cpu().numpy())
             all_targets.append(y_batch.numpy())
@@ -1132,7 +1165,83 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     return y_true, y_pred, metrics
 
 
-def plot_results_per_greenhouse(results, horizon=6):
+def evaluate_loader(model, loader, scaler_y, bc_lambda):
+    """Run inference on any DataLoader; return (y_true, y_pred) in original kg scale."""
+    model.eval()
+    all_preds, all_targets = [], []
+    with torch.no_grad():
+        for Xs_batch, Xt_batch, y_batch, *_ in loader:
+            pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
+            all_preds.append(pred.cpu().numpy())
+            all_targets.append(y_batch.numpy())
+    y_pred_norm = np.concatenate(all_preds).flatten()
+    y_true_norm = np.concatenate(all_targets).flatten()
+    y_pred = scaler_y.inverse_transform(y_pred_norm.reshape(-1, 1)).flatten()
+    y_true = scaler_y.inverse_transform(y_true_norm.reshape(-1, 1)).flatten()
+    if bc_lambda == 'log':
+        y_pred = np.expm1(y_pred)
+        y_true = np.expm1(y_true)
+    elif bc_lambda is not None:
+        from scipy.special import inv_boxcox as _inv_boxcox
+        if bc_lambda > 0:
+            y_pred = np.clip(y_pred, -1.0 / bc_lambda + 1e-6, None)
+        y_pred = _inv_boxcox(y_pred, bc_lambda) - 1.0
+        y_true = _inv_boxcox(y_true, bc_lambda) - 1.0
+    return y_true, y_pred
+
+
+def compute_cptc_intervals(y_cal_true, y_cal_pred, y_te_pred,
+                           alpha=0.10, gamma=0.005, K=3):
+    """
+    Warm-starts K state-specific calibration sets from validation residuals,
+    then applies CPTC online update to test predictions.
+    Returns (lower, upper, val_coverage, avg_width).
+    """
+    cal_residuals = np.abs(y_cal_true - y_cal_pred)
+    n_cal = len(cal_residuals)
+    n_te  = len(y_te_pred)
+
+    def _states(n):
+        return np.minimum(np.arange(n) * K // max(n, 1), K - 1)
+
+    cal_states = _states(n_cal)
+    te_states  = _states(n_te)
+
+    S = {k: list(cal_residuals[cal_states == k]) for k in range(K)}
+
+    alpha_t = alpha
+    lower, upper = [], []
+
+    for t in range(n_te):
+        k   = int(te_states[t])
+        sk  = S[k]
+        q   = np.quantile(sk, float(np.clip(1 - alpha_t, 0.01, 0.99))) if sk else 0.0
+        lower.append(y_te_pred[t] - q)
+        upper.append(y_te_pred[t] + q)
+        alpha_t = alpha_t + gamma * (alpha - (1 if len(lower) > 1 else 0))
+
+    lower = np.array(lower)
+    upper = np.array(upper)
+
+    val_coverage = float(np.mean(
+        (y_cal_true >= (y_cal_pred - np.array([np.quantile(S[k], 1 - alpha)
+                                               if S[k] else 0.0
+                                               for k in cal_states]))) &
+        (y_cal_true <= (y_cal_pred + np.array([np.quantile(S[k], 1 - alpha)
+                                               if S[k] else 0.0
+                                               for k in cal_states])))
+    ))
+    avg_width = float(np.mean(upper - lower))
+
+    for i in range(n_cal):
+        k  = int(cal_states[i])
+        sk = cal_residuals[cal_states == k]
+        S[k].append(float(cal_residuals[i]))
+
+    return lower, upper, val_coverage, avg_width
+
+
+def plot_results_per_greenhouse(results, horizon=6, intervals=None):
     """Plot training/validation loss and predictions for each greenhouse."""
     n_greenhouses = len(results)
     fig, axes = plt.subplots(n_greenhouses, 2, figsize=(16, 5 * n_greenhouses))

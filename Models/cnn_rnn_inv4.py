@@ -24,15 +24,15 @@ from cnn_rnn_yield import (
 INV_ID = 4
 
 HP = {
-    'seq_len': 2,
-    'horizon': 4,
+    'seq_len': 4,
+    'horizon': 0,
     'batch_size': 8,
-    'lag_features': [1],
+    'lag_features': [],
     'include_rolling_mean': False,
     # CNN
     'cnn_filters': 128,
     'cnn_kernel_size': 2,
-    'cnn_padding': 0,
+    'cnn_padding': 'same',
     'num_cnn_blocks': 3,
     # RNN
     'lstm_hidden': 128,
@@ -43,8 +43,8 @@ HP = {
     'learning_rate': 2e-3,
     'weight_decay': 0,
     'corr_weight': 0.5,
-    'epochs': 500,
-    'patience': 150,
+    'epochs': 1000,
+    'patience': 250,
     'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
     'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
               0, 1, 2, 3, 4, 5, 6, 8, 9, 10,

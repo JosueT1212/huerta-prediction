@@ -25,24 +25,24 @@ from cnn_rnn_yield import (
 INV_ID = 3
 
 HP = {
-    'seq_len': 2,
+    'seq_len': 6,
     'horizon': 3,
     'batch_size': 8,
     'lag_features': [],
     'include_rolling_mean': False,
     # CNN
-    'cnn_filters': 128,
+    'cnn_filters': 32,
     'cnn_kernel_size': 2,
-    'cnn_padding': 0,
-    'num_cnn_blocks': 3,
+    'cnn_padding': 1,
+    'num_cnn_blocks': 1,
     # RNN
-    'lstm_hidden': 128,
-    'lstm_layers': 3,
-    'fc_hidden': 128,
+    'lstm_hidden': 64,
+    'lstm_layers': 1,
+    'fc_hidden': 32,
     # Training
-    'dropout': 0.05,
+    'dropout': 0.3,
     'learning_rate': 2e-3,
-    'weight_decay': 0,
+    'weight_decay': 1e-4,
     'corr_weight': 0.8,
     'epochs': 500,
     'patience': 150,

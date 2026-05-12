@@ -25,9 +25,9 @@ INV_ID = 4
 
 HP = {
     'seq_len': 2,
-    'horizon': 4,
+    'horizon': 3,
     'batch_size': 8,
-    'lag_features': [1],
+    'lag_features': [],
     'include_rolling_mean': False,
     # CNN
     'cnn_filters': 128,
@@ -133,6 +133,7 @@ def main():
     best_result['pi_lower'] = lower
     best_result['pi_upper'] = upper
     print(f'  90% PI (CPTC): val_coverage={val_cov:.3f}, avg_width={avg_w:.1f} kg')
+
 
     print(f'\n  >>> Best: [{best_result["init_method"]}] seed={best_result["seed"]}  R²={best_r2:.4f} <<<')
     print(f'  >>> Ensemble top-{top_k}: R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')

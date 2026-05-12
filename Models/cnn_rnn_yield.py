@@ -547,55 +547,6 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     # Split: configurable train/val seasons, T17 always test
     train_seasons = train_seasons if train_seasons is not None else ['T13', 'T14', 'T15']
 
-    # Historical average/median kg per week position — leave-one-out for train seasons, full stat for val/test
-    full_hist_avg = (df_all[df_all['temporada'].isin(train_seasons)]
-                     .groupby('week_in_season')['kg_reales'].mean())
-    full_hist_median = (df_all[df_all['temporada'].isin(train_seasons)]
-                        .groupby('week_in_season')['kg_reales'].median())
-
-    def get_loo_hist_avg(season):
-        """For train seasons: average of the OTHER train seasons (leave-one-out).
-        Falls back to full_hist_avg when only one train season exists."""
-        if season in train_seasons:
-            other = [s for s in train_seasons if s != season]
-            if other:
-                return (df_all[df_all['temporada'].isin(other)]
-                        .groupby('week_in_season')['kg_reales'].mean())
-        return full_hist_avg  # val/test use full train average, also fallback for single-season
-
-    def get_loo_hist_median(season):
-        """Leave-one-out median; falls back to full_hist_median for val/test or single-season."""
-        if season in train_seasons:
-            other = [s for s in train_seasons if s != season]
-            if other:
-                return (df_all[df_all['temporada'].isin(other)]
-                        .groupby('week_in_season')['kg_reales'].median())
-        return full_hist_median
-
-    df_all['kg_hist_avg'] = np.nan
-    df_all['kg_hist_median'] = np.nan
-    for season in df_all['temporada'].unique():
-        mask = df_all['temporada'] == season
-        avg = get_loo_hist_avg(season)
-        med = get_loo_hist_median(season)
-        df_all.loc[mask, 'kg_hist_avg']    = df_all.loc[mask, 'week_in_season'].map(avg)
-        df_all.loc[mask, 'kg_hist_median'] = df_all.loc[mask, 'week_in_season'].map(med)
-
-    # Use full_hist_avg/median as the series for future-week lookups (test-time reference)
-    kg_hist_avg    = full_hist_avg
-    kg_hist_median = full_hist_median
-
-    # Known future temporal features: kg_hist_avg and kg_hist_median for weeks +1 through +h
-    for k in range(1, horizon + 1):
-        df_all[f'kg_hist_avg_+{k}']    = np.nan
-        df_all[f'kg_hist_median_+{k}'] = np.nan
-        for season in df_all['temporada'].unique():
-            mask = df_all['temporada'] == season
-            avg  = get_loo_hist_avg(season)
-            med  = get_loo_hist_median(season)
-            df_all.loc[mask, f'kg_hist_avg_+{k}']    = (df_all.loc[mask, 'week_in_season'] + k).map(avg)
-            df_all.loc[mask, f'kg_hist_median_+{k}'] = (df_all.loc[mask, 'week_in_season'] + k).map(med)
-
     val_season = val_season if val_season is not None else 'T16'
 
     # Drop rows with NaN from lagging or target shift
@@ -693,8 +644,8 @@ class CNNBlock(nn.Module):
 
 
 # Features that bypass the CNN and go straight to the LSTM (clean temporal signal)
-TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_', 'kg_hist_avg_+', 'kg_hist_median_+')
-TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season', 'kg_hist_avg', 'kg_hist_median'}
+TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_')
+TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season'}
 
 
 def split_features(feature_cols):

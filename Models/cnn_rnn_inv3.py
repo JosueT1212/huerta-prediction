@@ -26,9 +26,9 @@ INV_ID = 3
 
 HP = {
     'seq_len': 2,
-    'horizon': 4,
+    'horizon': 3,
     'batch_size': 8,
-    'lag_features': [1],
+    'lag_features': [],
     'include_rolling_mean': False,
     # CNN
     'cnn_filters': 128,

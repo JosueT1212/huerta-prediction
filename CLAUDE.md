@@ -109,3 +109,50 @@ horizon = first_prod_week - seq_len_weeks
 Con `seq_len=34` y `first_prod_week≈37` (T13): horizon ≈ 6 semanas.
 
 **Cambio clave en `make_sequences_per_season`:** el target usa `y_s[i]` (inicio de la ventana), NO `y_s[i + seq_len - 1]`. Esto aprovecha la brecha natural sensor→producción para predecir hacia adelante sin filtración de datos.
+
+---
+
+## 6. Dashboard — Opciones de Visualización para Cliente
+
+### Pipeline objetivo (sensores en vivo)
+
+```
+Sensores físicos → Collector → InfluxDB → Grafana (live viz)
+                                   ↑
+                     CNN-RNN inference script
+                     (escribe predicciones → InfluxDB)
+```
+
+### Collector (capa que recibe datos del sensor y escribe a InfluxDB)
+
+| Tipo de sensor | Collector recomendado |
+|---|---|
+| MQTT broker | Telegraf (plugin MQTT input) |
+| HTTP POST desde datalogger | Telegraf HTTP listener o Flask |
+| Serial/USB | Telegraf serial plugin o Python custom |
+| Excel manual (situación actual) | Script Python con cliente InfluxDB |
+| Campbell/Onset datalogger | Telegraf + config output datalogger |
+
+**Telegraf** es el agente oficial de InfluxData — soporta 200+ inputs, cero código para sensores estándar.
+
+### Opciones de stack completo
+
+| Stack | Costo | Pros | Contras |
+|---|---|---|---|
+| **InfluxDB OSS + Grafana OSS** (self-hosted VPS) | ~$5–10/mes (DigitalOcean/Hetzner) | Control total, sin límites, costo fijo | Necesita server, mantenimiento |
+| **InfluxDB Cloud + Grafana Cloud** (managed) | Gratis hasta límites; uso real ~$10–30/mes | Sin infra, escalable | Límites en free tier, datos en nube externa |
+| **InfluxDB Cloud Free tier** | Gratis | Fácil inicio | 30 días retención, 5 MB/5 min write |
+| **Grafana Cloud Free tier** | Gratis | 10k series, 14 días retención | Límite series/retención |
+| **Docker local** (dev/demo) | Gratis | Corre en Mac ahora mismo | Solo local, no accesible cliente |
+| **Streamlit (actual)** | Gratis (Community Cloud) | Ya funciona, deploy en minutos | No live data, no alertas |
+
+### Tamaño estimado datos
+
+- Imágenes Docker (InfluxDB + Grafana + Telegraf): ~600 MB
+- Datos: 10 sensores @ 5 min → ~50 MB/año
+- Histórico actual (T13–T17 Excel): < 10 MB total
+
+### Decisión actual
+
+Live sensors planeados → stack recomendado: **InfluxDB OSS + Grafana OSS en VPS**.
+Por ahora (sin sensores live): mantener Streamlit para demo cliente + preparar `docker-compose.yml` local para desarrollo del pipeline.

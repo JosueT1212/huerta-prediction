@@ -50,6 +50,8 @@ def render_greenhouse(cfg: dict):
     y_true        = data["y_true"]
     y_pred        = data["y_pred"]
     ensemble_pred = data["ensemble_pred"]
+    blend_pred    = data["blend_pred"]
+    kg_hist_avg   = data["kg_hist_avg"]
     pi_lower      = data["pi_lower"]
     pi_upper      = data["pi_upper"]
     week_keys     = data["week_keys"]
@@ -60,17 +62,21 @@ def render_greenhouse(cfg: dict):
         x_labels = [f"Week {int(wk)+1}" for wk in week_keys]
 
     metrics_df = pd.read_csv(csv_path).set_index("model")
-    r2   = metrics_df.loc["best", "R²"]
-    mape = metrics_df.loc["best", "MAPE (%)"]
-    rmse = metrics_df.loc["best", "RMSE (kg)"]
+    has_blend = "blend" in metrics_df.index
+    row = "blend" if has_blend else "best"
+    r2   = metrics_df.loc[row, "R²"]
+    mape = metrics_df.loc[row, "MAPE (%)"]
+    rmse = metrics_df.loc[row, "RMSE (kg)"]
     cov  = metrics_df.loc["cptc_pi", "pi_coverage"]
+    alpha = float(metrics_df.loc["blend", "blend_alpha"]) if has_blend and "blend_alpha" in metrics_df.columns else 0.0
 
     st.markdown("#### Model Performance")
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("R² (Best Model)",  f"{r2:.3f}",       help="Closer to 1 is better.")
-    k2.metric("MAPE (%)",         f"{mape:.1f}%",     help="Mean Absolute % Error on T17.")
-    k3.metric("RMSE (kg)",        f"{rmse:,.0f} kg",  help="Root Mean Squared Error.")
-    k4.metric("90% PI Coverage",  f"{cov*100:.1f}%",  help="Actual values inside the 90% band.")
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("R² (Blend)",       f"{r2:.3f}",        help="Closer to 1 is better.")
+    k2.metric("MAPE (%)",         f"{mape:.1f}%",      help="Mean Absolute % Error on T17.")
+    k3.metric("RMSE (kg)",        f"{rmse:,.0f} kg",   help="Root Mean Squared Error.")
+    k4.metric("90% PI Coverage",  f"{cov*100:.1f}%",   help="Actual values inside the 90% band.")
+    k5.metric("Blend α",          f"{alpha:.2f}",      help="Weight on historical avg (0=pure model, 1=pure history).")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### Actual vs. Predicted — Test Season (T17)")
@@ -84,14 +90,19 @@ def render_greenhouse(cfg: dict):
         name="90% Prediction Interval", hoverinfo="skip",
     ))
     fig.add_trace(go.Scatter(
-        x=x_labels, y=ensemble_pred.tolist(), mode="lines",
-        line=dict(color="#43A047", width=2, dash="dot"),
-        name="Ensemble (Top-20)",
+        x=x_labels, y=kg_hist_avg.tolist(), mode="lines",
+        line=dict(color="#9C27B0", width=2, dash="dot"),
+        name="Historical Avg (Baseline)",
     ))
     fig.add_trace(go.Scatter(
-        x=x_labels, y=y_pred.tolist(), mode="lines+markers",
-        line=dict(color="#FB8C00", width=2.5, dash="dash"),
-        marker=dict(size=5), name="Best Prediction",
+        x=x_labels, y=y_pred.tolist(), mode="lines",
+        line=dict(color="#43A047", width=1.5, dash="dash"),
+        name="CNN-RNN (Best)",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x_labels, y=blend_pred.tolist(), mode="lines+markers",
+        line=dict(color="#FB8C00", width=2.5),
+        marker=dict(size=6), name=f"Blend (α={alpha:.2f})",
     ))
     fig.add_trace(go.Scatter(
         x=x_labels, y=y_true.tolist(), mode="lines+markers",
@@ -110,20 +121,22 @@ def render_greenhouse(cfg: dict):
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("#### Detailed Results by Week")
-    error_pct = np.abs((y_true - y_pred) / np.where(y_true == 0, 1, y_true)) * 100
+    error_pct = np.abs((y_true - blend_pred) / np.where(y_true == 0, 1, y_true)) * 100
     table_df = pd.DataFrame({
         "Week":             x_labels,
         "Actual (kg)":      np.round(y_true, 1),
-        "Predicted (kg)":   np.round(y_pred, 1),
+        "Blend (kg)":       np.round(blend_pred, 1),
+        "CNN-RNN (kg)":     np.round(y_pred, 1),
+        "Hist Avg (kg)":    np.round(kg_hist_avg, 1),
         "Lower Bound (kg)": np.round(pi_lower, 1),
         "Upper Bound (kg)": np.round(pi_upper, 1),
         "Error (%)":        np.round(error_pct, 2),
     })
     st.dataframe(
         table_df.style
-            .format({"Actual (kg)": "{:,.1f}", "Predicted (kg)": "{:,.1f}",
-                     "Lower Bound (kg)": "{:,.1f}", "Upper Bound (kg)": "{:,.1f}",
-                     "Error (%)": "{:.2f}%"})
+            .format({"Actual (kg)": "{:,.1f}", "Blend (kg)": "{:,.1f}", "CNN-RNN (kg)": "{:,.1f}",
+                     "Hist Avg (kg)": "{:,.1f}", "Lower Bound (kg)": "{:,.1f}",
+                     "Upper Bound (kg)": "{:,.1f}", "Error (%)": "{:.2f}%"})
             .background_gradient(subset=["Error (%)"], cmap="RdYlGn_r", vmin=0, vmax=30),
         use_container_width=True, hide_index=True,
     )

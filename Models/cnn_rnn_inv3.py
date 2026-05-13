@@ -27,6 +27,7 @@ INV_ID = 3
 HP = {
     'seq_len': 6,
     'horizon': 3,
+    'alignment': 'positional',
     'batch_size': 8,
     'lag_features': [],
     'include_rolling_mean': False,

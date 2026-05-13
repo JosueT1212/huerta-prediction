@@ -302,6 +302,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                       if c in df_riego.columns]
 
     all_season_frames = []
+    all_sensor_season_frames = []
 
     for temp in SEASON_NAMES:
         # Get daily data for this season
@@ -356,6 +357,21 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             # data for the first production weeks.
             weekly_env = daily.groupby('week_key').agg(agg_dict).reset_index()
             weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
+
+            # Build full sensor frame (all sensor rows including pre-production weeks)
+            _sf = weekly_env.copy()
+            _sf['temporada'] = temp
+            _sf['week_in_season'] = np.arange(len(_sf))
+            # Merge pheno features if available (pre-production rows get 0)
+            if pheno_feat_cols:
+                _pheno_s = df_pheno[df_pheno['temporada'] == temp][['semana'] + pheno_feat_cols].copy()
+                _pheno_s = _pheno_s.rename(columns={'semana': '_sensor_semana'})
+                _sf['_sensor_semana'] = (_sf['week_key'] % 100).astype(int)
+                _sf = _sf.merge(_pheno_s, on='_sensor_semana', how='left')
+                _sf = _sf.drop(columns=['_sensor_semana'])
+                for col in pheno_feat_cols:
+                    _sf[col] = _sf[col].ffill().bfill().fillna(0)
+            all_sensor_season_frames.append(_sf)
 
             # Keep production in original Excel order (chronological across year boundary)
             # DO NOT sort by semana — seasons span 52→1, so numeric sort reverses them.
@@ -543,6 +559,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
                 all_season_frames.append(weekly)
 
     df_all = pd.concat(all_season_frames, ignore_index=True)
+    df_sensor_all = pd.concat(all_sensor_season_frames, ignore_index=True) if all_sensor_season_frames else None
 
     # Split: configurable train/val seasons, T17 always test
     train_seasons = train_seasons if train_seasons is not None else ['T13', 'T14', 'T15']
@@ -568,41 +585,44 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
     print(f'    Test samples:  {len(test_df)} (T17)')
     print(f'    Features ({len(feature_cols)}): {feature_cols}')
 
-    return train_df, val_df, test_df, feature_cols
+    return train_df, val_df, test_df, feature_cols, df_sensor_all
 
 
 # ============================================================================
 # 2. DATASET & DATALOADER
 # ============================================================================
 
-def make_sequences_per_season(X, y, temporadas, seq_len, stride=1):
+def make_sequences_per_season(Xs, Xt, y, temporadas_s, temporadas_y, seq_len, stride=1):
     """
-    Build (seq_len, n_features) windows strictly within each season.
-    No window ever crosses a season boundary — each season is treated
-    as an independent time series.
+    Build sliding windows strictly within each season.
+    Xs and Xt may have more rows than y (e.g. pre-production sensor weeks).
+    For each production target j, uses sensor window [j : j+seq_len].
+    Requires sensor rows >= N_kg + seq_len - 1 per season.
 
-    stride=1  : dense sliding window (weekly resolution default)
-    stride=7  : one window per production week (daily resolution) — avoids
-                building 7 identical-target sequences per week.
+    stride=1 : dense sliding window (weekly resolution)
+    stride=7 : one window per production week (daily resolution)
 
-    Returns seqs_X, seqs_y, seqs_pos where seqs_pos is the 0-indexed
-    position of each sequence within its season (used for week-weighted loss).
+    Returns seqs_Xs, seqs_Xt, seqs_y, seqs_pos.
     """
-    seqs_X, seqs_y, seqs_pos = [], [], []
-    for temp in pd.Series(temporadas).unique():
-        mask = np.array(temporadas) == temp
-        X_s = X[mask]
-        y_s = y[mask]
-        seq_idx = 0
-        for i in range(0, len(X_s) - seq_len + 1, stride):
-            seqs_X.append(X_s[i:i + seq_len])
-            seqs_y.append(y_s[i])
-            seqs_pos.append(seq_idx)
-            seq_idx += 1
-    if len(seqs_X) == 0:
+    seqs_Xs, seqs_Xt, seqs_y, seqs_pos = [], [], [], []
+    for temp in pd.Series(temporadas_y).unique():
+        mask_s = np.array(temporadas_s) == temp
+        mask_y = np.array(temporadas_y) == temp
+        Xs_s = Xs[mask_s]
+        Xt_s = Xt[mask_s]
+        y_s  = y[mask_y]
+        for j in range(0, len(y_s), stride):
+            if j + seq_len > len(Xs_s):
+                break
+            seqs_Xs.append(Xs_s[j : j + seq_len])
+            seqs_Xt.append(Xt_s[j : j + seq_len])
+            seqs_y.append(y_s[j])
+            seqs_pos.append(j)
+    if len(seqs_Xs) == 0:
         raise ValueError('No sequences built — check seq_len vs season length.')
-    return (np.array(seqs_X, dtype=np.float32),
-            np.array(seqs_y, dtype=np.float32),
+    return (np.array(seqs_Xs, dtype=np.float32),
+            np.array(seqs_Xt, dtype=np.float32),
+            np.array(seqs_y,  dtype=np.float32),
             np.array(seqs_pos, dtype=np.int32))
 
 
@@ -748,14 +768,14 @@ def set_seed(seed):
 
 def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0):
     """Load data, normalize, split into train/val/test, create DataLoaders."""
-    train_df, val_df, test_df, feature_cols = build_dataset_for_greenhouse(
+    train_df, val_df, test_df, feature_cols, df_sensor_all = build_dataset_for_greenhouse(
         invernadero_id, horizon=hp['horizon'],
         lag_features=hp.get('lag_features', [1]),
         include_rolling_mean=hp.get('include_rolling_mean', False),
         train_seasons=train_seasons, val_season=val_season,
         early_season_lag=hp.get('early_season_lag', 0),
         resolution=hp.get('resolution', 'weekly'),
-        alignment=hp.get('alignment', 'iso'),
+        alignment=hp.get('alignment', 'positional'),
         sensor_lead_weeks=hp.get('sensor_lead_weeks', None),
     )
 
@@ -803,10 +823,23 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     y_val   = scaler_y.transform(y_val.reshape(-1, 1)).flatten()
     y_test  = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
 
+    # ── Sensor/temporal source: use full sensor frames when available ──
+    if df_sensor_all is not None:
+        sensor_tr_df = df_sensor_all[df_sensor_all['temporada'].isin(
+            train_seasons if train_seasons is not None else ['T13', 'T14', 'T15'])].reset_index(drop=True)
+        sensor_va_df = df_sensor_all[df_sensor_all['temporada'] == (val_season or 'T16')].reset_index(drop=True)
+        sensor_te_df = df_sensor_all[df_sensor_all['temporada'] == 'T17'].reset_index(drop=True)
+        # Only keep columns present in both sensor frames and feature_cols
+        avail_sensor  = [c for c in sensor_cols  if c in sensor_tr_df.columns]
+        avail_temporal = [c for c in temporal_cols if c in sensor_tr_df.columns]
+    else:
+        sensor_tr_df, sensor_va_df, sensor_te_df = train_df, val_df, test_df
+        avail_sensor, avail_temporal = sensor_cols, temporal_cols
+
     # ── Sensor features: scale + PCA ──
-    Xs_tr = train_df[sensor_cols].values.astype(np.float32)
-    Xs_va = val_df[sensor_cols].values.astype(np.float32)
-    Xs_te = test_df[sensor_cols].values.astype(np.float32)
+    Xs_tr = sensor_tr_df[avail_sensor].values.astype(np.float32)
+    Xs_va = sensor_va_df[avail_sensor].values.astype(np.float32)
+    Xs_te = sensor_te_df[avail_sensor].values.astype(np.float32)
 
     scaler_Xs = _scaler()
     Xs_tr = scaler_Xs.fit_transform(Xs_tr)
@@ -818,46 +851,54 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     Xs_va = pca.transform(Xs_va)
     Xs_te = pca.transform(Xs_te)
     n_sensor_pca = pca.n_components_
-    print(f'  PCA (sensor only): {len(sensor_cols)} -> {n_sensor_pca} components')
+    print(f'  PCA (sensor only): {len(avail_sensor)} -> {n_sensor_pca} components')
 
     # ── Phenology features: MinMax scale only (no PCA), concatenate with sensor PCA ──
     if pheno_cols:
-        scaler_Xp = MinMaxScaler(feature_range=(-1, 1))
-        Xp_tr = scaler_Xp.fit_transform(train_df[pheno_cols].values.astype(np.float32))
-        Xp_va = scaler_Xp.transform(val_df[pheno_cols].values.astype(np.float32))
-        Xp_te = scaler_Xp.transform(test_df[pheno_cols].values.astype(np.float32))
-        Xs_tr = np.hstack([Xs_tr, Xp_tr])
-        Xs_va = np.hstack([Xs_va, Xp_va])
-        Xs_te = np.hstack([Xs_te, Xp_te])
-        print(f'  CNN input: {n_sensor_pca} PCA + {len(pheno_cols)} pheno = {Xs_tr.shape[1]} channels')
+        avail_pheno_s = [c for c in pheno_cols if c in sensor_tr_df.columns]
+        avail_pheno_p = [c for c in pheno_cols if c in train_df.columns]
+        _pheno_src_tr = sensor_tr_df if avail_pheno_s else train_df
+        _pheno_src_va = sensor_va_df if avail_pheno_s else val_df
+        _pheno_src_te = sensor_te_df if avail_pheno_s else test_df
+        _pheno_cols   = avail_pheno_s if avail_pheno_s else avail_pheno_p
+        if _pheno_cols:
+            scaler_Xp = MinMaxScaler(feature_range=(-1, 1))
+            Xp_tr = scaler_Xp.fit_transform(_pheno_src_tr[_pheno_cols].values.astype(np.float32))
+            Xp_va = scaler_Xp.transform(_pheno_src_va[_pheno_cols].values.astype(np.float32))
+            Xp_te = scaler_Xp.transform(_pheno_src_te[_pheno_cols].values.astype(np.float32))
+            Xs_tr = np.hstack([Xs_tr, Xp_tr])
+            Xs_va = np.hstack([Xs_va, Xp_va])
+            Xs_te = np.hstack([Xs_te, Xp_te])
+            print(f'  CNN input: {n_sensor_pca} PCA + {len(_pheno_cols)} pheno = {Xs_tr.shape[1]} channels')
     n_sensor_pca = Xs_tr.shape[1]
 
-    # ── Temporal features: each gets its own RobustScaler (or MinMaxScaler) ──
-    Xt_tr = train_df[temporal_cols].values.astype(np.float32)
-    Xt_va = val_df[temporal_cols].values.astype(np.float32)
-    Xt_te = test_df[temporal_cols].values.astype(np.float32)
+    # ── Temporal features ──
+    Xt_tr = sensor_tr_df[avail_temporal].values.astype(np.float32)
+    Xt_va = sensor_va_df[avail_temporal].values.astype(np.float32)
+    Xt_te = sensor_te_df[avail_temporal].values.astype(np.float32)
 
     scaler_Xt = _scaler()
     Xt_tr = scaler_Xt.fit_transform(Xt_tr)
     Xt_va = scaler_Xt.transform(Xt_va)
     Xt_te = scaler_Xt.transform(Xt_te)
-    n_temporal = len(temporal_cols)
+    n_temporal = len(avail_temporal)
 
     # ── Sequences ──
     seq_len  = hp['seq_len']
-    # stride=7 for daily resolution: one 42-day window per production week,
-    # avoiding 7 overlapping sequences that share the same weekly target.
     stride   = hp.get('stride', 7 if hp.get('resolution') == 'daily' else 1)
-    temps_tr = train_df['temporada'].values
-    temps_va = val_df['temporada'].values
-    temps_te = test_df['temporada'].values
+    temps_sensor_tr = sensor_tr_df['temporada'].values
+    temps_sensor_va = sensor_va_df['temporada'].values
+    temps_sensor_te = sensor_te_df['temporada'].values
+    temps_prod_tr   = train_df['temporada'].values
+    temps_prod_va   = val_df['temporada'].values
+    temps_prod_te   = test_df['temporada'].values
 
-    Xs_tr_seq, y_tr, pos_tr = make_sequences_per_season(Xs_tr, y_train, temps_tr, seq_len, stride)
-    Xt_tr_seq, _,    _      = make_sequences_per_season(Xt_tr, y_train, temps_tr, seq_len, stride)
-    Xs_va_seq, y_va, pos_va = make_sequences_per_season(Xs_va, y_val,   temps_va, seq_len, stride)
-    Xt_va_seq, _,    _      = make_sequences_per_season(Xt_va, y_val,   temps_va, seq_len, stride)
-    Xs_te_seq, y_te, _      = make_sequences_per_season(Xs_te, y_test,  temps_te, seq_len, stride)
-    Xt_te_seq, _,    _      = make_sequences_per_season(Xt_te, y_test,  temps_te, seq_len, stride)
+    Xs_tr_seq, Xt_tr_seq, y_tr, pos_tr = make_sequences_per_season(
+        Xs_tr, Xt_tr, y_train, temps_sensor_tr, temps_prod_tr, seq_len, stride)
+    Xs_va_seq, Xt_va_seq, y_va, pos_va = make_sequences_per_season(
+        Xs_va, Xt_va, y_val,   temps_sensor_va, temps_prod_va, seq_len, stride)
+    Xs_te_seq, Xt_te_seq, y_te, _      = make_sequences_per_season(
+        Xs_te, Xt_te, y_test,  temps_sensor_te, temps_prod_te, seq_len, stride)
     print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
           + (f' (stride={stride})' if stride > 1 else ''))
 
@@ -887,7 +928,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     print(f'  Train y variance (scaled {transform}): {var_y_train:.6f}')
 
     _has_wk = 'prod_week_key' in test_df.columns
-    test_week_keys = test_df['prod_week_key'].values[:len(y_te)] if _has_wk else np.arange(len(y_te))
+    test_week_keys = test_df['prod_week_key'].values if _has_wk else np.arange(len(y_te))
     return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys
 
 

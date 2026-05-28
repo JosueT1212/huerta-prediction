@@ -194,7 +194,7 @@ def prepare_data_flat(invernadero_id, hp,
     Xs_te_seq, Xt_te_seq, y_te_seq, _ = make_sequences_per_season(
         Xs_te, Xt_te, y_test,  temps_s_te, temps_p_te, seq_len)
 
-    # ── 10. Flatten sequences → (N, 30) ──
+    # ── 10. Flatten sequences → (N, F) ──
     X_train = flatten_sequences(Xs_tr_seq, Xt_tr_seq)
     X_val   = flatten_sequences(Xs_va_seq, Xt_va_seq)
     X_test  = flatten_sequences(Xs_te_seq, Xt_te_seq)

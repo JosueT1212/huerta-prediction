@@ -22,4 +22,5 @@ Xs_tr_seq, Xt_tr_seq, y_tr, Xs_va_seq, Xt_va_seq, y_va, Xs_te_seq, Xt_te_seq, y_
 assert isinstance(Xs_tr_seq, np.ndarray), 'Xs_tr_seq must be ndarray'
 assert Xs_tr_seq.ndim == 3, f'Expected 3D array, got {Xs_tr_seq.ndim}D'
 assert len(y_tr) == len(Xs_tr_seq), 'y_tr and Xs_tr_seq must have same length'
-print(f'PASS: shapes train={Xs_tr_seq.shape}, val={Xs_va_seq.shape}, test={Xs_te_seq.shape}')
+assert len(week_keys) == len(y_te), f'week_keys/y_te mismatch: {len(week_keys)} vs {len(y_te)}'
+print(f'PASS: shapes train={Xs_tr_seq.shape}, val={Xs_va_seq.shape}, test={Xs_te_seq.shape}, week_keys={len(week_keys)}')

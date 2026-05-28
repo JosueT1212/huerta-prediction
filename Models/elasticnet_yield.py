@@ -211,9 +211,17 @@ def prepare_data_flat(invernadero_id, hp,
             scaler_y, bc_lambda, test_week_keys)
 
 
+def _inverse_transform(y_scaled, scaler_y, bc_lambda):
+    """Invert MinMax scaling then Box-Cox transform to original kg space."""
+    y_bc = scaler_y.inverse_transform(y_scaled.reshape(-1, 1)).flatten()
+    if bc_lambda == 'log':
+        return np.expm1(y_bc)
+    return inv_boxcox(np.clip(y_bc, 0, None), bc_lambda) - 1.0
+
+
 def grid_search_elasticnet(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
     """
-    Grid search over alpha x l1_ratio, scored by val R².
+    Grid search over alpha x l1_ratio, scored by val R² in original kg space.
     Returns (best_model, best_params, best_val_r2).
     """
     alphas    = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
@@ -223,6 +231,9 @@ def grid_search_elasticnet(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
     best_params = {}
     best_model  = None
 
+    # Precompute val targets in kg (invariant across grid iterations)
+    y_val_kg = _inverse_transform(y_val, scaler_y, bc_lambda)
+
     for alpha in alphas:
         for l1_ratio in l1_ratios:
             model = ElasticNet(
@@ -230,25 +241,16 @@ def grid_search_elasticnet(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
                 max_iter=10000, random_state=42
             )
             model.fit(X_train, y_train)
-            y_pred_scaled = model.predict(X_val)
-            # Inverse transform: MinMax → Box-Cox → original kg
-            y_pred_bc = scaler_y.inverse_transform(
-                y_pred_scaled.reshape(-1, 1)).flatten()
-            if bc_lambda == 'log':
-                y_pred_kg = np.expm1(y_pred_bc)
-            else:
-                y_pred_kg = inv_boxcox(np.clip(y_pred_bc, 0, None), bc_lambda) - 1.0
-            y_val_bc = scaler_y.inverse_transform(
-                y_val.reshape(-1, 1)).flatten()
-            if bc_lambda == 'log':
-                y_val_kg = np.expm1(y_val_bc)
-            else:
-                y_val_kg = inv_boxcox(np.clip(y_val_bc, 0, None), bc_lambda) - 1.0
+            y_pred_kg = _inverse_transform(model.predict(X_val), scaler_y, bc_lambda)
             r2 = r2_score(y_val_kg, y_pred_kg)
             if r2 > best_r2:
                 best_r2     = r2
                 best_params = {'alpha': alpha, 'l1_ratio': l1_ratio, 'val_r2': r2}
                 best_model  = model
+
+    if best_model is None:
+        raise RuntimeError(
+            'grid_search_elasticnet: all 36 combos produced NaN R²; check training data.')
 
     print(f'  Best val R²={best_r2:.4f}  alpha={best_params["alpha"]}  '
           f'l1_ratio={best_params["l1_ratio"]}')
@@ -259,15 +261,8 @@ def evaluate_elasticnet(model, X_test, y_test, scaler_y, bc_lambda):
     """
     Evaluate on test set. Returns (y_true_kg, y_pred_kg, metrics_dict).
     """
-    def inv_transform(y_scaled):
-        y_bc = scaler_y.inverse_transform(y_scaled.reshape(-1, 1)).flatten()
-        if bc_lambda == 'log':
-            return np.expm1(y_bc)
-        return inv_boxcox(np.clip(y_bc, 0, None), bc_lambda) - 1.0
-
-    y_pred_scaled = model.predict(X_test)
-    y_true = inv_transform(y_test)
-    y_pred = inv_transform(y_pred_scaled)
+    y_true = _inverse_transform(y_test, scaler_y, bc_lambda)
+    y_pred = _inverse_transform(model.predict(X_test), scaler_y, bc_lambda)
     metrics = compute_metrics(y_true, y_pred)
     return y_true, y_pred, metrics
 
@@ -308,7 +303,9 @@ def save_results(inv_id, best_params, metrics, y_true, y_pred, test_week_keys):
     plt.savefig(plot_path, dpi=150)
     plt.close()
 
+    metrics_path = RESULTS_DIR / f'elasticnet_inv{inv_id}_metrics.csv'
+    preds_path   = RESULTS_DIR / f'elasticnet_inv{inv_id}_predictions.npz'
     print(f'  Params  → {params_path}')
-    print(f'  Metrics → results/elasticnet_inv{inv_id}_metrics.csv')
-    print(f'  Preds   → results/elasticnet_inv{inv_id}_predictions.npz')
+    print(f'  Metrics → {metrics_path}')
+    print(f'  Preds   → {preds_path}')
     print(f'  Plot    → {plot_path}')

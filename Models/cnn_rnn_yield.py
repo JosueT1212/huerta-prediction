@@ -588,6 +588,29 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 # 2. DATASET & DATALOADER
 # ============================================================================
 
+def _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=HORIZON):
+    """Trim sensor_df front per season so eff_horizon = gap - seq_len = horizon.
+
+    extra_skip = max(0, gap - seq_len - horizon)
+    prod_df is used only to read sensor_gap; it is NOT modified.
+    sensor_df rows without a matching season in prod_df are kept unchanged.
+    """
+    parts = []
+    for temp in sensor_df['temporada'].unique():
+        s = sensor_df[sensor_df['temporada'] == temp].copy()
+        p = prod_df[prod_df['temporada'] == temp]
+        if len(p) == 0 or 'sensor_gap' not in p.columns:
+            parts.append(s)
+            continue
+        gap = int(p['sensor_gap'].iloc[0])
+        extra_skip = max(0, gap - seq_len - horizon)
+        if extra_skip >= len(s):
+            raise ValueError(
+                f'Season {temp}: extra_skip={extra_skip} >= sensor rows={len(s)}.')
+        parts.append(s.iloc[extra_skip:].reset_index(drop=True))
+    return pd.concat(parts, ignore_index=True)
+
+
 def make_sequences_per_season(Xs, Xt, y, temporadas_s, temporadas_y, seq_len, stride=1):
     """
     Build sliding windows strictly within each season.
@@ -761,7 +784,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0):
+def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0, return_arrays=False):
     """Load data, normalize, split into train/val/test, create DataLoaders."""
     train_df, val_df, test_df, feature_cols, df_sensor_all = build_dataset_for_greenhouse(
         invernadero_id, horizon=0,
@@ -824,6 +847,12 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
             train_seasons if train_seasons is not None else ['T13', 'T14', 'T15'])].reset_index(drop=True)
         sensor_va_df = df_sensor_all[df_sensor_all['temporada'] == (val_season or 'T16')].reset_index(drop=True)
         sensor_te_df = df_sensor_all[df_sensor_all['temporada'] == 'T17'].reset_index(drop=True)
+        # Gap normalisation: trim sensor front so eff_horizon = gap - seq_len = HORIZON
+        _seq = hp.get('seq_len', 6)
+        sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq)
+        sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq)
+        sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq)
+        print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}): sensor frames trimmed per season')
         # Only keep columns present in both sensor frames and feature_cols
         avail_sensor  = [c for c in sensor_cols  if c in sensor_tr_df.columns]
         avail_temporal = [c for c in temporal_cols if c in sensor_tr_df.columns]
@@ -897,6 +926,14 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         Xs_te, Xt_te, y_test,  temps_sensor_te, temps_prod_te, seq_len, stride)
     print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
           + (f' (stride={stride})' if stride > 1 else ''))
+
+    if return_arrays:
+        _has_wk = 'prod_week_key' in test_df.columns
+        _week_keys = test_df['prod_week_key'].values if _has_wk else np.arange(len(y_te))
+        return (Xs_tr_seq, Xt_tr_seq, y_tr,
+                Xs_va_seq, Xt_va_seq, y_va,
+                Xs_te_seq, Xt_te_seq, y_te,
+                scaler_y, bc_lambda, _week_keys)
 
     def to_ds(Xs, Xt, y):
         return TensorDataset(torch.FloatTensor(Xs), torch.FloatTensor(Xt),

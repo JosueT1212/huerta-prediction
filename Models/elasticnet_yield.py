@@ -26,7 +26,8 @@ from cnn_rnn_yield import (
 
 def flatten_sequences(Xs_seq, Xt_seq):
     """
-    Flatten (N, seq_len, n_sensor+pheno) + (N, seq_len, n_temporal) → (N, 30).
+    Flatten (N, seq_len, n_sensor+pheno) + (N, seq_len, n_temporal) → (N, F).
+    F = 2*n_sensor_pheno + n_temporal (typically 30 with default PCA and 8 pheno cols).
 
     Per sample:
       mean over seq_len of Xs  → n_sensor_pheno values
@@ -42,30 +43,30 @@ def flatten_sequences(Xs_seq, Xt_seq):
 def _apply_gap_normalization(sensor_df, prod_df, seq_len, target_horizon=HORIZON):
     """
     Per season: drop first max(0, gap - seq_len - target_horizon) rows from
-    BOTH sensor and production frames so eff_horizon = target_horizon for all
-    seasons where gap >= seq_len + target_horizon.
+    the SENSOR frame only, advancing its start so eff_horizon = target_horizon
+    for seasons where gap >= seq_len + target_horizon.
 
-    Positional alignment is preserved: sensor[i] still pairs with prod[i]
-    after trimming. Short-gap seasons (gap < seq_len + target_horizon) are
-    left unchanged.
+    prod_df is returned unchanged — the gap is encoded in the length difference
+    between sensor_df and prod_df, so only sensor needs trimming.
 
-    Returns (sensor_df_norm, prod_df_norm) with same columns.
+    Returns (sensor_df_norm, prod_df_unchanged).
     """
     sensor_parts = []
-    prod_parts   = []
     for temp in prod_df['temporada'].unique():
         s = sensor_df[sensor_df['temporada'] == temp].copy()
-        p = prod_df[prod_df['temporada'] == temp].copy()
+        p = prod_df[prod_df['temporada'] == temp]
         if len(p) == 0 or 'sensor_gap' not in p.columns:
             sensor_parts.append(s)
-            prod_parts.append(p)
             continue
         gap        = int(p['sensor_gap'].iloc[0])
         extra_skip = max(0, gap - seq_len - target_horizon)
+        if extra_skip >= len(s):
+            raise ValueError(
+                f'Season {temp}: extra_skip={extra_skip} >= sensor rows={len(s)}. '
+                f'gap={gap}, seq_len={seq_len}, target_horizon={target_horizon}')
         sensor_parts.append(s.iloc[extra_skip:].reset_index(drop=True))
-        prod_parts.append(p.iloc[extra_skip:].reset_index(drop=True))
-    return (pd.concat(sensor_parts, ignore_index=True),
-            pd.concat(prod_parts,   ignore_index=True))
+    sensor_norm = pd.concat(sensor_parts, ignore_index=True)
+    return sensor_norm, prod_df  # prod_df unchanged
 
 
 def prepare_data_flat(invernadero_id, hp,
@@ -75,7 +76,7 @@ def prepare_data_flat(invernadero_id, hp,
 
     Returns
     -------
-    X_train, X_val, X_test : np.ndarray, shape (N, 30)
+    X_train, X_val, X_test : np.ndarray, shape (N, F) where F = 2*n_sensor_pheno + n_temporal
     y_train, y_val, y_test : np.ndarray, shape (N,)  — Box-Cox + MinMax scaled
     scaler_y               : fitted MinMaxScaler for y
     bc_lambda              : Box-Cox lambda (float)

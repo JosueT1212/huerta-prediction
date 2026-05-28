@@ -209,3 +209,106 @@ def prepare_data_flat(invernadero_id, hp,
     return (X_train, X_val, X_test,
             y_tr_seq, y_va_seq, y_te_seq,
             scaler_y, bc_lambda, test_week_keys)
+
+
+def grid_search_elasticnet(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
+    """
+    Grid search over alpha x l1_ratio, scored by val R².
+    Returns (best_model, best_params, best_val_r2).
+    """
+    alphas    = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
+    l1_ratios = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+
+    best_r2     = -np.inf
+    best_params = {}
+    best_model  = None
+
+    for alpha in alphas:
+        for l1_ratio in l1_ratios:
+            model = ElasticNet(
+                alpha=alpha, l1_ratio=l1_ratio,
+                max_iter=10000, random_state=42
+            )
+            model.fit(X_train, y_train)
+            y_pred_scaled = model.predict(X_val)
+            # Inverse transform: MinMax → Box-Cox → original kg
+            y_pred_bc = scaler_y.inverse_transform(
+                y_pred_scaled.reshape(-1, 1)).flatten()
+            if bc_lambda == 'log':
+                y_pred_kg = np.expm1(y_pred_bc)
+            else:
+                y_pred_kg = inv_boxcox(np.clip(y_pred_bc, 0, None), bc_lambda) - 1.0
+            y_val_bc = scaler_y.inverse_transform(
+                y_val.reshape(-1, 1)).flatten()
+            if bc_lambda == 'log':
+                y_val_kg = np.expm1(y_val_bc)
+            else:
+                y_val_kg = inv_boxcox(np.clip(y_val_bc, 0, None), bc_lambda) - 1.0
+            r2 = r2_score(y_val_kg, y_pred_kg)
+            if r2 > best_r2:
+                best_r2     = r2
+                best_params = {'alpha': alpha, 'l1_ratio': l1_ratio, 'val_r2': r2}
+                best_model  = model
+
+    print(f'  Best val R²={best_r2:.4f}  alpha={best_params["alpha"]}  '
+          f'l1_ratio={best_params["l1_ratio"]}')
+    return best_model, best_params, best_r2
+
+
+def evaluate_elasticnet(model, X_test, y_test, scaler_y, bc_lambda):
+    """
+    Evaluate on test set. Returns (y_true_kg, y_pred_kg, metrics_dict).
+    """
+    def inv_transform(y_scaled):
+        y_bc = scaler_y.inverse_transform(y_scaled.reshape(-1, 1)).flatten()
+        if bc_lambda == 'log':
+            return np.expm1(y_bc)
+        return inv_boxcox(np.clip(y_bc, 0, None), bc_lambda) - 1.0
+
+    y_pred_scaled = model.predict(X_test)
+    y_true = inv_transform(y_test)
+    y_pred = inv_transform(y_pred_scaled)
+    metrics = compute_metrics(y_true, y_pred)
+    return y_true, y_pred, metrics
+
+
+def save_results(inv_id, best_params, metrics, y_true, y_pred, test_week_keys):
+    """Save params JSON, metrics CSV, predictions NPZ, results plot."""
+    import json
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    # Params JSON
+    params_path = RESULTS_DIR / f'elasticnet_inv{inv_id}_params.json'
+    with open(params_path, 'w') as f:
+        json.dump(best_params, f, indent=2)
+
+    # Metrics CSV
+    rows = [{'invernadero': inv_id, 'model': 'best', **metrics}]
+    pd.DataFrame(rows).to_csv(
+        RESULTS_DIR / f'elasticnet_inv{inv_id}_metrics.csv', index=False)
+
+    # Predictions NPZ
+    np.savez_compressed(
+        RESULTS_DIR / f'elasticnet_inv{inv_id}_predictions.npz',
+        y_true=y_true, y_pred=y_pred, week_keys=test_week_keys,
+    )
+
+    # Results plot
+    fig, ax = plt.subplots(figsize=(12, 4))
+    ax.plot(y_true, label='Actual', marker='o', ms=4)
+    ax.plot(y_pred, label='ElasticNet', marker='s', ms=4, linestyle='--')
+    ax.set_title(f'Invernadero {inv_id} — ElasticNet T17 Predictions')
+    ax.set_xlabel('Week (test sequence)')
+    ax.set_ylabel('kg')
+    ax.legend()
+    plt.tight_layout()
+    plot_path = RESULTS_DIR / f'elasticnet_inv{inv_id}_results.png'
+    plt.savefig(plot_path, dpi=150)
+    plt.close()
+
+    print(f'  Params  → {params_path}')
+    print(f'  Metrics → results/elasticnet_inv{inv_id}_metrics.csv')
+    print(f'  Preds   → results/elasticnet_inv{inv_id}_predictions.npz')
+    print(f'  Plot    → {plot_path}')

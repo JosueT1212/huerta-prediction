@@ -3,9 +3,6 @@ SVR Yield Prediction — Shared Functions
 ========================================
 flatten_sequences, grid_search_svr, evaluate_svr, save_results
 """
-import warnings
-warnings.filterwarnings('ignore')
-
 import json
 from pathlib import Path
 
@@ -66,6 +63,7 @@ def grid_search_svr(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
     best_r2, best_params, best_model = -np.inf, {}, None
     y_val_kg = _inverse_transform(y_val, scaler_y, bc_lambda)
 
+    import warnings
     total = len(Cs) * len(gammas) * len(epsilons)
     done  = 0
     for C in Cs:
@@ -73,7 +71,9 @@ def grid_search_svr(X_train, y_train, X_val, y_val, scaler_y, bc_lambda):
             for epsilon in epsilons:
                 model = SVR(kernel='rbf', C=C, gamma=gamma,
                             epsilon=epsilon, max_iter=50000)
-                model.fit(X_train, y_train)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    model.fit(X_train, y_train)
                 y_pred_kg = _inverse_transform(
                     model.predict(X_val), scaler_y, bc_lambda)
                 r2 = r2_score(y_val_kg, y_pred_kg)
@@ -100,6 +100,7 @@ def evaluate_svr(model, X_test, y_test, scaler_y, bc_lambda):
 
 def save_results(inv_id, best_params, metrics, y_true, y_pred, week_keys):
     """Save params JSON, metrics CSV, predictions NPZ, results PNG."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     tag = f'svr_inv{inv_id}'
 
     # params JSON

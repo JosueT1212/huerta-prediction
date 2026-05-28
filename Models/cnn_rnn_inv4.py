@@ -13,9 +13,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import torch
+import yaml
+from pathlib import Path
 
 from cnn_rnn_yield import (
-    DEVICE, RESULTS_DIR,
+    DEVICE, RESULTS_DIR, HORIZON,
     prepare_data, set_seed, init_weights,
     CNNRNN, train_model, evaluate_model, compute_metrics, print_metrics,
     plot_results_per_greenhouse, compute_cptc_intervals,
@@ -23,37 +25,9 @@ from cnn_rnn_yield import (
 
 INV_ID = 4
 
-HP = {
-    'seq_len': 6,
-    'horizon': 3,
-    'alignment': 'positional',
-    'batch_size': 8,
-    'lag_features': [],
-    'include_rolling_mean': False,
-    # CNN
-    'cnn_filters': 32,
-    'cnn_kernel_size': 2,
-    'cnn_padding': 1,
-    'num_cnn_blocks': 1,
-    # RNN
-    'lstm_hidden': 64,
-    'lstm_layers': 1,
-    'fc_hidden': 32,
-    # Training
-    'dropout': 0.3,
-    'learning_rate': 2e-3,
-    'weight_decay': 1e-4,
-    'corr_weight': 0.5,
-    'epochs': 1000,
-    'patience': 250,
-    'init_methods': ['default', 'xavier', 'orthogonal', 'lecun'],
-    'seeds': [42, 7, 123, 2024, 99, 13, 55, 777, 314, 2025,
-              0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
-              11, 12, 14, 15, 16, 17, 18, 19, 20, 21,
-              22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-              32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-              100, 200, 500, 1000],
-}
+_hp_path = Path(__file__).parent / 'hp_inv4.yaml'
+with open(_hp_path) as f:
+    HP = yaml.safe_load(f)
 
 TRAIN_SEASONS = ['T13', 'T14', 'T15']
 VAL_SEASON    = 'T16'
@@ -63,11 +37,12 @@ def main():
     print('=' * 60)
     print('  CNN-RNN Invernadero 4')
     print(f'  Train: {TRAIN_SEASONS} | Val: {VAL_SEASON} | Test: T17')
-    print(f'  Horizon: {HP["horizon"]} semanas')
+    print(f'  HORIZON={HORIZON} (doc) | seq_len={HP["seq_len"]} | eff_horizon = gap - seq_len (per temporada)')
     print('=' * 60)
 
     train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys = \
-        prepare_data(INV_ID, HP, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON)
+        prepare_data(INV_ID, HP, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON,
+                     skip_first_weeks=HP.get('skip_first_weeks', 0))
 
     n_runs = len(HP['seeds']) * len(HP['init_methods'])
     print(f'\n  {n_runs} runs ({len(HP["seeds"])} seeds × {len(HP["init_methods"])} inits)')
@@ -138,9 +113,9 @@ def main():
 
     print(f'\n  >>> Best: [{best_result["init_method"]}] seed={best_result["seed"]}  R²={best_r2:.4f} <<<')
     print(f'  >>> Ensemble top-{top_k}: R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
-    print_metrics(INV_ID, best_result['metrics'], horizon=HP['horizon'])
+    print_metrics(INV_ID, best_result['metrics'], horizon=HORIZON)
 
-    plot_results_per_greenhouse({INV_ID: best_result}, horizon=HP['horizon'],
+    plot_results_per_greenhouse({INV_ID: best_result}, horizon=HORIZON,
                                 intervals={INV_ID: (lower, upper)})
 
     # Top-25 R² statistics

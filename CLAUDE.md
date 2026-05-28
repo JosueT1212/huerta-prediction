@@ -156,3 +156,20 @@ Sensores físicos → Collector → InfluxDB → Grafana (live viz)
 
 Live sensors planeados → stack recomendado: **InfluxDB OSS + Grafana OSS en VPS**.
 Por ahora (sin sensores live): mantener Streamlit para demo cliente + preparar `docker-compose.yml` local para desarrollo del pipeline.
+---
+
+## 7. Horizonte de Predicción — Diseño seq_len
+
+`HORIZON = 4` es una constante de documentación en `cnn_rnn_yield.py`. Representa el horizonte objetivo (semanas entre el último dato del sensor en la ventana y la producción target).
+
+`seq_len` es fijo por invernadero en `hp_inv*.yaml` (actualmente = 6). El horizonte efectivo real es `gap - seq_len` y varía ±1 semana entre temporadas según el gap sensor→producción:
+
+| Invernadero | gap típico | seq_len | eff_horizon |
+|-------------|-----------|---------|-------------|
+| Inv3        | 10–11     | 6       | 4–5 sem     |
+| Inv4        | 6–11      | 6       | 0–5 sem     |
+
+Los logs muestran `gap` por temporada y la línea `HORIZON=4 (doc) | seq_len=6 | eff_horizon = gap - seq_len`.
+
+**Por qué NO se usa seq_len variable por temporada:**
+Con `seq_len = gap - HORIZON + skip_first_weeks`, inv4 T16 (gap=6, skip=1) da `seq_len=3`, que al hacer padding hasta `max_seq_len=8` rellena 5 de 8 filas con ceros. El modelo veía mayormente ceros en la temporada de validación → R² muy bajo (~0.39). Decisión: `seq_len` fijo, horizonte efectivo varía ligeramente entre temporadas.

@@ -1892,10 +1892,15 @@ function buildHistTable(tbody, data) {
     const isObs = r.status === 'Observado';
     let errHtml = '<td class="num"><span style="color:var(--ink-muted);opacity:0.4">—</span></td>';
     if (isObs && r.real != null) {
-      const err = ((r.real - r.pred) / r.pred) * 100;
+      const err = ((r.pred - r.real) / r.real) * 100;
+      const errKg = r.pred - r.real;
       const cls = errorBucket(err);
       const sign = err >= 0 ? '+' : '';
-      errHtml = `<td class="num"><span class="error-cell ${cls}">${sign}${err.toFixed(1)}%</span></td>`;
+      const signKg = errKg >= 0 ? '+' : '';
+      errHtml = `<td class="num">
+        <span class="error-cell ${cls}">${sign}${err.toFixed(1)}%</span>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;font-variant-numeric:tabular-nums;">${signKg}${Math.round(errKg).toLocaleString('en-US')} kg</div>
+      </td>`;
     }
     return `
       <tr class="${isObs ? 'observed-row' : 'future'} ${r.peak ? 'peak' : ''}">
@@ -1970,32 +1975,14 @@ function makeDetailChart(ctxId, history, predictions, color) {
   const allWeeks = [...history.map(h => h.week), ...predictions.map(p => p.week)];
   const realData = [...history.map(h => h.real), ...predictions.map(() => null)];
   const predData = [...history.map(h => h.pred), ...predictions.map(p => p.pred)];
-  const upperBound = [...history.map(h => h.hi), ...predictions.map(p => p.hi)];
-  const lowerBound = [...history.map(h => h.lo), ...predictions.map(p => p.lo)];
+  const upperBound = [...history.map(h => h.pred * 1.10), ...predictions.map(p => p.pred * 1.10)];
+  const lowerBound = [...history.map(h => h.pred * 0.90), ...predictions.map(p => p.pred * 0.90)];
 
   charts[ctxId] = new Chart(ctx, {
     type: 'line',
     data: {
       labels: allWeeks.map(w => w.split('–')[0]),
       datasets: [
-        {
-          label: 'Intervalo superior',
-          data: upperBound,
-          borderColor: 'transparent',
-          backgroundColor: hexToRgba(color, 0.08),
-          fill: '+1',
-          pointRadius: 0,
-          tension: 0.3,
-        },
-        {
-          label: 'Intervalo inferior',
-          data: lowerBound,
-          borderColor: 'transparent',
-          backgroundColor: 'transparent',
-          fill: false,
-          pointRadius: 0,
-          tension: 0.3,
-        },
         {
           label: 'Predicción',
           data: predData,

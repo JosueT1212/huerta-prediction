@@ -3,7 +3,23 @@
 # macOS
 .DS_Store
 
-# Python
+# Computer Vision: dataset y videos pesados (16GB) — NO subir a GitHub
+Vision Computer/
+
+# Pesos preentrenados YOLO (descargables, no versionar)
+/yolo11m-seg.pt
+/yolo26n.pt
+
+# Checkpoints temporales de entrenamiento
+Models/results/_tmp_*.pt
+
+# Caches de Python
 __pycache__/
 *.pyc
 *.pyo
+
+# Artefactos comprimidos
+*.zip
+
+# Config local del agente
+.claude/

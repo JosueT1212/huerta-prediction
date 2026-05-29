@@ -116,3 +116,60 @@ def test_crad_season_monotone_within_season():
     crad = np.cumsum(rad)
     diffs = np.diff(crad)
     assert (diffs >= 0).all(), "crad_season must be non-decreasing within a season"
+
+
+# ── spline_yield feature tests ────────────────────────────────────────────────
+
+def test_spline_yield_in_pheno_feature_names():
+    """spline_yield must route through pheno path (post-PCA channel, not rotated)."""
+    from cnn_rnn_yield import PHENO_FEATURE_NAMES
+    assert 'spline_yield' in PHENO_FEATURE_NAMES
+
+
+def test_spline_yield_split_routes_to_pheno():
+    """split_features must put spline_yield in pheno list, not sensor or temporal."""
+    from cnn_rnn_yield import split_features
+    sensor, pheno, temporal = split_features(['temp_prom_int', 'spline_yield', 'week_in_season'])
+    assert 'spline_yield' in pheno
+    assert 'spline_yield' not in sensor
+    assert 'spline_yield' not in temporal
+
+
+def test_compute_spline_yield_no_leakage():
+    """spline_yield on val/test must be computed from training mean curve only."""
+    import numpy as np
+    import pandas as pd
+    from cnn_rnn_yield import compute_spline_yield_feature
+
+    rng = np.random.default_rng(42)
+    n_train = 37
+    n_val = 20
+
+    train_df = pd.DataFrame({
+        'week_in_season': np.arange(n_train),
+        'kg_reales': 1000.0 * np.sin(np.linspace(0, np.pi, n_train)) + rng.normal(0, 50, n_train),
+    })
+    # Val has different actual yields — spline_yield must be from train curve
+    val_df = pd.DataFrame({
+        'week_in_season': np.arange(n_val),
+        'kg_reales': 2000.0 * np.sin(np.linspace(0, np.pi, n_val)) + rng.normal(0, 50, n_val),
+    })
+    test_df = pd.DataFrame({
+        'week_in_season': np.arange(15),
+        'kg_reales': np.zeros(15),
+    })
+
+    tr_out, va_out, te_out = compute_spline_yield_feature(train_df.copy(), val_df.copy(), test_df.copy())
+
+    # spline_yield column must exist in all splits
+    assert 'spline_yield' in tr_out.columns
+    assert 'spline_yield' in va_out.columns
+    assert 'spline_yield' in te_out.columns
+
+    # spline_yield for week 0 on train and val should be same (same spline evaluated at w=0)
+    assert abs(tr_out.loc[tr_out['week_in_season'] == 0, 'spline_yield'].iloc[0] -
+               va_out.loc[va_out['week_in_season'] == 0, 'spline_yield'].iloc[0]) < 1.0
+
+    # Spline should be non-negative at the peak (week ~n_train//2)
+    mid = n_train // 2
+    assert tr_out.loc[tr_out['week_in_season'] == mid, 'spline_yield'].iloc[0] > 0

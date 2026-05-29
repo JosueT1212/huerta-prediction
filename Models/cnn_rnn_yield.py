@@ -64,7 +64,7 @@ PHENO_FEATURE_COLS = [
     'DIAMETRO DEL FRUTO cm',
     'CRECIMIENTO PLANTA (cm)',
 ]
-PHENO_FEATURE_NAMES = set(PHENO_FEATURE_COLS)
+PHENO_FEATURE_NAMES = set(PHENO_FEATURE_COLS) | {'spline_yield'}
 
 # ============================================================================
 # 1. DATA LOADING & FEATURE ENGINEERING
@@ -710,6 +710,41 @@ def split_features(feature_cols):
     return sensor, pheno, temporal
 
 
+def compute_spline_yield_feature(train_df, val_df, test_df):
+    """
+    Fit a smoothing spline on the mean training yield curve (by week_in_season),
+    then add 'spline_yield' column to train, val, and test DataFrames.
+
+    The spline is fit on training data only (T13-T15 mean) to prevent leakage.
+    It provides a phenological prior: expected yield at week w of the season.
+
+    Args:
+        train_df: DataFrame with 'week_in_season' and 'kg_reales' columns.
+        val_df, test_df: Same schema — 'week_in_season' must be present.
+
+    Returns:
+        (train_df, val_df, test_df) with 'spline_yield' column added (copies).
+    """
+    from scipy.interpolate import UnivariateSpline
+
+    # Mean yield curve from training seasons only (no leakage)
+    mean_curve = train_df.groupby('week_in_season')['kg_reales'].mean().sort_index()
+    weeks = mean_curve.index.values.astype(float)
+    yields = mean_curve.values.astype(float)
+
+    k = min(3, len(weeks) - 1)  # cubic if enough points, else lower degree
+    spline = UnivariateSpline(weeks, yields, k=k, s=None)
+
+    train_df = train_df.copy()
+    val_df = val_df.copy()
+    test_df = test_df.copy()
+
+    for df in [train_df, val_df, test_df]:
+        df['spline_yield'] = spline(df['week_in_season'].values.astype(float))
+
+    return train_df, val_df, test_df
+
+
 class CNNRNN(nn.Module):
     """
     CNN-RNN model for crop yield prediction.
@@ -813,6 +848,13 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         val_df   = val_df[val_df['week_in_season']     >= skip_first_weeks].reset_index(drop=True)
         test_df  = test_df[test_df['week_in_season']   >= skip_first_weeks].reset_index(drop=True)
         print(f'  Skipped first {skip_first_weeks} weeks → train: {len(train_df)}, val: {len(val_df)}, test: {len(test_df)}')
+
+    # Phenological spline: fit on training mean yield curve, add to all splits
+    # Must be called AFTER build_dataset (needs kg_reales) but BEFORE split_features
+    if hp.get('use_spline_feature', True):
+        train_df, val_df, test_df = compute_spline_yield_feature(train_df, val_df, test_df)
+        if 'spline_yield' not in feature_cols:
+            feature_cols = list(feature_cols) + ['spline_yield']
 
     sensor_cols, pheno_cols, temporal_cols = split_features(feature_cols)
     if hp.get('temporal_keep'):

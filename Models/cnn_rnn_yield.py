@@ -732,15 +732,21 @@ def compute_spline_yield_feature(train_df, val_df, test_df):
     weeks = mean_curve.index.values.astype(float)
     yields = mean_curve.values.astype(float)
 
-    k = min(3, len(weeks) - 1)  # cubic if enough points, else lower degree
-    spline = UnivariateSpline(weeks, yields, k=k, s=None)
+    # k: cubic if ≥4 points, lower degree otherwise; minimum k=1
+    k = max(1, min(3, len(weeks) - 1))
+    # s: scale smoothing to data variance so spline is smooth, not interpolating
+    s = len(weeks) * float(np.var(yields)) if np.var(yields) > 0 else float(len(weeks))
+    spline = UnivariateSpline(weeks, yields, k=k, s=s)
 
     train_df = train_df.copy()
     val_df = val_df.copy()
     test_df = test_df.copy()
 
+    # Clip weeks to training range to prevent polynomial extrapolation divergence
+    w_min, w_max = weeks.min(), weeks.max()
     for df in [train_df, val_df, test_df]:
-        df['spline_yield'] = spline(df['week_in_season'].values.astype(float))
+        w_clipped = np.clip(df['week_in_season'].values.astype(float), w_min, w_max)
+        df['spline_yield'] = spline(w_clipped)
 
     return train_df, val_df, test_df
 

@@ -1062,7 +1062,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         criterion = NSECorrLoss(corr_weight=hp.get('corr_weight', 0.8),
                                 var_y_train=var_y_train)
     elif loss_type == 'quantile':
-        criterion = PinballLoss(quantiles=hp.get('quantiles', [0.1, 0.5, 0.9]))
+        criterion = PinballLoss(quantiles=hp.get('quantiles', [0.1, 0.5, 0.9])).to(DEVICE)
     else:
         criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
                                   power=hp.get('wmae_power', 1),
@@ -1121,7 +1121,14 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         val_losses.append(avg_val_loss)
 
         # Compute validation correlation for early stopping
-        val_preds_cat = torch.cat(all_val_preds).flatten()
+        # For quantile mode (n_out > 1), use the median column (index of 0.5 quantile)
+        _preds_raw = torch.cat(all_val_preds)  # (N, n_out) or (N, 1)
+        if _preds_raw.dim() > 1 and _preds_raw.shape[1] > 1:
+            _quantiles = hp.get('quantiles', [0.5])
+            _q50_idx = _quantiles.index(0.5) if 0.5 in _quantiles else _preds_raw.shape[1] // 2
+            val_preds_cat = _preds_raw[:, _q50_idx]
+        else:
+            val_preds_cat = _preds_raw.flatten()
         val_targets_cat = torch.cat(all_val_targets).flatten()
         vp = val_preds_cat - val_preds_cat.mean()
         vt = val_targets_cat - val_targets_cat.mean()

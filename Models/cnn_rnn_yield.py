@@ -940,8 +940,10 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
                              torch.FloatTensor(y).unsqueeze(1),
                              torch.FloatTensor(w).reshape(-1, 1))
 
-    ramp_weeks  = hp.get('ramp_weeks', 4)
-    ramp_weight = hp.get('ramp_weight', 1.0)
+    if ramp_weeks is None:
+        ramp_weeks = hp.get('ramp_weeks', 4)
+    if ramp_weight is None:
+        ramp_weight = hp.get('ramp_weight', 1.0)
     w_train = np.where(pos_tr < ramp_weeks, ramp_weight, 1.0).astype(np.float32)
     w_ones_va = np.ones(len(y_va), dtype=np.float32)
     w_ones_te = np.ones(len(y_te), dtype=np.float32)
@@ -1057,7 +1059,10 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
 
             optimizer.zero_grad()
             pred = model(Xs_batch, Xt_batch)
-            loss = criterion(pred, y_batch, sample_weights=w_batch)
+            if isinstance(criterion, YieldWMAELoss):
+                loss = criterion(pred, y_batch, sample_weights=w_batch)
+            else:
+                loss = criterion(pred, y_batch)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()

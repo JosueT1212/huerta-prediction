@@ -110,21 +110,27 @@ def main():
     best_result['ensemble_pred']    = ensemble_pred
     best_result['ensemble_metrics'] = ensemble_metrics
 
-    # CPTC Prediction Intervals
-    best_model = CNNRNN(
-        n_sensor=n_sensor_pca, n_temporal=n_temporal,
-        cnn_filters=HP['cnn_filters'], cnn_kernel_size=HP['cnn_kernel_size'],
-        cnn_padding=HP['cnn_padding'], num_cnn_blocks=HP['num_cnn_blocks'],
-        lstm_hidden=HP['lstm_hidden'], lstm_layers=HP['lstm_layers'],
-        dropout=HP['dropout'], fc_hidden=HP['fc_hidden'],
-        n_out=_n_out,
-    ).to(DEVICE)
-    best_model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=True))
-    y_val_true, y_val_pred, _ = evaluate_model(best_model, val_loader, scaler_y, bc_lambda)
-    lower, upper, val_cov, avg_w = compute_cptc_intervals(y_val_true, y_val_pred, best_result['y_pred'])
-    best_result['pi_lower'] = lower
-    best_result['pi_upper'] = upper
-    print(f'  90% PI (CPTC): val_coverage={val_cov:.3f}, avg_width={avg_w:.1f} kg')
+    # CPTC Prediction Intervals (skip in quantile mode — q10/q90 bands serve as PI)
+    if HP.get('loss_type') == 'quantile':
+        n_te = len(best_result['y_true'])
+        lower = np.zeros(n_te)
+        upper = np.zeros(n_te)
+        val_cov, avg_w = float('nan'), float('nan')
+    else:
+        best_model = CNNRNN(
+            n_sensor=n_sensor_pca, n_temporal=n_temporal,
+            cnn_filters=HP['cnn_filters'], cnn_kernel_size=HP['cnn_kernel_size'],
+            cnn_padding=HP['cnn_padding'], num_cnn_blocks=HP['num_cnn_blocks'],
+            lstm_hidden=HP['lstm_hidden'], lstm_layers=HP['lstm_layers'],
+            dropout=HP['dropout'], fc_hidden=HP['fc_hidden'],
+            n_out=_n_out,
+        ).to(DEVICE)
+        best_model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=True))
+        y_val_true, y_val_pred, _ = evaluate_model(best_model, val_loader, scaler_y, bc_lambda)
+        lower, upper, val_cov, avg_w = compute_cptc_intervals(y_val_true, y_val_pred, best_result['y_pred'])
+        best_result['pi_lower'] = lower
+        best_result['pi_upper'] = upper
+        print(f'  90% PI (CPTC): val_coverage={val_cov:.3f}, avg_width={avg_w:.1f} kg')
 
 
     print(f'\n  >>> Best: [{best_result["init_method"]}] seed={best_result["seed"]}  R²={best_r2:.4f} <<<')

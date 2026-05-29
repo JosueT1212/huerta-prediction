@@ -1027,6 +1027,32 @@ class YieldWMAELoss(nn.Module):
         return wmae + corr_loss
 
 
+class PinballLoss(nn.Module):
+    """Pinball (quantile) loss for multi-quantile output.
+
+    pred:   (batch, n_quantiles) — model outputs one column per quantile
+    target: (batch, 1)           — single true value broadcast across quantiles
+    quantiles: list of floats in strictly increasing order, e.g. [0.1, 0.5, 0.9]
+
+    Loss = mean over batch and quantiles of pinball(q, err):
+        err > 0 (over-pred) → q * err
+        err < 0 (under-pred)→ (q - 1) * err
+    """
+    def __init__(self, quantiles=(0.1, 0.5, 0.9)):
+        quantiles = list(quantiles)
+        if quantiles != sorted(quantiles):
+            raise ValueError(f'quantiles must be strictly increasing, got {quantiles}')
+        super().__init__()
+        self.register_buffer('q', torch.tensor(quantiles, dtype=torch.float32))
+
+    def forward(self, pred, target):
+        # pred:   (batch, n_q)  target: (batch, 1)
+        target_exp = target.expand_as(pred)     # (batch, n_q)
+        err = target_exp - pred                 # positive = under-pred
+        loss = torch.max(self.q * err, (self.q - 1) * err)
+        return loss.mean()
+
+
 def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
     """Train the CNN-RNN model with early stopping on validation score."""
     loss_type = hp.get('loss_type', 'wmae')

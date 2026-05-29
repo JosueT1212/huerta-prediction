@@ -24,14 +24,14 @@ def test_pinball_loss_median_equals_mae_half():
 
 
 def test_pinball_loss_q10_penalises_overestimates():
-    """At q=0.1, over-predicting costs 0.1*err; under costs 0.9*err."""
+    """At q=0.1, over-predicting costs (1-q)*err=0.9*err (heavy); under costs 0.1*err (light)."""
     from cnn_rnn_yield import PinballLoss
-    # pred=10, target=5 → over by 5  → loss = 0.1 * 5 = 0.5
+    # pred=10, target=5 → over by 5 → loss = (1-0.1) * 5 = 4.5
     pred   = torch.tensor([[10.0]])
     target = torch.tensor([[ 5.0]])
     loss_fn = PinballLoss(quantiles=[0.1])
     loss = loss_fn(pred, target)
-    assert abs(loss.item() - 0.5) < 1e-5, f'Got {loss.item()}'
+    assert abs(loss.item() - 4.5) < 1e-5, f'Got {loss.item()}'
 
 
 def test_pinball_loss_q90_penalises_underestimates():

@@ -1179,7 +1179,9 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         avg_val_loss = val_loss / max(val_batches, 1)
         val_losses.append(avg_val_loss)
 
-        # Compute validation correlation for early stopping
+        # NSE-based early stopping: directly aligns model selection with R²
+        # NSE = 1 - MSE/Var(targets). In normalized space NSE == R² (linear scaler is neutral).
+        # val_score = -NSE  →  lower is better  →  maximize NSE.
         # For quantile mode (n_out > 1), use the median column (index of 0.5 quantile)
         _preds_raw = torch.cat(all_val_preds)  # (N, n_out) or (N, 1)
         if _preds_raw.dim() > 1 and _preds_raw.shape[1] > 1:
@@ -1189,20 +1191,12 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         else:
             val_preds_cat = _preds_raw.flatten()
         val_targets_cat = torch.cat(all_val_targets).flatten()
-        vp = val_preds_cat - val_preds_cat.mean()
-        vt = val_targets_cat - val_targets_cat.mean()
-        val_corr = (torch.sum(vp * vt) / (
-            torch.sqrt(torch.sum(vp ** 2) + 1e-8) *
-            torch.sqrt(torch.sum(vt ** 2) + 1e-8)
-        )).item()
-
-        # Early stopping score: loss - corr_weight * correlation
-        # Fix 1: quantile mode uses q50-MAE (not avg pinball) so corr_weight is on same scale
-        if hp.get('loss_type') == 'quantile':
-            q50_mae = torch.mean(torch.abs(val_preds_cat - val_targets_cat)).item()
-            val_score = q50_mae - hp.get('corr_weight', 0.0) * val_corr
-        else:
-            val_score = avg_val_loss - hp.get('corr_weight', 0.0) * val_corr
+        vt_np = val_targets_cat.cpu().numpy().astype(np.float64)
+        vp_np = val_preds_cat.cpu().numpy().astype(np.float64)
+        _var_t = float(np.var(vt_np)) + 1e-8
+        _mse   = float(np.mean((vt_np - vp_np) ** 2))
+        val_nse = 1.0 - _mse / _var_t
+        val_score = -val_nse  # minimize negative NSE = maximize NSE
 
         if val_score < best_val_loss:
             best_val_loss = val_score
@@ -1215,7 +1209,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
             print(f'  Epoch {epoch+1:>4d}/{hp["epochs"]} | '
                   f'Train: {avg_train_loss:.6f} | '
                   f'Val Loss: {avg_val_loss:.6f} | '
-                  f'Val Corr: {val_corr:.4f}')
+                  f'Val NSE: {val_nse:.4f}')
 
         if patience_counter >= hp['patience']:
             print(f'  Early stopping at epoch {epoch+1}')

@@ -173,3 +173,79 @@ def test_compute_spline_yield_no_leakage():
     # Spline should be non-negative at the peak (week ~n_train//2)
     mid = n_train // 2
     assert tr_out.loc[tr_out['week_in_season'] == mid, 'spline_yield'].iloc[0] > 0
+
+
+def test_nse_early_stopping_selects_best_r2():
+    """
+    NSE-based stopping must select the checkpoint with lowest MSE/var(target),
+    not lowest MAE - corr*r. Verify that a biased-but-well-shaped prediction
+    (high r, high bias) scores worse than an unbiased prediction under NSE.
+    """
+    import numpy as np
+
+    targets = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float32)
+    # pred_a: unbiased, slightly noisy — good R²
+    pred_a = np.array([1.1, 2.0, 3.1, 3.9, 5.0], dtype=np.float32)
+    # pred_b: 2x scale — perfect Pearson r=1.0 but terrible R²
+    pred_b = np.array([2.0, 4.0, 6.0, 8.0, 10.0], dtype=np.float32)
+
+    def nse_score(pred, target):
+        mse = np.mean((pred - target) ** 2)
+        var_t = np.var(target) + 1e-8
+        return -(1.0 - mse / var_t)  # lower is better (we minimize)
+
+    def pearson_r(pred, target):
+        p = pred - pred.mean(); t = target - target.mean()
+        return float(np.sum(p * t) / (np.sqrt(np.sum(p**2) + 1e-8) * np.sqrt(np.sum(t**2) + 1e-8)))
+
+    # pred_b has perfect Pearson but terrible NSE
+    r_a = pearson_r(pred_a, targets)
+    r_b = pearson_r(pred_b, targets)
+    assert r_b > 0.999, "pred_b should have r≈1"
+    # Pearson r is scale-invariant: both predictions have nearly identical r
+    assert abs(r_a - r_b) < 0.01, "Pearson r fails to penalize 2x scale"
+
+    # NSE scheme correctly prefers pred_a (lower score = better)
+    nse_a = nse_score(pred_a, targets)
+    nse_b = nse_score(pred_b, targets)
+    assert nse_a < nse_b, "NSE score must prefer unbiased pred_a over scaled pred_b"
+
+
+def test_train_model_uses_nse_stopping(tmp_path):
+    """
+    train_model with WMAE loss must use NSE-based val_score so training completes
+    without error and val_losses contains finite values.
+    """
+    import torch
+    import numpy as np
+    from torch.utils.data import TensorDataset, DataLoader
+    from cnn_rnn_yield import CNNRNN, DEVICE, train_model
+
+    torch.manual_seed(0)
+    n_sensor, n_temporal, seq_len = 4, 2, 6
+    batch = 8
+
+    hp = {
+        'epochs': 2, 'patience': 10, 'learning_rate': 1e-4,
+        'weight_decay': 0.0, 'corr_weight': 0.5, 'loss_type': 'wmae',
+        'ramp_weeks': 0, 'ramp_weight': 1.0,
+    }
+
+    Xs = torch.randn(batch, seq_len, n_sensor)
+    Xt = torch.randn(batch, seq_len, n_temporal)
+    y_norm = torch.linspace(0.1, 0.9, batch)
+    w = torch.ones(batch)
+
+    dataset = TensorDataset(Xs, Xt, y_norm, w)
+    loader = DataLoader(dataset, batch_size=batch)
+
+    model = CNNRNN(n_sensor=n_sensor, n_temporal=n_temporal,
+                   cnn_filters=8, cnn_kernel_size=2, cnn_padding=1,
+                   num_cnn_blocks=1, lstm_hidden=16, lstm_layers=1,
+                   dropout=0.0, fc_hidden=8, n_out=1).to(DEVICE)
+
+    ckpt = tmp_path / 'ckpt.pt'
+    model_out, train_l, val_l = train_model(model, loader, loader, hp, ckpt, var_y_train=0.1)
+    assert len(train_l) == 2
+    assert len(val_l) == 2
+    assert all(np.isfinite(v) for v in val_l)

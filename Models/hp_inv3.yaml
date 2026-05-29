@@ -2,8 +2,6 @@ seq_len: 6
 skip_first_weeks: 0
 ramp_weeks: 4
 ramp_weight: 0.5
-loss_type: quantile
-quantiles: [0.1, 0.5, 0.9]
 alignment: positional
 batch_size: 8
 lag_features: []

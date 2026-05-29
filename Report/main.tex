@@ -1,0 +1,554 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Encoding & language ──
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+
+% ── Fonts ──
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Layout ──
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=2.8cm, right=2.8cm
+]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Graphics & tables ──
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{subcaption}
+
+
+% ── Colors & styling ──
+\usepackage[dvipsnames]{xcolor}
+\definecolor{accent}{HTML}{2E7D32}   % dark green – agricultural theme
+\definecolor{gray60}{HTML}{666666}
+\definecolor{lightbg}{HTML}{F5F7F5}
+
+% ── Headers & footers ──
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textcolor{gray60}{Proyecto de Predicción de Rendimiento — Reporte de Avances}}
+\fancyhead[R]{\small\textcolor{gray60}{8 de abril de 2026}}
+\fancyfoot[C]{\thepage}
+
+% ── Section styling ──
+\usepackage{titlesec}
+\titleformat{\section}
+  {\Large\bfseries\color{accent}}{\thesection.}{0.6em}{}[\vspace{2pt}\textcolor{accent}{\rule{\linewidth}{0.6pt}}]
+\titleformat{\subsection}
+  {\large\bfseries\color{accent!80!black}}{\thesubsection}{0.5em}{}
+
+% ── Hyperlinks ──
+\usepackage[hidelinks,colorlinks=true,linkcolor=accent,urlcolor=accent]{hyperref}
+
+% ── TikZ ──
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, decorations.pathreplacing, calc}
+
+% ── Misc ──
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.5em, itemsep=3pt}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+% ── Custom box for pending / key info ──
+\newtcolorbox{infobox}[1][]{%
+  colback=lightbg, colframe=accent!60!black,
+  fonttitle=\bfseries, title=#1,
+  boxrule=0.5pt, arc=2pt, left=6pt, right=6pt,
+  top=4pt, bottom=4pt, breakable
+}
+
+% ── Figure paths (update these to match your Overleaf file names) ──
+% Upload these PNGs to your Overleaf project:
+%   logo.png, cnn_rnn_inv3_h6.png, cnn_rnn_inv4_h6.png,
+%   cnn_rnn_inv3_h4.png, cnn_rnn_inv4_h4.png, roboflow_example.png
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title page ──
+\thispagestyle{empty}
+\begin{center}
+  \vspace*{1.5cm}
+
+  \includegraphics[height=3cm]{jata.png}
+
+  \vspace{2cm}
+  {\Huge\bfseries\color{accent} Reporte de Avances}\\[0.6cm]
+  {\LARGE Proyecto de Predicción de Rendimiento}\\[0.4cm]
+  {\large\color{gray60} Predicción de producción y visión por computadora\\
+   en invernaderos de tomate}
+
+  \vspace{2.5cm}
+
+  \begin{tabular}{rl}
+    \textbf{Fecha:}   & 8 de abril de 2026 \\[4pt]
+    \textbf{Versión:}  & Briefing de avance \\[4pt]
+    \textbf{Equipo:}   & JATA \\
+  \end{tabular}
+
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Modelos predictivos de producción (kg/semana)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Objetivo y evaluación}
+
+El objetivo de esta línea de trabajo es apoyar la planificación operativa estimando los \textbf{kilogramos de tomate por semana} en los invernaderos~3 y~4, con dos horizontes de interés: cuatro semanas y seis semanas adelante.
+
+Los modelos se entrenan con datos de temporadas anteriores, se ajustan con una temporada intermedia y se evalúan sobre la \emph{última temporada disponible} (conjunto de prueba). Todas las métricas de este reporte corresponden a ese último paso: el desempeño del modelo al predecir una temporada que no observó durante el entrenamiento.
+
+\subsection{Datos y variables de entrada}
+
+Se parte de mediciones diarias de clima dentro del invernadero, clima exterior y riego. A partir de ellas se construyen resúmenes semanales, alineados con el registro semanal de producción y con el calendario de cultivo (fechas de trasplante por temporada).
+
+Dado el volumen de variables disponibles, parte de los modelos reduce la dimensionalidad mediante \emph{componentes principales}, conservando la mayor parte de la varianza explicada. En paralelo, el equipo continúa refinando los criterios de selección de variables, trabajo que se enlazará con la retroalimentación del personal del cliente (véase la sección~\ref{sec:pendiente}).
+
+\subsection{Métricas: evaluación de modelos}
+
+\subsubsection*{MAPE: Error porcentual absoluto medio}
+
+\begin{equation}
+  M = \frac{1}{n} \sum_{t=1}^{n} \left| \frac{A_t - F_t}{A_t} \right|
+\end{equation}
+
+Donde:
+\begin{itemize}
+    \item $M$: Error Porcentual Absoluto Medio (MAPE).
+    \item $n$: Número total de observaciones.
+    \item $t$: Índice del periodo o tiempo.
+    \item $A_t$: Valor real u observado en el momento $t$.
+    \item $F_t$: Valor pronosticado o estimado en el momento $t$.
+\end{itemize}
+
+Es el promedio de los errores absolutos medidos en porcentaje en relación con los valores reales. En otras palabras, es el porcentaje de error promedio entre todas las observaciones. Por ejemplo un modelo con un MAPE igual a $10$ nos indica que el mismo se suele equivocar en promedio por $\pm 10\%$. \textbf{Nota:} Cabe recalcar que eta métrica es la que más nos importa pues el objetivo principal es conseguir que el modelo se equivoque por menos del $10\%$.
+
+\subsubsection*{RMSE: Error cuadrático medio}
+
+\begin{equation}
+  RMSE = \sqrt{\frac{\sum_{i=1}^{n}(y_i-\hat{y_i})^2}{n}}
+\end{equation}
+
+\begin{itemize}
+    \item $RMSE$: Raíz del Error Cuadrático Medio (\textit{Root Mean Square Error}).
+    \item $n$: Tamaño de la muestra o número total de observaciones.
+    \item $y_i$: Valor real u observado de la variable dependiente.
+    \item $\hat{y}_i$: Valor predicho o estimado por el modelo de regresión.
+    \item $i$: Índice que denota la observación individual, donde $i \in \{1, 2, \dots, n\}$.
+    \item $\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$: Suma de los residuos al cuadrado.
+\end{itemize}
+Es la raíz cuadrada del promedio de los cuadrados de los errores. Mide la magnitud promedio de las desviaciones de las predicciones respecto a los valores observados en las mismas unidades que los datos (en este caso, kilogramos). En otras palabras se puede ver como el margen de error. Por ejemplo un modelo con un RMSE igual a $350kg$ nos estaría indicando que en promedio la respuesta exacta suele variar por $\pm 350kg$, ósea si el modelo dice que la próxima semana abran $10000kg$, esta métrica nos ayuda a entender que puede variar desde $9650kg$ hasta $10350kg$ en promedio.
+
+\subsubsection*{$R^2$: Coeficiente de determinación}
+
+\begin{equation}
+  R^2 = 1 - \frac{\sum(y_i-\hat{y_i})^2}{\sum(y_i-\bar{y_i})^2}
+\end{equation}
+
+\begin{itemize}
+    \item $R^2$: Coeficiente de determinación.
+    \item $y_i$: Valor observado (real).
+    \item $\hat{y}_i$: Valor predicho por el modelo.
+    \item $\bar{y}$: Media aritmética de los valores observados ($\bar{y} = \frac{1}{n} \sum y_i$).
+    \item $n$: Tamaño de la muestra.
+    \item $\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$: Suma de Cuadrados de los Residuos ($SS_{res}$).
+    \item $\sum_{i=1}^{n} (y_i - \bar{y})^2$: Suma Total de Cuadrados ($SS_{tot}$).
+\end{itemize}
+
+
+Indica la proporción de la varianza total de la variable dependiente que es explicada por el modelo de regresión. Varía entre 0 y 1. En otras palabras es la calificación del modelo de $0$ a $1$, entre más cercano sea el $R^2$ a $1$ el modelo explica y entiende mejor lo que sucede con la producción, por ejemplo un modelo con un $R^2$ igual a $0.8$ explica y entiende el $80\%$ de los datos. \textbf{Nota:} Considerese que un $R^2$ igual o muy cercano a $1$ no es lo que se busca porque son indicios de sobreajuste, lo que significa que memorizo los datos y no aprendió a generalizar para siguientes temporadas.
+
+
+\subsection{Resultados obtenidos hasta la fecha}
+
+Con la versión más reciente del proyecto, el modelo principal reportado es el CNN-RNN, evaluado por separado en cada invernadero. Los resultados se presentan en dos bloques según el horizonte de predicción (6 y 4~semanas), para que puedan compararse ambos escenarios de planificación. En cada horizonte se muestra únicamente el mejor resultado vigente por invernadero (conjunto de prueba en la última temporada).
+
+\subsubsection*{Horizonte de 6 semanas}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{cnn_rnn_inv3_h6.png}
+  \caption{Invernadero~3 --- Modelo CNN-RNN a 6~semanas: predicción frente a producción real en el conjunto de prueba.}
+  \label{fig:inv3_h6}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{cnn_rnn_inv4_h6.png}
+  \caption{Invernadero~4 --- Modelo CNN-RNN a 6~semanas: predicción frente a producción real en el conjunto de prueba.}
+  \label{fig:inv4_h6}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Mejores resultados por invernadero --- modelo CNN-RNN, $h=6$ semanas (conjunto de prueba).}
+  \label{tab:h6}
+  \small
+  \begin{tabularx}{0.78\linewidth}{@{} l r r r @{}}
+    \toprule
+    \textbf{Inv.} & \textbf{RMSE (kg)} & \textbf{R\textsuperscript{2}} & \textbf{MAPE} \\
+    \midrule
+    3 & 3\,240{,}53 & 0{,}794 &  8{,}09\,\% \\
+    4 & 6\,108{,}31 & 0{,}487 & 13{,}18\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsubsection*{Horizonte de 4 semanas}
+
+La misma arquitectura CNN-RNN admite entrenamiento con horizonte de 4~semanas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{cnn_rnn_inv3_h4.png}
+  \caption{Invernadero~3 --- Modelo CNN-RNN a 4~semanas: predicción frente a producción real en el conjunto de prueba.}
+  \label{fig:inv3_h4}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{cnn_rnn_inv4_h4.png}
+  \caption{Invernadero~4 --- Modelo CNN-RNN a 4~semanas: predicción frente a producción real en el conjunto de prueba.}
+  \label{fig:inv4_h4}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+\caption{Mejores resultados por invernadero --- modelo CNN-RNN, $h=4$ semanas (conjunto de prueba).}                  
+  \label{tab:h4}                                                                                                        
+  \small                                                                                                                
+  \begin{tabularx}{0.78\linewidth}{@{} l r r r @{}}                                                                     
+    \toprule                                                                                                            
+    \textbf{Inv.} & \textbf{RMSE (kg)} & \textbf{R\textsuperscript{2}} & \textbf{MAPE} \\                               
+    \midrule                                                                                                            
+    3 & 3{,}533 & 0.755 & 8.75\% \\                                                                                     
+    4 & 4{,}658 & 0.702 & 8.98\% \\                                                                                     
+    \bottomrule                                                                                                         
+  \end{tabularx}                                                                                                        
+                 
+\end{table}
+
+\paragraph{Interpretación conjunta.} A 6~semanas el modelo captura señal útil en ambos invernaderos ($R^{2}$ positivo), con mejor ajuste relativo en el invernadero~3. Suele esperarse que, con el mismo modelo y datos, el error a 4~semanas no sea mayor que a 6~semanas porque el horizonte es más corto; la tabla anterior permitirá contrastar esa intuición con cifras cuando estén disponibles.
+
+
+\subsection{Comparativa entre invernaderos}
+
+Con los resultados actuales a 6~semanas, el invernadero~3 presenta mejor desempeño que el invernadero~4. Ambos seguirán siendo objeto de ajuste y mejora, especialmente el invernadero~4 para reducir error y aumentar estabilidad; el mismo criterio se aplicará al comparar ambos horizontes cuando la tabla a 4~semanas esté completa.
+
+\subsection{Trabajo pendiente}\label{sec:pendiente}
+
+\begin{infobox}[Nota: este reporte presenta un avance, no el producto terminado]
+Quedan pasos necesarios para acercar la herramienta a un uso cotidiano con la confianza deseada:
+\begin{itemize}
+  \item \textbf{Intervalos de predicción.} Ofrecer no solo un valor puntual de kilogramos estimados, sino un rango o margen de incertidumbre asociado.
+  \item \textbf{Mejora en invernadero~4.} Seguir mejorando el comportamiento en el invernadero~4 (error y estabilidad).
+  \item \textbf{Selección de variables con expertos.} Completar la revisión de qué factores climáticos y de riego aportan más información, cruzando los resultados estadísticos con la experiencia del personal del cliente (formulario pendiente).
+  \item \textbf{Ajuste fino de hiperparámetros.} Seguir optimizando las configuraciones de entrenamiento.
+\end{itemize}
+\end{infobox}
+
+De validarse la dirección del proyecto, los pasos de más largo plazo incluyen la definición de una estrategia de despliegue en planta, re-entrenamiento periódico con nuevos datos y, en lo posible, la automatización del flujo de datos desde los sensores hacia el proceso de estimación.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Visión por computadora y etiquetado de imágenes}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{roboflow_example.jpeg}
+  \caption{Ejemplo de fotografía etiquetada en Roboflow (cajas delimitadoras visibles sobre frutos de tomate).}
+  \label{fig:roboflow}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Estado del etiquetado de imágenes.}
+  \label{tab:labeling}
+  \small
+  \begin{tabularx}{0.75\linewidth}{@{} X r @{}}
+    \toprule
+    \textbf{Concepto} & \textbf{Valor} \\
+    \midrule
+    Fotografías etiquetadas & 720 \\
+    Meta de etiquetado      & 1\,500 \\
+    Avance                  & 48\,\% \\
+    Clases predominantes    & Tamaños~5 y~4; color~1 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Situación actual de la herramienta}
+
+Hace aproximadamente dos semanas y media, la función de etiquetado asistido de Roboflow dejó de comportarse de forma adecuada, lo que ralentizó significativamente el proceso. El soporte técnico de la plataforma no ofreció una solución en el plazo requerido.
+
+Dado el coste elevado de la suscripción mensual y considerando que el modelo predictivo de producción en kilogramos puede alcanzar la calidad buscada sin depender, por ahora, de una red de conteo fino por clase de tomate, se decidió \textbf{no renovar la suscripción y pausar esta línea de trabajo}.
+
+\subsection{Pregunta abierta para el cliente}
+
+\begin{infobox}[Decisión requerida]
+¿Resulta útil para la operación o para decisiones comerciales disponer, en momentos concretos que ustedes definan, de un \textbf{conteo de tomates por tamaño y color} por cada racimo (u otras categorías que manejen)?
+
+\begin{itemize}
+  \item \textbf{Sí aporta valor:} se reactiva la suscripción a Roboflow y se continúa el etiquetado y desarrollo asociado al robot y la visión por computadora.
+  \item \textbf{No es prioridad ahora:} el esfuerzo se concentra en el modelo de kilogramos a varias semanas vista con variables de clima, riego e historial de producción.
+\end{itemize}
+
+Agradecemos una respuesta abierta para alinear el plan de trabajo con las necesidades reales de la empresa.
+\end{infobox}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Alineación temporal: sensores y producción}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Los sensores comienzan a registrar antes de que inicie la cosecha cada temporada.
+Con alineación posicional, el índice~$j$ del sensor y de producción coinciden en
+posición pero \textbf{no} en semana calendario.
+El modelo aprovecha esta brecha natural: el target \texttt{y\_s[i]} es la
+producción al \emph{inicio} de la ventana, generando un horizonte implícito sin
+filtración de datos futuros.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Invernadero 3 — resolución diaria, \texttt{seq\_len}~=~34~días}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    font=\small,
+    sensor/.style={fill=blue!20, draw=blue!60, rounded corners=2pt},
+    prod/.style={fill=orange!25, draw=orange!60, rounded corners=2pt},
+    window/.style={fill=green!20, draw=green!60, rounded corners=2pt},
+    target/.style={fill=red!20, draw=red!60, rounded corners=2pt},
+]
+% x = (semana_ISO - 20).  Axis w20–w42 → x=0..22
+\draw[->] (0,0) -- (22.8,0) node[right] {Semana ISO};
+
+\foreach \w/\lab in {26/{w26},31/{w31},37/{w37}}{
+  \pgfmathsetmacro{\xx}{\w-20}
+  \draw (\xx,0.12) -- (\xx,-0.12);
+  \node[below,font=\scriptsize] at (\xx,-0.12) {\lab};
+}
+
+% Sensor bar: w26..w42
+\draw[sensor,very thick]
+    (6,0.35) rectangle node[midway]{\textbf{Datos sensor (T13, w26\,→)}} (22,0.85);
+\node[right] at (22,0.60) {$\cdots$};
+
+% Production bar: w37..w42
+\draw[prod,very thick]
+    (17,-0.85) rectangle node[midway]{\textbf{Producción (T13, w37\,→)}} (22,-0.35);
+\node[right] at (22,-0.60) {$\cdots$};
+
+% Gap brace
+\draw[decorate,decoration={brace,amplitude=5pt,mirror}]
+    (6,-1.15) -- (17,-1.15)
+    node[midway,below=6pt]{\textit{brecha} = 11 sem (T13)};
+
+% seq_len window: w26..w31
+\draw[window,very thick]
+    (6,1.10) rectangle node[midway,align=center,font=\scriptsize\bfseries]
+    {ventana $x_i$\\34 días} (11,1.65);
+\draw[<->,green!50!black] (6,1.82) -- (11,1.82)
+    node[midway,above,font=\scriptsize]{w26 $\to$ w31};
+
+% Target
+\draw[target,very thick]
+    (6,2.10) rectangle node[midway,font=\scriptsize\bfseries]{$\hat{y}=y_s[i]$} (8.8,2.60);
+\draw[->,red!70,thick] (7.4,2.10) -- (7.4,1.65);
+
+% Horizon arrow
+\draw[<->,thick,purple] (11,-1.80) -- (17,-1.80)
+    node[midway,below=4pt,purple]{$h \approx 6$ sem};
+\draw[dashed,gray!60] (11,-1.80) -- (11,1.10);
+\draw[dashed,gray!60] (17,-1.80) -- (17,-0.85);
+
+% Legend
+\node[sensor,draw,font=\scriptsize,minimum width=1.4cm] at (3.5,-2.65) {Sensor};
+\node[prod,  draw,font=\scriptsize,minimum width=1.4cm] at (7.5,-2.65) {Producción};
+\node[window,draw,font=\scriptsize,minimum width=1.4cm] at (11.5,-2.65) {Ventana $x_i$};
+\node[target,draw,font=\scriptsize,minimum width=1.4cm] at (15.5,-2.65) {Target $y_s[i]$};
+
+\end{tikzpicture}}
+\caption{Invernadero~3 — alineación temporal (T13). Sensor inicia w26,
+  ventana de 34~días finaliza w31, producción comienza w37.
+  Horizonte implícito $h = 37 - 31 \approx 6$ semanas.}
+\label{fig:align_inv3}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Invernadero 4 — resolución diaria, \texttt{seq\_len}~=~34~días}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    font=\small,
+    sensor/.style={fill=blue!20, draw=blue!60, rounded corners=2pt},
+    prod/.style={fill=orange!25, draw=orange!60, rounded corners=2pt},
+    window/.style={fill=green!20, draw=green!60, rounded corners=2pt},
+    target/.style={fill=red!20, draw=red!60, rounded corners=2pt},
+]
+\draw[->] (0,0) -- (22.8,0) node[right] {Semana ISO};
+
+\foreach \w/\lab in {26/{w26},31/{w31},36/{w36}}{
+  \pgfmathsetmacro{\xx}{\w-20}
+  \draw (\xx,0.12) -- (\xx,-0.12);
+  \node[below,font=\scriptsize] at (\xx,-0.12) {\lab};
+}
+
+% Sensor bar: w26..w42
+\draw[sensor,very thick]
+    (6,0.35) rectangle node[midway]{\textbf{Datos sensor (T13, w26\,→)}} (22,0.85);
+\node[right] at (22,0.60) {$\cdots$};
+
+% Production bar: w36..w42
+\draw[prod,very thick]
+    (16,-0.85) rectangle node[midway]{\textbf{Producción (T13, w36\,→)}} (22,-0.35);
+\node[right] at (22,-0.60) {$\cdots$};
+
+% Gap brace
+\draw[decorate,decoration={brace,amplitude=5pt,mirror}]
+    (6,-1.15) -- (16,-1.15)
+    node[midway,below=6pt]{\textit{brecha} = 10 sem (T13)};
+
+% seq_len window: w26..w31
+\draw[window,very thick]
+    (6,1.10) rectangle node[midway,align=center,font=\scriptsize\bfseries]
+    {ventana $x_i$\\34 días} (11,1.65);
+\draw[<->,green!50!black] (6,1.82) -- (11,1.82)
+    node[midway,above,font=\scriptsize]{w26 $\to$ w31};
+
+% Target
+\draw[target,very thick]
+    (6,2.10) rectangle node[midway,font=\scriptsize\bfseries]{$\hat{y}=y_s[i]$} (8.8,2.60);
+\draw[->,red!70,thick] (7.4,2.10) -- (7.4,1.65);
+
+% Horizon arrow
+\draw[<->,thick,purple] (11,-1.80) -- (16,-1.80)
+    node[midway,below=4pt,purple]{$h \approx 5$ sem};
+\draw[dashed,gray!60] (11,-1.80) -- (11,1.10);
+\draw[dashed,gray!60] (16,-1.80) -- (16,-0.85);
+
+% Legend
+\node[sensor,draw,font=\scriptsize,minimum width=1.4cm] at (3.5,-2.65) {Sensor};
+\node[prod,  draw,font=\scriptsize,minimum width=1.4cm] at (7.5,-2.65) {Producción};
+\node[window,draw,font=\scriptsize,minimum width=1.4cm] at (11.5,-2.65) {Ventana $x_i$};
+\node[target,draw,font=\scriptsize,minimum width=1.4cm] at (15.5,-2.65) {Target $y_s[i]$};
+
+\end{tikzpicture}}
+\caption{Invernadero~4 — alineación temporal (T13). Sensor inicia w26,
+  ventana de 34~días finaliza w31, producción comienza w36.
+  Horizonte implícito $h = 36 - 31 \approx 5$ semanas.}
+\label{fig:align_inv4}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Semanas exactas de inicio de sensor, fin de secuencia y inicio de producción por temporada.}
+\label{tab:brechas}
+\small
+\begin{tabularx}{0.88\linewidth}{@{} l ccc c ccc @{}}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Invernadero 3}}
+ & \phantom{x}
+ & \multicolumn{3}{c}{\textbf{Invernadero 4}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){6-8}
+\textbf{Temp.} & Sensor & Seq.\ fin & Prod. & & Sensor & Seq.\ fin & Prod. \\
+\midrule
+T13 & w26 & w31 & w37 & & w26 & w31 & w36 \\
+T14 & w25 & w30 & w35 & & w25 & w30 & w35 \\
+T15 & w23 & w28 & w33 & & w26 & w31 & w34 \\
+T16 & w21 & w26 & w31 & & w25 & w30 & w31 \\
+T17 & w21 & w26 & w32 & & w21 & w26 & w32 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Avance reciente — Invernadero~4}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Desde la versión anterior del reporte se realizaron experimentos adicionales sobre el invernadero~4, cambiando la resolución de entrada a datos diarios (en lugar de resúmenes semanales). La siguiente tabla compara el resultado anterior con el mejor obtenido hasta la fecha.
+
+\begin{table}[H]
+  \centering
+  \caption{Evolución de resultados --- Invernadero~4, conjunto de prueba (T17).}
+  \label{tab:inv4_progress}
+  \small
+  \begin{tabularx}{0.88\linewidth}{@{} l l r r r @{}}
+    \toprule
+    \textbf{Versión} & \textbf{Configuración} & \textbf{RMSE (kg)} & \textbf{R\textsuperscript{2}} & \textbf{MAPE} \\
+    \midrule
+    Anterior & Semanal, $h=4$ sem    & 4\,658 & 0{,}702 &  8{,}98\,\% \\
+    Anterior & Semanal, $h=6$ sem    & 6\,108 & 0{,}487 & 13{,}18\,\% \\
+    Reciente & Diaria, $h$ implícito & 5\,473 & 0{,}728 &  9{,}20\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La nueva configuración supera a la versión semanal de 6~semanas y es comparable a la de 4~semanas, sin necesidad de fijar un horizonte: la brecha natural entre sensores y cosecha (~10--11~semanas) genera la anticipación automáticamente.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{cnn_rnn_inv4_results.png}
+  \caption{Invernadero~4 — Mejor modelo CNN-RNN (configuración diaria, horizonte implícito): curvas de pérdida de entrenamiento/validación y predicción frente a producción real en T17.}
+  \label{fig:inv4_recent}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Intervalos de confianza para la predicción}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Además del valor puntual de kilogramos estimados, el modelo genera un \textbf{rango de incertidumbre} por cada semana: una banda inferior y superior que, con una confianza del 90\%, debe contener la producción real.
+
+\subsection*{¿Cómo funciona?}
+
+La idea es sencilla: el modelo ya entrenado comete ciertos errores en datos históricos que no usó para aprender (temporada de validación, T16). Esos errores pasados se guardan como referencia.
+
+\begin{enumerate}[leftmargin=1.8em, itemsep=4pt]
+  \item \textbf{Guardar errores históricos.}
+    Para cada predicción en T16 se calcula $\text{error}_t = |\text{real}_t - \hat{y}_t|$.
+    Los errores se agrupan en tres etapas de la temporada: inicio, mitad y final de cosecha.
+
+  \item \textbf{Calcular el cuantil de cobertura.}
+    Para cada semana nueva a predecir se busca en el grupo correspondiente el error
+    que cubre el 90\,\% de los casos históricos. Ese valor es el ``margen de seguridad'' $q$.
+
+  \item \textbf{Construir el intervalo.}
+    \[
+      \text{Intervalo} = \bigl[\,\hat{y}_t - q,\;\; \hat{y}_t + q\,\bigr]
+    \]
+    Si el modelo predice 10\,000~kg y $q = 2\,000$~kg, el intervalo es
+    $[8\,000,\;12\,000]$~kg.
+
+  \item \textbf{Actualización continua.}
+    Conforme avanza la temporada, los errores reales se incorporan al historial,
+    ajustando automáticamente el margen según el comportamiento observado.
+\end{enumerate}
+
+\subsection*{¿Para qué sirve?}
+
+En lugar de recibir solo ``la semana que viene se esperan 10\,000~kg'', el equipo del cliente puede planificar con: \emph{``entre 8\,000 y 12\,000~kg con 90\,\% de confianza''}. Esto permite tomar decisiones de logística y comercialización considerando el mejor y peor escenario probable.
+
+\begin{infobox}[Resultado en validación]
+En las pruebas realizadas, el 91\,\% de las semanas reales de T17 cayeron dentro del intervalo predicho, superando el objetivo del 90\,\%.
+\end{infobox}
+
+\end{document}

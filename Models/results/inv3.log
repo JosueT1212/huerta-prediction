@@ -1,0 +1,2580 @@
+Using device: mps
+============================================================
+  CNN-RNN Invernadero 3
+  Train: ['T13', 'T14', 'T15'] | Val: T16 | Test: T17
+  HORIZON=4 (doc) | seq_len=6 | eff_horizon = gap - seq_len (per temporada)
+============================================================
+    T13: sensor ISO sem 26 → prod ISO sem 37  gap=11 sem
+    T14: sensor ISO sem 25 → prod ISO sem 35  gap=10 sem
+    T15: sensor ISO sem 23 → prod ISO sem 33  gap=10 sem
+    T16: sensor ISO sem 21 → prod ISO sem 31  gap=10 sem
+    T17: sensor ISO sem 21 → prod ISO sem 32  gap=11 sem
+  Invernadero 3:
+    Train samples: 111 (T13,T14,T15)
+    Val samples:   41 (T16)
+    Test samples:  39 (T17)
+    Features (29): ['temp_prom_int', 'temp_min_int', 'temp_max_int', 'hr_prom_int', 'co2_ppm', 'deficit_humedad', 'deficit_presion_vapor', 'humedad_abs_int', 'temp_prom_ext', 'temp_max_ext', 'temp_min_ext', 'hr_prom_ext', 'rad_sum', 'rad_max', 'dh_ext', 'humedad_abs_ext', 'riego_total', 'ph_promedio', 'ce_promedio', 'dias_desde_transplante', 'week_in_season', 'RACIMOS PUESTOS', 'FLORES EN RACIMO ABIERTAS', 'CANTIDAD DE RACIMOS EN PLANTA', 'CANTIDAD DE TOMATES', 'Nº DE RACIMO EN COSECHA', 'TOMATES MADUROS (COLOR 2)', 'DIAMETRO DEL FRUTO cm', 'CRECIMIENTO PLANTA (cm)']
+  Temporal features (2): ['dias_desde_transplante', 'week_in_season']
+  Sensor features (19): ['temp_prom_int', 'temp_min_int', 'temp_max_int', 'hr_prom_int', 'co2_ppm', 'deficit_humedad', 'deficit_presion_vapor', 'humedad_abs_int', 'temp_prom_ext', 'temp_max_ext', 'temp_min_ext', 'hr_prom_ext', 'rad_sum', 'rad_max', 'dh_ext', 'humedad_abs_ext', 'riego_total', 'ph_promedio', 'ce_promedio']
+  Phenology features (8): ['RACIMOS PUESTOS', 'FLORES EN RACIMO ABIERTAS', 'CANTIDAD DE RACIMOS EN PLANTA', 'CANTIDAD DE TOMATES', 'Nº DE RACIMO EN COSECHA', 'TOMATES MADUROS (COLOR 2)', 'DIAMETRO DEL FRUTO cm', 'CRECIMIENTO PLANTA (cm)']
+  Box-Cox λ = 0.7549
+  Gap-norm applied (HORIZON=4, seq_len=6): sensor frames trimmed per season
+  PCA (sensor only): 19 -> 6 components
+  CNN input: 6 PCA + 8 pheno = 14 channels
+  HORIZON=4 (doc) | seq_len=6 | eff_horizon = gap - seq_len (per temporada, shown above)
+  Sequences — train: 111, val: 41, test: 39
+  Train y variance (scaled boxcox): 0.065360
+
+  216 runs (54 seeds × 4 inits)
+  Epoch    1/500 | Train: 0.090579 | Val Loss: 0.098676 | Val Corr: -0.0746
+  Epoch   20/500 | Train: 0.044707 | Val Loss: 0.088605 | Val Corr: 0.6981
+  Epoch   40/500 | Train: 0.038494 | Val Loss: 0.076608 | Val Corr: 0.6369
+  Epoch   60/500 | Train: 0.029697 | Val Loss: 0.084070 | Val Corr: 0.6549
+  Epoch   80/500 | Train: 0.027399 | Val Loss: 0.109565 | Val Corr: 0.6981
+  Epoch  100/500 | Train: 0.025032 | Val Loss: 0.100342 | Val Corr: 0.6741
+  Epoch  120/500 | Train: 0.027327 | Val Loss: 0.091004 | Val Corr: 0.7126
+  Epoch  140/500 | Train: 0.021592 | Val Loss: 0.113427 | Val Corr: 0.6793
+  Epoch  160/500 | Train: 0.022570 | Val Loss: 0.105586 | Val Corr: 0.6742
+  Early stopping at epoch 177
+    [default] s42: R²=0.3796, MAPE=18.26%
+  Epoch    1/500 | Train: 0.075787 | Val Loss: 0.110948 | Val Corr: 0.2391
+  Epoch   20/500 | Train: 0.043960 | Val Loss: 0.078656 | Val Corr: 0.6938
+  Epoch   40/500 | Train: 0.036814 | Val Loss: 0.080857 | Val Corr: 0.6994
+  Epoch   60/500 | Train: 0.028556 | Val Loss: 0.104473 | Val Corr: 0.6976
+  Epoch   80/500 | Train: 0.027832 | Val Loss: 0.078202 | Val Corr: 0.5732
+  Epoch  100/500 | Train: 0.026953 | Val Loss: 0.116556 | Val Corr: 0.6495
+  Epoch  120/500 | Train: 0.022570 | Val Loss: 0.110787 | Val Corr: 0.6683
+  Epoch  140/500 | Train: 0.025418 | Val Loss: 0.120970 | Val Corr: 0.6577
+  Epoch  160/500 | Train: 0.020378 | Val Loss: 0.091155 | Val Corr: 0.6439
+  Epoch  180/500 | Train: 0.019697 | Val Loss: 0.124875 | Val Corr: 0.5853
+  Epoch  200/500 | Train: 0.018413 | Val Loss: 0.116394 | Val Corr: 0.6571
+  Early stopping at epoch 206
+    [default] s7: R²=0.3799, MAPE=18.60%
+  Epoch    1/500 | Train: 0.083964 | Val Loss: 0.115999 | Val Corr: 0.4219
+  Epoch   20/500 | Train: 0.044184 | Val Loss: 0.083276 | Val Corr: 0.6826
+  Epoch   40/500 | Train: 0.038095 | Val Loss: 0.103656 | Val Corr: 0.7188
+  Epoch   60/500 | Train: 0.032663 | Val Loss: 0.091601 | Val Corr: 0.5910
+  Epoch   80/500 | Train: 0.029414 | Val Loss: 0.078472 | Val Corr: 0.6666
+  Epoch  100/500 | Train: 0.026963 | Val Loss: 0.083390 | Val Corr: 0.5970
+  Epoch  120/500 | Train: 0.025951 | Val Loss: 0.109621 | Val Corr: 0.6803
+  Epoch  140/500 | Train: 0.019057 | Val Loss: 0.087697 | Val Corr: 0.6133
+  Epoch  160/500 | Train: 0.022265 | Val Loss: 0.084992 | Val Corr: 0.6106
+  Early stopping at epoch 175
+    [default] s123: R²=0.2881, MAPE=20.33%
+  Epoch    1/500 | Train: 0.065039 | Val Loss: 0.108272 | Val Corr: 0.0128
+  Epoch   20/500 | Train: 0.042155 | Val Loss: 0.079859 | Val Corr: 0.7276
+  Epoch   40/500 | Train: 0.035642 | Val Loss: 0.085263 | Val Corr: 0.7015
+  Epoch   60/500 | Train: 0.032576 | Val Loss: 0.088634 | Val Corr: 0.6739
+  Epoch   80/500 | Train: 0.028283 | Val Loss: 0.083380 | Val Corr: 0.6506
+  Epoch  100/500 | Train: 0.023898 | Val Loss: 0.124206 | Val Corr: 0.6620
+  Epoch  120/500 | Train: 0.020275 | Val Loss: 0.099034 | Val Corr: 0.6583
+  Epoch  140/500 | Train: 0.023155 | Val Loss: 0.086379 | Val Corr: 0.6454
+  Epoch  160/500 | Train: 0.018577 | Val Loss: 0.089979 | Val Corr: 0.6100
+  Early stopping at epoch 167
+    [default] s2024: R²=0.3765, MAPE=18.84%
+  Epoch    1/500 | Train: 0.101282 | Val Loss: 0.102873 | Val Corr: 0.2501
+  Epoch   20/500 | Train: 0.047016 | Val Loss: 0.080155 | Val Corr: 0.7414
+  Epoch   40/500 | Train: 0.036975 | Val Loss: 0.097080 | Val Corr: 0.7105
+  Epoch   60/500 | Train: 0.032597 | Val Loss: 0.100008 | Val Corr: 0.6915
+  Epoch   80/500 | Train: 0.029623 | Val Loss: 0.108832 | Val Corr: 0.7174
+  Epoch  100/500 | Train: 0.023234 | Val Loss: 0.115303 | Val Corr: 0.6630
+  Epoch  120/500 | Train: 0.018509 | Val Loss: 0.089815 | Val Corr: 0.6675
+  Epoch  140/500 | Train: 0.022860 | Val Loss: 0.087427 | Val Corr: 0.6978
+  Epoch  160/500 | Train: 0.017862 | Val Loss: 0.096393 | Val Corr: 0.7440
+  Early stopping at epoch 176
+    [default] s99: R²=0.2463, MAPE=21.49%
+  Epoch    1/500 | Train: 0.083501 | Val Loss: 0.113693 | Val Corr: 0.1057
+  Epoch   20/500 | Train: 0.042144 | Val Loss: 0.089842 | Val Corr: 0.7304
+  Epoch   40/500 | Train: 0.041448 | Val Loss: 0.075506 | Val Corr: 0.7133
+  Epoch   60/500 | Train: 0.035990 | Val Loss: 0.077467 | Val Corr: 0.5973
+  Epoch   80/500 | Train: 0.027481 | Val Loss: 0.095336 | Val Corr: 0.6697
+  Epoch  100/500 | Train: 0.022847 | Val Loss: 0.091558 | Val Corr: 0.6519
+  Epoch  120/500 | Train: 0.025281 | Val Loss: 0.104377 | Val Corr: 0.6793
+  Epoch  140/500 | Train: 0.020329 | Val Loss: 0.100172 | Val Corr: 0.6473
+  Epoch  160/500 | Train: 0.023246 | Val Loss: 0.078117 | Val Corr: 0.5226
+  Epoch  180/500 | Train: 0.022036 | Val Loss: 0.086159 | Val Corr: 0.6055
+  Epoch  200/500 | Train: 0.019116 | Val Loss: 0.105617 | Val Corr: 0.5724
+  Early stopping at epoch 214
+    [default] s13: R²=0.4616, MAPE=17.49%
+  Epoch    1/500 | Train: 0.081481 | Val Loss: 0.104551 | Val Corr: 0.0270
+  Epoch   20/500 | Train: 0.040500 | Val Loss: 0.091734 | Val Corr: 0.7556
+  Epoch   40/500 | Train: 0.037477 | Val Loss: 0.107793 | Val Corr: 0.6757
+  Epoch   60/500 | Train: 0.027468 | Val Loss: 0.098995 | Val Corr: 0.6577
+  Epoch   80/500 | Train: 0.026871 | Val Loss: 0.087741 | Val Corr: 0.6718
+  Epoch  100/500 | Train: 0.026421 | Val Loss: 0.098877 | Val Corr: 0.6759
+  Epoch  120/500 | Train: 0.021981 | Val Loss: 0.110258 | Val Corr: 0.6570
+  Epoch  140/500 | Train: 0.021246 | Val Loss: 0.105529 | Val Corr: 0.6643
+  Epoch  160/500 | Train: 0.022327 | Val Loss: 0.075532 | Val Corr: 0.5385
+  Early stopping at epoch 168
+    [default] s55: R²=0.4023, MAPE=18.43%
+  Epoch    1/500 | Train: 0.101784 | Val Loss: 0.124156 | Val Corr: 0.1817
+  Epoch   20/500 | Train: 0.043346 | Val Loss: 0.098665 | Val Corr: 0.7092
+  Epoch   40/500 | Train: 0.033210 | Val Loss: 0.078156 | Val Corr: 0.6494
+  Epoch   60/500 | Train: 0.034003 | Val Loss: 0.098140 | Val Corr: 0.6605
+  Epoch   80/500 | Train: 0.026411 | Val Loss: 0.104214 | Val Corr: 0.6444
+  Epoch  100/500 | Train: 0.029929 | Val Loss: 0.091310 | Val Corr: 0.6179
+  Epoch  120/500 | Train: 0.019302 | Val Loss: 0.120700 | Val Corr: 0.6398
+  Epoch  140/500 | Train: 0.022938 | Val Loss: 0.081806 | Val Corr: 0.5814
+  Epoch  160/500 | Train: 0.020091 | Val Loss: 0.079310 | Val Corr: 0.5667
+  Early stopping at epoch 173
+    [default] s777: R²=0.2852, MAPE=19.28%
+  Epoch    1/500 | Train: 0.073309 | Val Loss: 0.115088 | Val Corr: 0.2134
+  Epoch   20/500 | Train: 0.043255 | Val Loss: 0.088721 | Val Corr: 0.7314
+  Epoch   40/500 | Train: 0.034573 | Val Loss: 0.079875 | Val Corr: 0.7308
+  Epoch   60/500 | Train: 0.028013 | Val Loss: 0.074932 | Val Corr: 0.6656
+  Epoch   80/500 | Train: 0.027438 | Val Loss: 0.074961 | Val Corr: 0.7244
+  Epoch  100/500 | Train: 0.024971 | Val Loss: 0.075693 | Val Corr: 0.6837
+  Epoch  120/500 | Train: 0.023067 | Val Loss: 0.098404 | Val Corr: 0.6586
+  Epoch  140/500 | Train: 0.023503 | Val Loss: 0.087912 | Val Corr: 0.6708
+  Epoch  160/500 | Train: 0.019921 | Val Loss: 0.092445 | Val Corr: 0.6489
+  Epoch  180/500 | Train: 0.019004 | Val Loss: 0.090252 | Val Corr: 0.6394
+  Early stopping at epoch 183
+    [default] s314: R²=0.2049, MAPE=19.48%
+  Epoch    1/500 | Train: 0.068097 | Val Loss: 0.104149 | Val Corr: 0.1962
+  Epoch   20/500 | Train: 0.045687 | Val Loss: 0.082122 | Val Corr: 0.7176
+  Epoch   40/500 | Train: 0.033072 | Val Loss: 0.119226 | Val Corr: 0.6853
+  Epoch   60/500 | Train: 0.032642 | Val Loss: 0.093554 | Val Corr: 0.7048
+  Epoch   80/500 | Train: 0.025147 | Val Loss: 0.099219 | Val Corr: 0.6731
+  Epoch  100/500 | Train: 0.024956 | Val Loss: 0.120930 | Val Corr: 0.6839
+  Epoch  120/500 | Train: 0.025168 | Val Loss: 0.123717 | Val Corr: 0.6563
+  Epoch  140/500 | Train: 0.024860 | Val Loss: 0.119220 | Val Corr: 0.6289
+  Epoch  160/500 | Train: 0.021754 | Val Loss: 0.119575 | Val Corr: 0.6471
+  Early stopping at epoch 165
+    [default] s2025: R²=0.4414, MAPE=17.81%
+  Epoch    1/500 | Train: 0.069698 | Val Loss: 0.111805 | Val Corr: 0.2113
+  Epoch   20/500 | Train: 0.042150 | Val Loss: 0.082935 | Val Corr: 0.7430
+  Epoch   40/500 | Train: 0.036289 | Val Loss: 0.084243 | Val Corr: 0.6825
+  Epoch   60/500 | Train: 0.028736 | Val Loss: 0.091776 | Val Corr: 0.6402
+  Epoch   80/500 | Train: 0.024823 | Val Loss: 0.091673 | Val Corr: 0.6164
+  Epoch  100/500 | Train: 0.022313 | Val Loss: 0.083294 | Val Corr: 0.6486
+  Epoch  120/500 | Train: 0.021673 | Val Loss: 0.086526 | Val Corr: 0.5394
+  Epoch  140/500 | Train: 0.019096 | Val Loss: 0.084948 | Val Corr: 0.5932
+  Epoch  160/500 | Train: 0.019339 | Val Loss: 0.080577 | Val Corr: 0.4619
+  Early stopping at epoch 177
+    [default] s0: R²=0.3819, MAPE=17.67%
+  Epoch    1/500 | Train: 0.070613 | Val Loss: 0.106888 | Val Corr: 0.2342
+  Epoch   20/500 | Train: 0.046226 | Val Loss: 0.066582 | Val Corr: 0.6861
+  Epoch   40/500 | Train: 0.037420 | Val Loss: 0.059974 | Val Corr: 0.7005
+  Epoch   60/500 | Train: 0.029453 | Val Loss: 0.078433 | Val Corr: 0.6989
+  Epoch   80/500 | Train: 0.028754 | Val Loss: 0.072503 | Val Corr: 0.6679
+  Epoch  100/500 | Train: 0.024828 | Val Loss: 0.112010 | Val Corr: 0.7129
+  Epoch  120/500 | Train: 0.028519 | Val Loss: 0.107064 | Val Corr: 0.7001
+  Epoch  140/500 | Train: 0.024631 | Val Loss: 0.105249 | Val Corr: 0.6727
+  Epoch  160/500 | Train: 0.025390 | Val Loss: 0.070174 | Val Corr: 0.6071
+  Early stopping at epoch 161
+    [default] s1: R²=0.3233, MAPE=18.59%
+  Epoch    1/500 | Train: 0.084107 | Val Loss: 0.108575 | Val Corr: 0.2017
+  Epoch   20/500 | Train: 0.042063 | Val Loss: 0.077372 | Val Corr: 0.5127
+  Epoch   40/500 | Train: 0.034790 | Val Loss: 0.096990 | Val Corr: 0.6719
+  Epoch   60/500 | Train: 0.033510 | Val Loss: 0.107485 | Val Corr: 0.6645
+  Epoch   80/500 | Train: 0.028874 | Val Loss: 0.080853 | Val Corr: 0.6642
+  Epoch  100/500 | Train: 0.024321 | Val Loss: 0.104696 | Val Corr: 0.6703
+  Epoch  120/500 | Train: 0.023540 | Val Loss: 0.101272 | Val Corr: 0.6570
+  Epoch  140/500 | Train: 0.024632 | Val Loss: 0.082999 | Val Corr: 0.6575
+  Epoch  160/500 | Train: 0.019685 | Val Loss: 0.129582 | Val Corr: 0.6364
+  Early stopping at epoch 168
+    [default] s2: R²=0.4137, MAPE=15.82%
+  Epoch    1/500 | Train: 0.061888 | Val Loss: 0.109098 | Val Corr: 0.3409
+  Epoch   20/500 | Train: 0.047188 | Val Loss: 0.089964 | Val Corr: 0.7171
+  Epoch   40/500 | Train: 0.036991 | Val Loss: 0.071400 | Val Corr: 0.6431
+  Epoch   60/500 | Train: 0.027916 | Val Loss: 0.078899 | Val Corr: 0.5254
+  Epoch   80/500 | Train: 0.025951 | Val Loss: 0.098470 | Val Corr: 0.6262
+  Epoch  100/500 | Train: 0.029655 | Val Loss: 0.096980 | Val Corr: 0.6270
+  Epoch  120/500 | Train: 0.023280 | Val Loss: 0.090295 | Val Corr: 0.6500
+  Epoch  140/500 | Train: 0.022353 | Val Loss: 0.086030 | Val Corr: 0.6396
+  Epoch  160/500 | Train: 0.018740 | Val Loss: 0.110861 | Val Corr: 0.6877
+  Early stopping at epoch 164
+    [default] s3: R²=0.3292, MAPE=20.26%
+  Epoch    1/500 | Train: 0.062982 | Val Loss: 0.104263 | Val Corr: 0.2377
+  Epoch   20/500 | Train: 0.037847 | Val Loss: 0.073687 | Val Corr: 0.7127
+  Epoch   40/500 | Train: 0.037338 | Val Loss: 0.100847 | Val Corr: 0.6859
+  Epoch   60/500 | Train: 0.033220 | Val Loss: 0.085090 | Val Corr: 0.5975
+  Epoch   80/500 | Train: 0.024840 | Val Loss: 0.081089 | Val Corr: 0.5649
+  Epoch  100/500 | Train: 0.025500 | Val Loss: 0.101760 | Val Corr: 0.6636
+  Epoch  120/500 | Train: 0.020040 | Val Loss: 0.087612 | Val Corr: 0.6574
+  Epoch  140/500 | Train: 0.024904 | Val Loss: 0.100193 | Val Corr: 0.6425
+  Epoch  160/500 | Train: 0.023348 | Val Loss: 0.090177 | Val Corr: 0.6339
+  Early stopping at epoch 160
+    [default] s4: R²=0.4092, MAPE=17.77%
+  Epoch    1/500 | Train: 0.068811 | Val Loss: 0.108830 | Val Corr: 0.0544
+  Epoch   20/500 | Train: 0.042100 | Val Loss: 0.077191 | Val Corr: 0.7235
+  Epoch   40/500 | Train: 0.036902 | Val Loss: 0.095932 | Val Corr: 0.6982
+  Epoch   60/500 | Train: 0.030926 | Val Loss: 0.092706 | Val Corr: 0.6877
+  Epoch   80/500 | Train: 0.026625 | Val Loss: 0.098206 | Val Corr: 0.6530
+  Epoch  100/500 | Train: 0.030348 | Val Loss: 0.100577 | Val Corr: 0.6042
+  Epoch  120/500 | Train: 0.023259 | Val Loss: 0.107816 | Val Corr: 0.5185
+  Epoch  140/500 | Train: 0.021191 | Val Loss: 0.123968 | Val Corr: 0.6202
+  Epoch  160/500 | Train: 0.021814 | Val Loss: 0.119232 | Val Corr: 0.6011
+  Early stopping at epoch 167
+    [default] s5: R²=0.3973, MAPE=18.29%
+  Epoch    1/500 | Train: 0.072890 | Val Loss: 0.101068 | Val Corr: 0.2271
+  Epoch   20/500 | Train: 0.043131 | Val Loss: 0.085915 | Val Corr: 0.7351
+  Epoch   40/500 | Train: 0.033246 | Val Loss: 0.079287 | Val Corr: 0.6722
+  Epoch   60/500 | Train: 0.029754 | Val Loss: 0.089105 | Val Corr: 0.6890
+  Epoch   80/500 | Train: 0.027433 | Val Loss: 0.103043 | Val Corr: 0.6431
+  Epoch  100/500 | Train: 0.024393 | Val Loss: 0.072741 | Val Corr: 0.5755
+  Epoch  120/500 | Train: 0.022368 | Val Loss: 0.097627 | Val Corr: 0.6576
+  Epoch  140/500 | Train: 0.019698 | Val Loss: 0.092894 | Val Corr: 0.6222
+  Epoch  160/500 | Train: 0.023832 | Val Loss: 0.104500 | Val Corr: 0.7044
+  Early stopping at epoch 177
+    [default] s6: R²=0.1498, MAPE=21.73%
+  Epoch    1/500 | Train: 0.096694 | Val Loss: 0.097506 | Val Corr: 0.2609
+  Epoch   20/500 | Train: 0.048579 | Val Loss: 0.074901 | Val Corr: 0.6986
+  Epoch   40/500 | Train: 0.045979 | Val Loss: 0.094857 | Val Corr: 0.6952
+  Epoch   60/500 | Train: 0.029897 | Val Loss: 0.082026 | Val Corr: 0.7215
+  Epoch   80/500 | Train: 0.031557 | Val Loss: 0.060946 | Val Corr: 0.7022
+  Epoch  100/500 | Train: 0.025973 | Val Loss: 0.071447 | Val Corr: 0.6585
+  Epoch  120/500 | Train: 0.023952 | Val Loss: 0.080444 | Val Corr: 0.6003
+  Epoch  140/500 | Train: 0.026792 | Val Loss: 0.102432 | Val Corr: 0.6762
+  Epoch  160/500 | Train: 0.022787 | Val Loss: 0.127639 | Val Corr: 0.6569
+  Early stopping at epoch 178
+    [default] s8: R²=0.4101, MAPE=17.62%
+  Epoch    1/500 | Train: 0.078574 | Val Loss: 0.108414 | Val Corr: 0.1714
+  Epoch   20/500 | Train: 0.043461 | Val Loss: 0.079095 | Val Corr: 0.7439
+  Epoch   40/500 | Train: 0.040651 | Val Loss: 0.085144 | Val Corr: 0.6679
+  Epoch   60/500 | Train: 0.029600 | Val Loss: 0.113059 | Val Corr: 0.6887
+  Epoch   80/500 | Train: 0.026554 | Val Loss: 0.092727 | Val Corr: 0.6992
+  Epoch  100/500 | Train: 0.024606 | Val Loss: 0.079364 | Val Corr: 0.6771
+  Epoch  120/500 | Train: 0.022738 | Val Loss: 0.082105 | Val Corr: 0.5993
+  Epoch  140/500 | Train: 0.020095 | Val Loss: 0.115164 | Val Corr: 0.6698
+  Epoch  160/500 | Train: 0.019836 | Val Loss: 0.106955 | Val Corr: 0.7332
+  Epoch  180/500 | Train: 0.015546 | Val Loss: 0.091998 | Val Corr: 0.7230
+  Early stopping at epoch 180
+    [default] s9: R²=0.3030, MAPE=19.28%
+  Epoch    1/500 | Train: 0.070230 | Val Loss: 0.109440 | Val Corr: 0.1077
+  Epoch   20/500 | Train: 0.042537 | Val Loss: 0.080260 | Val Corr: 0.7137
+  Epoch   40/500 | Train: 0.034572 | Val Loss: 0.087022 | Val Corr: 0.7032
+  Epoch   60/500 | Train: 0.031227 | Val Loss: 0.080749 | Val Corr: 0.6754
+  Epoch   80/500 | Train: 0.025514 | Val Loss: 0.084591 | Val Corr: 0.6778
+  Epoch  100/500 | Train: 0.024592 | Val Loss: 0.092952 | Val Corr: 0.6470
+  Epoch  120/500 | Train: 0.025347 | Val Loss: 0.104393 | Val Corr: 0.6389
+  Epoch  140/500 | Train: 0.025574 | Val Loss: 0.082325 | Val Corr: 0.6805
+  Epoch  160/500 | Train: 0.018707 | Val Loss: 0.079447 | Val Corr: 0.6125
+  Early stopping at epoch 164
+    [default] s10: R²=0.2676, MAPE=20.17%
+  Epoch    1/500 | Train: 0.102539 | Val Loss: 0.114491 | Val Corr: -0.1797
+  Epoch   20/500 | Train: 0.041958 | Val Loss: 0.067670 | Val Corr: 0.7053
+  Epoch   40/500 | Train: 0.036649 | Val Loss: 0.070436 | Val Corr: 0.6770
+  Epoch   60/500 | Train: 0.027558 | Val Loss: 0.081260 | Val Corr: 0.6514
+  Epoch   80/500 | Train: 0.024751 | Val Loss: 0.075713 | Val Corr: 0.5952
+  Epoch  100/500 | Train: 0.025234 | Val Loss: 0.106353 | Val Corr: 0.6897
+  Epoch  120/500 | Train: 0.023787 | Val Loss: 0.117432 | Val Corr: 0.5900
+  Epoch  140/500 | Train: 0.018008 | Val Loss: 0.095742 | Val Corr: 0.6155
+  Epoch  160/500 | Train: 0.018638 | Val Loss: 0.132130 | Val Corr: 0.5943
+  Early stopping at epoch 169
+    [default] s11: R²=0.3591, MAPE=17.82%
+  Epoch    1/500 | Train: 0.070298 | Val Loss: 0.106465 | Val Corr: 0.0317
+  Epoch   20/500 | Train: 0.045164 | Val Loss: 0.080098 | Val Corr: 0.7329
+  Epoch   40/500 | Train: 0.033328 | Val Loss: 0.064611 | Val Corr: 0.6933
+  Epoch   60/500 | Train: 0.034222 | Val Loss: 0.094328 | Val Corr: 0.7008
+  Epoch   80/500 | Train: 0.028200 | Val Loss: 0.064913 | Val Corr: 0.6534
+  Epoch  100/500 | Train: 0.029638 | Val Loss: 0.118227 | Val Corr: 0.6808
+  Epoch  120/500 | Train: 0.025155 | Val Loss: 0.089255 | Val Corr: 0.7014
+  Epoch  140/500 | Train: 0.020125 | Val Loss: 0.075118 | Val Corr: 0.6740
+  Epoch  160/500 | Train: 0.018324 | Val Loss: 0.090479 | Val Corr: 0.6916
+  Early stopping at epoch 179
+    [default] s12: R²=0.2977, MAPE=20.20%
+  Epoch    1/500 | Train: 0.080878 | Val Loss: 0.119262 | Val Corr: 0.2751
+  Epoch   20/500 | Train: 0.043534 | Val Loss: 0.076061 | Val Corr: 0.7035
+  Epoch   40/500 | Train: 0.032373 | Val Loss: 0.080381 | Val Corr: 0.6714
+  Epoch   60/500 | Train: 0.030451 | Val Loss: 0.086978 | Val Corr: 0.6667
+  Epoch   80/500 | Train: 0.024686 | Val Loss: 0.106112 | Val Corr: 0.5721
+  Epoch  100/500 | Train: 0.021313 | Val Loss: 0.076884 | Val Corr: 0.5231
+  Epoch  120/500 | Train: 0.022433 | Val Loss: 0.087827 | Val Corr: 0.5157
+  Epoch  140/500 | Train: 0.020198 | Val Loss: 0.097047 | Val Corr: 0.5892
+  Epoch  160/500 | Train: 0.018709 | Val Loss: 0.096682 | Val Corr: 0.5336
+  Early stopping at epoch 172
+    [default] s14: R²=0.3651, MAPE=18.13%
+  Epoch    1/500 | Train: 0.072388 | Val Loss: 0.116508 | Val Corr: -0.5866
+  Epoch   20/500 | Train: 0.045938 | Val Loss: 0.074153 | Val Corr: 0.7272
+  Epoch   40/500 | Train: 0.036224 | Val Loss: 0.067463 | Val Corr: 0.6451
+  Epoch   60/500 | Train: 0.029555 | Val Loss: 0.093005 | Val Corr: 0.6665
+  Epoch   80/500 | Train: 0.029083 | Val Loss: 0.088815 | Val Corr: 0.6931
+  Epoch  100/500 | Train: 0.023757 | Val Loss: 0.120813 | Val Corr: 0.6556
+  Epoch  120/500 | Train: 0.023735 | Val Loss: 0.118750 | Val Corr: 0.6887
+  Epoch  140/500 | Train: 0.018844 | Val Loss: 0.095753 | Val Corr: 0.6553
+  Epoch  160/500 | Train: 0.019168 | Val Loss: 0.126131 | Val Corr: 0.6763
+  Early stopping at epoch 171
+    [default] s15: R²=0.4782, MAPE=17.26%
+  Epoch    1/500 | Train: 0.109135 | Val Loss: 0.113241 | Val Corr: 0.1320
+  Epoch   20/500 | Train: 0.043130 | Val Loss: 0.076456 | Val Corr: 0.6986
+  Epoch   40/500 | Train: 0.039221 | Val Loss: 0.098247 | Val Corr: 0.7061
+  Epoch   60/500 | Train: 0.031082 | Val Loss: 0.076842 | Val Corr: 0.7766
+  Epoch   80/500 | Train: 0.028147 | Val Loss: 0.079724 | Val Corr: 0.7112
+  Epoch  100/500 | Train: 0.023376 | Val Loss: 0.069921 | Val Corr: 0.6697
+  Epoch  120/500 | Train: 0.020340 | Val Loss: 0.087162 | Val Corr: 0.7121
+  Epoch  140/500 | Train: 0.018054 | Val Loss: 0.127089 | Val Corr: 0.6238
+  Epoch  160/500 | Train: 0.018472 | Val Loss: 0.073118 | Val Corr: 0.6337
+  Epoch  180/500 | Train: 0.017827 | Val Loss: 0.080318 | Val Corr: 0.6792
+  Epoch  200/500 | Train: 0.017276 | Val Loss: 0.103389 | Val Corr: 0.6795
+  Early stopping at epoch 210
+    [default] s16: R²=0.4889, MAPE=17.81%
+  Epoch    1/500 | Train: 0.089824 | Val Loss: 0.113219 | Val Corr: 0.1981
+  Epoch   20/500 | Train: 0.042382 | Val Loss: 0.087309 | Val Corr: 0.6619
+  Epoch   40/500 | Train: 0.035355 | Val Loss: 0.096299 | Val Corr: 0.6736
+  Epoch   60/500 | Train: 0.034442 | Val Loss: 0.092769 | Val Corr: 0.6489
+  Epoch   80/500 | Train: 0.030878 | Val Loss: 0.107550 | Val Corr: 0.7108
+  Epoch  100/500 | Train: 0.024840 | Val Loss: 0.103166 | Val Corr: 0.7004
+  Epoch  120/500 | Train: 0.020131 | Val Loss: 0.087201 | Val Corr: 0.6597
+  Epoch  140/500 | Train: 0.020483 | Val Loss: 0.082411 | Val Corr: 0.6606
+  Epoch  160/500 | Train: 0.018470 | Val Loss: 0.104235 | Val Corr: 0.6874
+  Early stopping at epoch 172
+    [default] s17: R²=0.3853, MAPE=17.86%
+  Epoch    1/500 | Train: 0.079792 | Val Loss: 0.127966 | Val Corr: 0.1618
+  Epoch   20/500 | Train: 0.046185 | Val Loss: 0.080720 | Val Corr: 0.7070
+  Epoch   40/500 | Train: 0.034403 | Val Loss: 0.077996 | Val Corr: 0.6985
+  Epoch   60/500 | Train: 0.032519 | Val Loss: 0.065737 | Val Corr: 0.6656
+  Epoch   80/500 | Train: 0.028646 | Val Loss: 0.115404 | Val Corr: 0.6894
+  Epoch  100/500 | Train: 0.023662 | Val Loss: 0.092462 | Val Corr: 0.6427
+  Epoch  120/500 | Train: 0.025131 | Val Loss: 0.083476 | Val Corr: 0.5656
+  Epoch  140/500 | Train: 0.022707 | Val Loss: 0.097946 | Val Corr: 0.6957
+  Epoch  160/500 | Train: 0.020769 | Val Loss: 0.101714 | Val Corr: 0.6100
+  Early stopping at epoch 166
+    [default] s18: R²=0.2202, MAPE=18.85%
+  Epoch    1/500 | Train: 0.084328 | Val Loss: 0.124361 | Val Corr: 0.1193
+  Epoch   20/500 | Train: 0.043293 | Val Loss: 0.081466 | Val Corr: 0.6535
+  Epoch   40/500 | Train: 0.038113 | Val Loss: 0.067511 | Val Corr: 0.6316
+  Epoch   60/500 | Train: 0.028479 | Val Loss: 0.091560 | Val Corr: 0.5685
+  Epoch   80/500 | Train: 0.025912 | Val Loss: 0.097255 | Val Corr: 0.5640
+  Epoch  100/500 | Train: 0.023081 | Val Loss: 0.107739 | Val Corr: 0.6740
+  Epoch  120/500 | Train: 0.021314 | Val Loss: 0.097459 | Val Corr: 0.5944
+  Epoch  140/500 | Train: 0.021034 | Val Loss: 0.119051 | Val Corr: 0.6278
+  Epoch  160/500 | Train: 0.019992 | Val Loss: 0.100268 | Val Corr: 0.6001
+  Early stopping at epoch 171
+    [default] s19: R²=0.4058, MAPE=18.42%
+  Epoch    1/500 | Train: 0.073416 | Val Loss: 0.107711 | Val Corr: 0.1908
+  Epoch   20/500 | Train: 0.042909 | Val Loss: 0.076266 | Val Corr: 0.7166
+  Epoch   40/500 | Train: 0.035758 | Val Loss: 0.062629 | Val Corr: 0.6414
+  Epoch   60/500 | Train: 0.032056 | Val Loss: 0.077497 | Val Corr: 0.6828
+  Epoch   80/500 | Train: 0.026893 | Val Loss: 0.080026 | Val Corr: 0.6565
+  Epoch  100/500 | Train: 0.026516 | Val Loss: 0.112656 | Val Corr: 0.7055
+  Epoch  120/500 | Train: 0.025253 | Val Loss: 0.081660 | Val Corr: 0.6162
+  Epoch  140/500 | Train: 0.022348 | Val Loss: 0.084655 | Val Corr: 0.6449
+  Epoch  160/500 | Train: 0.018417 | Val Loss: 0.095549 | Val Corr: 0.7169
+  Early stopping at epoch 160
+    [default] s20: R²=0.3272, MAPE=18.80%
+  Epoch    1/500 | Train: 0.081570 | Val Loss: 0.117151 | Val Corr: 0.2580
+  Epoch   20/500 | Train: 0.043995 | Val Loss: 0.073971 | Val Corr: 0.6087
+  Epoch   40/500 | Train: 0.036676 | Val Loss: 0.087640 | Val Corr: 0.6765
+  Epoch   60/500 | Train: 0.031574 | Val Loss: 0.114789 | Val Corr: 0.6803
+  Epoch   80/500 | Train: 0.026764 | Val Loss: 0.096268 | Val Corr: 0.6457
+  Epoch  100/500 | Train: 0.024835 | Val Loss: 0.090119 | Val Corr: 0.6807
+  Epoch  120/500 | Train: 0.023435 | Val Loss: 0.081939 | Val Corr: 0.6473
+  Epoch  140/500 | Train: 0.021420 | Val Loss: 0.109855 | Val Corr: 0.6716
+  Epoch  160/500 | Train: 0.021481 | Val Loss: 0.126892 | Val Corr: 0.6152
+  Epoch  180/500 | Train: 0.015137 | Val Loss: 0.109507 | Val Corr: 0.6058
+  Epoch  200/500 | Train: 0.018372 | Val Loss: 0.126186 | Val Corr: 0.6145
+  Early stopping at epoch 213
+    [default] s21: R²=0.3225, MAPE=20.16%
+  Epoch    1/500 | Train: 0.070860 | Val Loss: 0.122945 | Val Corr: 0.2137
+  Epoch   20/500 | Train: 0.041174 | Val Loss: 0.081230 | Val Corr: 0.7532
+  Epoch   40/500 | Train: 0.038433 | Val Loss: 0.077923 | Val Corr: 0.6524
+  Epoch   60/500 | Train: 0.030370 | Val Loss: 0.100936 | Val Corr: 0.6805
+  Epoch   80/500 | Train: 0.028292 | Val Loss: 0.080063 | Val Corr: 0.6404
+  Epoch  100/500 | Train: 0.022857 | Val Loss: 0.081030 | Val Corr: 0.5446
+  Epoch  120/500 | Train: 0.023040 | Val Loss: 0.082434 | Val Corr: 0.5707
+  Epoch  140/500 | Train: 0.020905 | Val Loss: 0.083220 | Val Corr: 0.5780
+  Epoch  160/500 | Train: 0.019499 | Val Loss: 0.082106 | Val Corr: 0.5015
+  Early stopping at epoch 168
+    [default] s22: R²=0.3190, MAPE=18.04%
+  Epoch    1/500 | Train: 0.065478 | Val Loss: 0.104944 | Val Corr: 0.2252
+  Epoch   20/500 | Train: 0.040249 | Val Loss: 0.073263 | Val Corr: 0.7335
+  Epoch   40/500 | Train: 0.039217 | Val Loss: 0.076232 | Val Corr: 0.6866
+  Epoch   60/500 | Train: 0.031511 | Val Loss: 0.071645 | Val Corr: 0.6436
+  Epoch   80/500 | Train: 0.026195 | Val Loss: 0.067810 | Val Corr: 0.6438
+  Epoch  100/500 | Train: 0.025855 | Val Loss: 0.120368 | Val Corr: 0.6640
+  Epoch  120/500 | Train: 0.022392 | Val Loss: 0.089567 | Val Corr: 0.5475
+  Epoch  140/500 | Train: 0.021320 | Val Loss: 0.117382 | Val Corr: 0.6651
+  Epoch  160/500 | Train: 0.018784 | Val Loss: 0.104906 | Val Corr: 0.6300
+  Early stopping at epoch 179
+    [default] s23: R²=0.5069, MAPE=17.82%
+  Epoch    1/500 | Train: 0.079775 | Val Loss: 0.104991 | Val Corr: -0.0539
+  Epoch   20/500 | Train: 0.043390 | Val Loss: 0.070387 | Val Corr: 0.7003
+  Epoch   40/500 | Train: 0.038846 | Val Loss: 0.082841 | Val Corr: 0.7134
+  Epoch   60/500 | Train: 0.034245 | Val Loss: 0.097803 | Val Corr: 0.6739
+  Epoch   80/500 | Train: 0.032115 | Val Loss: 0.115542 | Val Corr: 0.6540
+  Epoch  100/500 | Train: 0.026621 | Val Loss: 0.089081 | Val Corr: 0.5759
+  Epoch  120/500 | Train: 0.022875 | Val Loss: 0.119687 | Val Corr: 0.6154
+  Epoch  140/500 | Train: 0.023303 | Val Loss: 0.100397 | Val Corr: 0.6116
+  Epoch  160/500 | Train: 0.019798 | Val Loss: 0.107142 | Val Corr: 0.5889
+  Early stopping at epoch 169
+    [default] s24: R²=0.3662, MAPE=17.52%
+  Epoch    1/500 | Train: 0.088134 | Val Loss: 0.113545 | Val Corr: 0.2083
+  Epoch   20/500 | Train: 0.041914 | Val Loss: 0.070308 | Val Corr: 0.7413
+  Epoch   40/500 | Train: 0.033215 | Val Loss: 0.077687 | Val Corr: 0.6634
+  Epoch   60/500 | Train: 0.026160 | Val Loss: 0.069208 | Val Corr: 0.6225
+  Epoch   80/500 | Train: 0.027195 | Val Loss: 0.093501 | Val Corr: 0.6732
+  Epoch  100/500 | Train: 0.026666 | Val Loss: 0.114458 | Val Corr: 0.6175
+  Epoch  120/500 | Train: 0.024206 | Val Loss: 0.120798 | Val Corr: 0.6195
+  Epoch  140/500 | Train: 0.020392 | Val Loss: 0.122404 | Val Corr: 0.6324
+  Epoch  160/500 | Train: 0.020970 | Val Loss: 0.128731 | Val Corr: 0.6116
+  Early stopping at epoch 170
+    [default] s25: R²=0.3396, MAPE=19.93%
+  Epoch    1/500 | Train: 0.078546 | Val Loss: 0.110405 | Val Corr: 0.3095
+  Epoch   20/500 | Train: 0.041256 | Val Loss: 0.063138 | Val Corr: 0.6967
+  Epoch   40/500 | Train: 0.037043 | Val Loss: 0.093883 | Val Corr: 0.7038
+  Epoch   60/500 | Train: 0.031329 | Val Loss: 0.081118 | Val Corr: 0.6589
+  Epoch   80/500 | Train: 0.028998 | Val Loss: 0.083332 | Val Corr: 0.6403
+  Epoch  100/500 | Train: 0.023361 | Val Loss: 0.082052 | Val Corr: 0.6199
+  Epoch  120/500 | Train: 0.021606 | Val Loss: 0.094691 | Val Corr: 0.5938
+  Epoch  140/500 | Train: 0.024443 | Val Loss: 0.084615 | Val Corr: 0.5742
+  Epoch  160/500 | Train: 0.024064 | Val Loss: 0.085583 | Val Corr: 0.6007
+  Early stopping at epoch 161
+    [default] s26: R²=0.3840, MAPE=17.93%
+  Epoch    1/500 | Train: 0.077177 | Val Loss: 0.105507 | Val Corr: 0.2910
+  Epoch   20/500 | Train: 0.045131 | Val Loss: 0.087813 | Val Corr: 0.7420
+  Epoch   40/500 | Train: 0.034892 | Val Loss: 0.090055 | Val Corr: 0.7339
+  Epoch   60/500 | Train: 0.028224 | Val Loss: 0.063118 | Val Corr: 0.5883
+  Epoch   80/500 | Train: 0.028458 | Val Loss: 0.082603 | Val Corr: 0.7232
+  Epoch  100/500 | Train: 0.027005 | Val Loss: 0.071404 | Val Corr: 0.7222
+  Epoch  120/500 | Train: 0.027468 | Val Loss: 0.092946 | Val Corr: 0.7430
+  Epoch  140/500 | Train: 0.023162 | Val Loss: 0.102934 | Val Corr: 0.7208
+  Epoch  160/500 | Train: 0.023192 | Val Loss: 0.080854 | Val Corr: 0.6718
+  Early stopping at epoch 167
+    [default] s27: R²=0.4124, MAPE=18.04%
+  Epoch    1/500 | Train: 0.085529 | Val Loss: 0.119074 | Val Corr: 0.1117
+  Epoch   20/500 | Train: 0.043793 | Val Loss: 0.093420 | Val Corr: 0.7734
+  Epoch   40/500 | Train: 0.037198 | Val Loss: 0.075270 | Val Corr: 0.6539
+  Epoch   60/500 | Train: 0.032776 | Val Loss: 0.108019 | Val Corr: 0.6633
+  Epoch   80/500 | Train: 0.031391 | Val Loss: 0.079291 | Val Corr: 0.6542
+  Epoch  100/500 | Train: 0.024129 | Val Loss: 0.090940 | Val Corr: 0.7187
+  Epoch  120/500 | Train: 0.022066 | Val Loss: 0.086367 | Val Corr: 0.6526
+  Epoch  140/500 | Train: 0.021442 | Val Loss: 0.076997 | Val Corr: 0.5887
+  Epoch  160/500 | Train: 0.019753 | Val Loss: 0.090930 | Val Corr: 0.6985
+  Early stopping at epoch 176
+    [default] s28: R²=0.3873, MAPE=18.17%
+  Epoch    1/500 | Train: 0.098248 | Val Loss: 0.131977 | Val Corr: 0.2677
+  Epoch   20/500 | Train: 0.045270 | Val Loss: 0.091691 | Val Corr: 0.6150
+  Epoch   40/500 | Train: 0.034016 | Val Loss: 0.097386 | Val Corr: 0.6843
+  Epoch   60/500 | Train: 0.032206 | Val Loss: 0.082586 | Val Corr: 0.6279
+  Epoch   80/500 | Train: 0.032107 | Val Loss: 0.070587 | Val Corr: 0.5592
+  Epoch  100/500 | Train: 0.026595 | Val Loss: 0.088381 | Val Corr: 0.5337
+  Epoch  120/500 | Train: 0.027593 | Val Loss: 0.102836 | Val Corr: 0.5961
+  Epoch  140/500 | Train: 0.025453 | Val Loss: 0.117004 | Val Corr: 0.6529
+  Epoch  160/500 | Train: 0.021491 | Val Loss: 0.084801 | Val Corr: 0.5197
+  Early stopping at epoch 168
+    [default] s29: R²=0.1270, MAPE=21.26%
+  Epoch    1/500 | Train: 0.071744 | Val Loss: 0.110503 | Val Corr: 0.2554
+  Epoch   20/500 | Train: 0.046990 | Val Loss: 0.068686 | Val Corr: 0.7404
+  Epoch   40/500 | Train: 0.035000 | Val Loss: 0.080389 | Val Corr: 0.6595
+  Epoch   60/500 | Train: 0.032003 | Val Loss: 0.076704 | Val Corr: 0.6480
+  Epoch   80/500 | Train: 0.028567 | Val Loss: 0.099064 | Val Corr: 0.7040
+  Epoch  100/500 | Train: 0.027138 | Val Loss: 0.123863 | Val Corr: 0.6474
+  Epoch  120/500 | Train: 0.027005 | Val Loss: 0.113673 | Val Corr: 0.6525
+  Epoch  140/500 | Train: 0.021696 | Val Loss: 0.126204 | Val Corr: 0.6611
+  Epoch  160/500 | Train: 0.021136 | Val Loss: 0.116000 | Val Corr: 0.6561
+  Early stopping at epoch 172
+    [default] s30: R²=0.5066, MAPE=16.74%
+  Epoch    1/500 | Train: 0.072129 | Val Loss: 0.115300 | Val Corr: -0.1401
+  Epoch   20/500 | Train: 0.045417 | Val Loss: 0.067895 | Val Corr: 0.6960
+  Epoch   40/500 | Train: 0.034422 | Val Loss: 0.066380 | Val Corr: 0.7038
+  Epoch   60/500 | Train: 0.031971 | Val Loss: 0.107035 | Val Corr: 0.6292
+  Epoch   80/500 | Train: 0.028444 | Val Loss: 0.108794 | Val Corr: 0.6642
+  Epoch  100/500 | Train: 0.023325 | Val Loss: 0.080846 | Val Corr: 0.5978
+  Epoch  120/500 | Train: 0.025249 | Val Loss: 0.088622 | Val Corr: 0.6046
+  Epoch  140/500 | Train: 0.021384 | Val Loss: 0.126020 | Val Corr: 0.6673
+  Epoch  160/500 | Train: 0.018859 | Val Loss: 0.091618 | Val Corr: 0.5850
+  Early stopping at epoch 166
+    [default] s31: R²=0.3874, MAPE=18.04%
+  Epoch    1/500 | Train: 0.075578 | Val Loss: 0.097082 | Val Corr: 0.0944
+  Epoch   20/500 | Train: 0.042934 | Val Loss: 0.080318 | Val Corr: 0.6894
+  Epoch   40/500 | Train: 0.035843 | Val Loss: 0.064954 | Val Corr: 0.6813
+  Epoch   60/500 | Train: 0.029058 | Val Loss: 0.074615 | Val Corr: 0.6881
+  Epoch   80/500 | Train: 0.022775 | Val Loss: 0.068122 | Val Corr: 0.5513
+  Epoch  100/500 | Train: 0.023874 | Val Loss: 0.081045 | Val Corr: 0.5892
+  Epoch  120/500 | Train: 0.024806 | Val Loss: 0.067594 | Val Corr: 0.6400
+  Epoch  140/500 | Train: 0.018659 | Val Loss: 0.080000 | Val Corr: 0.6072
+  Epoch  160/500 | Train: 0.019368 | Val Loss: 0.088392 | Val Corr: 0.5845
+  Early stopping at epoch 173
+    [default] s32: R²=0.4252, MAPE=18.02%
+  Epoch    1/500 | Train: 0.069975 | Val Loss: 0.098158 | Val Corr: 0.1771
+  Epoch   20/500 | Train: 0.043758 | Val Loss: 0.065044 | Val Corr: 0.7143
+  Epoch   40/500 | Train: 0.039958 | Val Loss: 0.066704 | Val Corr: 0.6744
+  Epoch   60/500 | Train: 0.028596 | Val Loss: 0.121531 | Val Corr: 0.6450
+  Epoch   80/500 | Train: 0.022500 | Val Loss: 0.089989 | Val Corr: 0.6639
+  Epoch  100/500 | Train: 0.022500 | Val Loss: 0.080879 | Val Corr: 0.6638
+  Epoch  120/500 | Train: 0.022770 | Val Loss: 0.117092 | Val Corr: 0.6630
+  Epoch  140/500 | Train: 0.021588 | Val Loss: 0.098139 | Val Corr: 0.6581
+  Epoch  160/500 | Train: 0.018407 | Val Loss: 0.131650 | Val Corr: 0.6476
+  Early stopping at epoch 162
+    [default] s33: R²=0.2661, MAPE=18.62%
+  Epoch    1/500 | Train: 0.099684 | Val Loss: 0.114240 | Val Corr: 0.0789
+  Epoch   20/500 | Train: 0.041800 | Val Loss: 0.082743 | Val Corr: 0.7043
+  Epoch   40/500 | Train: 0.037689 | Val Loss: 0.075316 | Val Corr: 0.6900
+  Epoch   60/500 | Train: 0.035643 | Val Loss: 0.096854 | Val Corr: 0.7098
+  Epoch   80/500 | Train: 0.024562 | Val Loss: 0.102533 | Val Corr: 0.6617
+  Epoch  100/500 | Train: 0.027705 | Val Loss: 0.102695 | Val Corr: 0.6677
+  Epoch  120/500 | Train: 0.020851 | Val Loss: 0.098773 | Val Corr: 0.6764
+  Epoch  140/500 | Train: 0.019380 | Val Loss: 0.097341 | Val Corr: 0.6501
+  Epoch  160/500 | Train: 0.018019 | Val Loss: 0.086767 | Val Corr: 0.6488
+  Early stopping at epoch 169
+    [default] s34: R²=0.2902, MAPE=19.82%
+  Epoch    1/500 | Train: 0.072442 | Val Loss: 0.108763 | Val Corr: 0.0805
+  Epoch   20/500 | Train: 0.043887 | Val Loss: 0.064389 | Val Corr: 0.7915
+  Epoch   40/500 | Train: 0.032561 | Val Loss: 0.063165 | Val Corr: 0.6497
+  Epoch   60/500 | Train: 0.026220 | Val Loss: 0.062432 | Val Corr: 0.6840
+  Epoch   80/500 | Train: 0.023573 | Val Loss: 0.100601 | Val Corr: 0.7058
+  Epoch  100/500 | Train: 0.026880 | Val Loss: 0.070360 | Val Corr: 0.6802
+  Epoch  120/500 | Train: 0.026044 | Val Loss: 0.082441 | Val Corr: 0.6768
+  Epoch  140/500 | Train: 0.019525 | Val Loss: 0.082242 | Val Corr: 0.7160
+  Epoch  160/500 | Train: 0.018602 | Val Loss: 0.083957 | Val Corr: 0.5807
+  Early stopping at epoch 170
+    [default] s35: R²=0.4250, MAPE=18.35%
+  Epoch    1/500 | Train: 0.095769 | Val Loss: 0.097478 | Val Corr: 0.3265
+  Epoch   20/500 | Train: 0.045814 | Val Loss: 0.088401 | Val Corr: 0.7393
+  Epoch   40/500 | Train: 0.035613 | Val Loss: 0.070766 | Val Corr: 0.6910
+  Epoch   60/500 | Train: 0.036048 | Val Loss: 0.081380 | Val Corr: 0.7054
+  Epoch   80/500 | Train: 0.029882 | Val Loss: 0.107415 | Val Corr: 0.6981
+  Epoch  100/500 | Train: 0.027341 | Val Loss: 0.095899 | Val Corr: 0.7021
+  Epoch  120/500 | Train: 0.026019 | Val Loss: 0.074308 | Val Corr: 0.5653
+  Epoch  140/500 | Train: 0.024758 | Val Loss: 0.077963 | Val Corr: 0.6130
+  Epoch  160/500 | Train: 0.023040 | Val Loss: 0.077795 | Val Corr: 0.6468
+  Early stopping at epoch 173
+    [default] s36: R²=0.2349, MAPE=19.92%
+  Epoch    1/500 | Train: 0.096982 | Val Loss: 0.135100 | Val Corr: 0.1907
+  Epoch   20/500 | Train: 0.045282 | Val Loss: 0.082011 | Val Corr: 0.7419
+  Epoch   40/500 | Train: 0.038184 | Val Loss: 0.077233 | Val Corr: 0.6736
+  Epoch   60/500 | Train: 0.029378 | Val Loss: 0.065673 | Val Corr: 0.6447
+  Epoch   80/500 | Train: 0.033951 | Val Loss: 0.103382 | Val Corr: 0.6249
+  Epoch  100/500 | Train: 0.023398 | Val Loss: 0.095319 | Val Corr: 0.6601
+  Epoch  120/500 | Train: 0.024256 | Val Loss: 0.092170 | Val Corr: 0.6193
+  Epoch  140/500 | Train: 0.021558 | Val Loss: 0.096165 | Val Corr: 0.6802
+  Epoch  160/500 | Train: 0.020072 | Val Loss: 0.096016 | Val Corr: 0.7083
+  Early stopping at epoch 167
+    [default] s37: R²=0.3843, MAPE=18.93%
+  Epoch    1/500 | Train: 0.072193 | Val Loss: 0.107285 | Val Corr: 0.1963
+  Epoch   20/500 | Train: 0.045172 | Val Loss: 0.081060 | Val Corr: 0.6879
+  Epoch   40/500 | Train: 0.034504 | Val Loss: 0.103257 | Val Corr: 0.6418
+  Epoch   60/500 | Train: 0.026556 | Val Loss: 0.104822 | Val Corr: 0.6282
+  Epoch   80/500 | Train: 0.025508 | Val Loss: 0.104317 | Val Corr: 0.6268
+  Epoch  100/500 | Train: 0.023805 | Val Loss: 0.092271 | Val Corr: 0.6341
+  Epoch  120/500 | Train: 0.021813 | Val Loss: 0.097178 | Val Corr: 0.6114
+  Epoch  140/500 | Train: 0.022297 | Val Loss: 0.106908 | Val Corr: 0.6783
+  Epoch  160/500 | Train: 0.018641 | Val Loss: 0.105141 | Val Corr: 0.6237
+  Early stopping at epoch 162
+    [default] s38: R²=0.3160, MAPE=18.50%
+  Epoch    1/500 | Train: 0.071470 | Val Loss: 0.115011 | Val Corr: 0.3308
+  Epoch   20/500 | Train: 0.041150 | Val Loss: 0.090548 | Val Corr: 0.7235
+  Epoch   40/500 | Train: 0.035865 | Val Loss: 0.069925 | Val Corr: 0.6352
+  Epoch   60/500 | Train: 0.029225 | Val Loss: 0.080642 | Val Corr: 0.6922
+  Epoch   80/500 | Train: 0.023752 | Val Loss: 0.076326 | Val Corr: 0.6657
+  Epoch  100/500 | Train: 0.024648 | Val Loss: 0.094364 | Val Corr: 0.7030
+  Epoch  120/500 | Train: 0.024684 | Val Loss: 0.123477 | Val Corr: 0.6762
+  Epoch  140/500 | Train: 0.021236 | Val Loss: 0.087020 | Val Corr: 0.6771
+  Epoch  160/500 | Train: 0.022673 | Val Loss: 0.091471 | Val Corr: 0.7092
+  Epoch  180/500 | Train: 0.016093 | Val Loss: 0.103361 | Val Corr: 0.6975
+  Early stopping at epoch 182
+    [default] s39: R²=0.3630, MAPE=17.84%
+  Epoch    1/500 | Train: 0.067387 | Val Loss: 0.104484 | Val Corr: 0.2936
+  Epoch   20/500 | Train: 0.038937 | Val Loss: 0.081923 | Val Corr: 0.7443
+  Epoch   40/500 | Train: 0.033491 | Val Loss: 0.088318 | Val Corr: 0.7156
+  Epoch   60/500 | Train: 0.029082 | Val Loss: 0.071114 | Val Corr: 0.6089
+  Epoch   80/500 | Train: 0.029811 | Val Loss: 0.077806 | Val Corr: 0.6474
+  Epoch  100/500 | Train: 0.023857 | Val Loss: 0.086043 | Val Corr: 0.6564
+  Epoch  120/500 | Train: 0.022614 | Val Loss: 0.116975 | Val Corr: 0.6352
+  Epoch  140/500 | Train: 0.023119 | Val Loss: 0.118404 | Val Corr: 0.6509
+  Epoch  160/500 | Train: 0.018970 | Val Loss: 0.075612 | Val Corr: 0.5781
+  Early stopping at epoch 174
+    [default] s40: R²=0.2556, MAPE=20.09%
+  Epoch    1/500 | Train: 0.064254 | Val Loss: 0.102145 | Val Corr: 0.1066
+  Epoch   20/500 | Train: 0.042786 | Val Loss: 0.070564 | Val Corr: 0.6511
+  Epoch   40/500 | Train: 0.031757 | Val Loss: 0.072151 | Val Corr: 0.6613
+  Epoch   60/500 | Train: 0.030888 | Val Loss: 0.096619 | Val Corr: 0.6444
+  Epoch   80/500 | Train: 0.024926 | Val Loss: 0.078133 | Val Corr: 0.5917
+  Epoch  100/500 | Train: 0.026912 | Val Loss: 0.077548 | Val Corr: 0.5807
+  Epoch  120/500 | Train: 0.025539 | Val Loss: 0.106078 | Val Corr: 0.6360
+  Epoch  140/500 | Train: 0.022755 | Val Loss: 0.090613 | Val Corr: 0.5555
+  Epoch  160/500 | Train: 0.018046 | Val Loss: 0.095668 | Val Corr: 0.6220
+  Early stopping at epoch 162
+    [default] s41: R²=0.3863, MAPE=19.21%
+  Epoch    1/500 | Train: 0.076077 | Val Loss: 0.101118 | Val Corr: 0.2015
+  Epoch   20/500 | Train: 0.046477 | Val Loss: 0.088609 | Val Corr: 0.6487
+  Epoch   40/500 | Train: 0.032810 | Val Loss: 0.085137 | Val Corr: 0.7299
+  Epoch   60/500 | Train: 0.029073 | Val Loss: 0.097912 | Val Corr: 0.6630
+  Epoch   80/500 | Train: 0.026756 | Val Loss: 0.110959 | Val Corr: 0.6839
+  Epoch  100/500 | Train: 0.025369 | Val Loss: 0.124692 | Val Corr: 0.6974
+  Epoch  120/500 | Train: 0.021061 | Val Loss: 0.086162 | Val Corr: 0.6638
+  Epoch  140/500 | Train: 0.019511 | Val Loss: 0.122817 | Val Corr: 0.6954
+  Epoch  160/500 | Train: 0.020294 | Val Loss: 0.134862 | Val Corr: 0.6046
+  Early stopping at epoch 172
+    [default] s100: R²=0.2642, MAPE=19.71%
+  Epoch    1/500 | Train: 0.062961 | Val Loss: 0.114680 | Val Corr: 0.0748
+  Epoch   20/500 | Train: 0.045659 | Val Loss: 0.086969 | Val Corr: 0.6340
+  Epoch   40/500 | Train: 0.033598 | Val Loss: 0.092843 | Val Corr: 0.7307
+  Epoch   60/500 | Train: 0.032801 | Val Loss: 0.077572 | Val Corr: 0.6344
+  Epoch   80/500 | Train: 0.034449 | Val Loss: 0.093730 | Val Corr: 0.5926
+  Epoch  100/500 | Train: 0.022881 | Val Loss: 0.087004 | Val Corr: 0.5822
+  Epoch  120/500 | Train: 0.022728 | Val Loss: 0.080730 | Val Corr: 0.6377
+  Epoch  140/500 | Train: 0.021606 | Val Loss: 0.076574 | Val Corr: 0.5848
+  Epoch  160/500 | Train: 0.022307 | Val Loss: 0.083357 | Val Corr: 0.6725
+  Early stopping at epoch 174
+    [default] s200: R²=0.4352, MAPE=17.53%
+  Epoch    1/500 | Train: 0.078079 | Val Loss: 0.115584 | Val Corr: 0.0909
+  Epoch   20/500 | Train: 0.043989 | Val Loss: 0.081645 | Val Corr: 0.6846
+  Epoch   40/500 | Train: 0.030982 | Val Loss: 0.089237 | Val Corr: 0.6991
+  Epoch   60/500 | Train: 0.028755 | Val Loss: 0.096949 | Val Corr: 0.5519
+  Epoch   80/500 | Train: 0.025085 | Val Loss: 0.124824 | Val Corr: 0.5605
+  Epoch  100/500 | Train: 0.022505 | Val Loss: 0.114621 | Val Corr: 0.6417
+  Epoch  120/500 | Train: 0.021467 | Val Loss: 0.114921 | Val Corr: 0.6591
+  Epoch  140/500 | Train: 0.019647 | Val Loss: 0.113780 | Val Corr: 0.6203
+  Epoch  160/500 | Train: 0.022206 | Val Loss: 0.091060 | Val Corr: 0.5207
+  Early stopping at epoch 162
+    [default] s500: R²=0.3085, MAPE=18.88%
+  Epoch    1/500 | Train: 0.063616 | Val Loss: 0.109180 | Val Corr: 0.2465
+  Epoch   20/500 | Train: 0.040803 | Val Loss: 0.076099 | Val Corr: 0.7249
+  Epoch   40/500 | Train: 0.039108 | Val Loss: 0.105139 | Val Corr: 0.6515
+  Epoch   60/500 | Train: 0.036413 | Val Loss: 0.098239 | Val Corr: 0.6408
+  Epoch   80/500 | Train: 0.026294 | Val Loss: 0.106387 | Val Corr: 0.6920
+  Epoch  100/500 | Train: 0.024379 | Val Loss: 0.076121 | Val Corr: 0.6955
+  Epoch  120/500 | Train: 0.019273 | Val Loss: 0.069400 | Val Corr: 0.5756
+  Epoch  140/500 | Train: 0.023170 | Val Loss: 0.109091 | Val Corr: 0.6568
+  Epoch  160/500 | Train: 0.020084 | Val Loss: 0.068990 | Val Corr: 0.6971
+  Early stopping at epoch 170
+    [default] s1000: R²=0.4250, MAPE=18.17%
+  Epoch    1/500 | Train: 0.101182 | Val Loss: 0.111022 | Val Corr: -0.1437
+  Epoch   20/500 | Train: 0.045670 | Val Loss: 0.076616 | Val Corr: 0.7041
+  Epoch   40/500 | Train: 0.038384 | Val Loss: 0.075147 | Val Corr: 0.7282
+  Epoch   60/500 | Train: 0.031925 | Val Loss: 0.070953 | Val Corr: 0.6862
+  Epoch   80/500 | Train: 0.029218 | Val Loss: 0.114414 | Val Corr: 0.6331
+  Epoch  100/500 | Train: 0.028071 | Val Loss: 0.090239 | Val Corr: 0.6547
+  Epoch  120/500 | Train: 0.026502 | Val Loss: 0.098699 | Val Corr: 0.6320
+  Epoch  140/500 | Train: 0.022480 | Val Loss: 0.097283 | Val Corr: 0.6454
+  Epoch  160/500 | Train: 0.022104 | Val Loss: 0.098693 | Val Corr: 0.5729
+  Early stopping at epoch 169
+    [xavier] s42: R²=0.3146, MAPE=18.04%
+  Epoch    1/500 | Train: 0.073459 | Val Loss: 0.098363 | Val Corr: 0.5645
+  Epoch   20/500 | Train: 0.038988 | Val Loss: 0.075811 | Val Corr: 0.7371
+  Epoch   40/500 | Train: 0.037447 | Val Loss: 0.067702 | Val Corr: 0.7099
+  Epoch   60/500 | Train: 0.029728 | Val Loss: 0.077245 | Val Corr: 0.5808
+  Epoch   80/500 | Train: 0.027167 | Val Loss: 0.087149 | Val Corr: 0.6969
+  Epoch  100/500 | Train: 0.027726 | Val Loss: 0.075676 | Val Corr: 0.6720
+  Epoch  120/500 | Train: 0.024321 | Val Loss: 0.096148 | Val Corr: 0.6649
+  Epoch  140/500 | Train: 0.021567 | Val Loss: 0.100575 | Val Corr: 0.6928
+  Epoch  160/500 | Train: 0.021421 | Val Loss: 0.105144 | Val Corr: 0.6667
+  Early stopping at epoch 175
+    [xavier] s7: R²=0.4720, MAPE=16.86%
+  Epoch    1/500 | Train: 0.096655 | Val Loss: 0.086564 | Val Corr: 0.3461
+  Epoch   20/500 | Train: 0.049072 | Val Loss: 0.091893 | Val Corr: 0.6492
+  Epoch   40/500 | Train: 0.041734 | Val Loss: 0.092884 | Val Corr: 0.7007
+  Epoch   60/500 | Train: 0.034996 | Val Loss: 0.083803 | Val Corr: 0.7131
+  Epoch   80/500 | Train: 0.029430 | Val Loss: 0.087549 | Val Corr: 0.6572
+  Epoch  100/500 | Train: 0.027710 | Val Loss: 0.079827 | Val Corr: 0.5994
+  Epoch  120/500 | Train: 0.022688 | Val Loss: 0.093063 | Val Corr: 0.6577
+  Epoch  140/500 | Train: 0.027774 | Val Loss: 0.084640 | Val Corr: 0.6650
+  Epoch  160/500 | Train: 0.025039 | Val Loss: 0.093314 | Val Corr: 0.6653
+  Epoch  180/500 | Train: 0.025274 | Val Loss: 0.086421 | Val Corr: 0.6176
+  Early stopping at epoch 184
+    [xavier] s123: R²=0.4408, MAPE=16.76%
+  Epoch    1/500 | Train: 0.070264 | Val Loss: 0.104119 | Val Corr: 0.5118
+  Epoch   20/500 | Train: 0.041105 | Val Loss: 0.087382 | Val Corr: 0.6003
+  Epoch   40/500 | Train: 0.039426 | Val Loss: 0.089298 | Val Corr: 0.6751
+  Epoch   60/500 | Train: 0.033411 | Val Loss: 0.102338 | Val Corr: 0.6850
+  Epoch   80/500 | Train: 0.031617 | Val Loss: 0.093925 | Val Corr: 0.6293
+  Epoch  100/500 | Train: 0.028811 | Val Loss: 0.091957 | Val Corr: 0.5143
+  Epoch  120/500 | Train: 0.026020 | Val Loss: 0.105700 | Val Corr: 0.6291
+  Epoch  140/500 | Train: 0.022361 | Val Loss: 0.110263 | Val Corr: 0.6415
+  Epoch  160/500 | Train: 0.023883 | Val Loss: 0.108503 | Val Corr: 0.6311
+  Epoch  180/500 | Train: 0.023611 | Val Loss: 0.121871 | Val Corr: 0.6089
+  Early stopping at epoch 186
+    [xavier] s2024: R²=0.3561, MAPE=17.60%
+  Epoch    1/500 | Train: 0.103588 | Val Loss: 0.123697 | Val Corr: 0.2073
+  Epoch   20/500 | Train: 0.047211 | Val Loss: 0.086907 | Val Corr: 0.7011
+  Epoch   40/500 | Train: 0.043741 | Val Loss: 0.096914 | Val Corr: 0.5917
+  Epoch   60/500 | Train: 0.033172 | Val Loss: 0.093747 | Val Corr: 0.7130
+  Epoch   80/500 | Train: 0.029629 | Val Loss: 0.099059 | Val Corr: 0.7060
+  Epoch  100/500 | Train: 0.032560 | Val Loss: 0.105081 | Val Corr: 0.7214
+  Epoch  120/500 | Train: 0.026378 | Val Loss: 0.114153 | Val Corr: 0.7311
+  Epoch  140/500 | Train: 0.026122 | Val Loss: 0.086819 | Val Corr: 0.7454
+  Epoch  160/500 | Train: 0.021994 | Val Loss: 0.112689 | Val Corr: 0.7111
+  Epoch  180/500 | Train: 0.020920 | Val Loss: 0.121693 | Val Corr: 0.6875
+  Epoch  200/500 | Train: 0.018241 | Val Loss: 0.068122 | Val Corr: 0.6543
+  Epoch  220/500 | Train: 0.020302 | Val Loss: 0.089289 | Val Corr: 0.7368
+  Epoch  240/500 | Train: 0.020816 | Val Loss: 0.113209 | Val Corr: 0.6646
+  Epoch  260/500 | Train: 0.021677 | Val Loss: 0.096393 | Val Corr: 0.7290
+  Early stopping at epoch 267
+    [xavier] s99: R²=0.1849, MAPE=19.50%
+  Epoch    1/500 | Train: 0.089049 | Val Loss: 0.104810 | Val Corr: 0.2376
+  Epoch   20/500 | Train: 0.047290 | Val Loss: 0.072834 | Val Corr: 0.6979
+  Epoch   40/500 | Train: 0.040325 | Val Loss: 0.086063 | Val Corr: 0.6285
+  Epoch   60/500 | Train: 0.030636 | Val Loss: 0.083453 | Val Corr: 0.6757
+  Epoch   80/500 | Train: 0.032026 | Val Loss: 0.079696 | Val Corr: 0.6148
+  Epoch  100/500 | Train: 0.028262 | Val Loss: 0.107676 | Val Corr: 0.6567
+  Epoch  120/500 | Train: 0.027345 | Val Loss: 0.100176 | Val Corr: 0.6698
+  Epoch  140/500 | Train: 0.019692 | Val Loss: 0.109318 | Val Corr: 0.5933
+  Epoch  160/500 | Train: 0.019703 | Val Loss: 0.099618 | Val Corr: 0.6088
+  Early stopping at epoch 164
+    [xavier] s13: R²=0.4028, MAPE=18.80%
+  Epoch    1/500 | Train: 0.081194 | Val Loss: 0.121841 | Val Corr: 0.2197
+  Epoch   20/500 | Train: 0.041120 | Val Loss: 0.085040 | Val Corr: 0.7130
+  Epoch   40/500 | Train: 0.034373 | Val Loss: 0.080144 | Val Corr: 0.6671
+  Epoch   60/500 | Train: 0.036763 | Val Loss: 0.083878 | Val Corr: 0.6129
+  Epoch   80/500 | Train: 0.030093 | Val Loss: 0.076393 | Val Corr: 0.6418
+  Epoch  100/500 | Train: 0.026664 | Val Loss: 0.111055 | Val Corr: 0.7024
+  Epoch  120/500 | Train: 0.024750 | Val Loss: 0.082259 | Val Corr: 0.7101
+  Epoch  140/500 | Train: 0.022893 | Val Loss: 0.082220 | Val Corr: 0.5323
+  Epoch  160/500 | Train: 0.024233 | Val Loss: 0.105018 | Val Corr: 0.6645
+  Early stopping at epoch 174
+    [xavier] s55: R²=0.3268, MAPE=18.85%
+  Epoch    1/500 | Train: 0.092614 | Val Loss: 0.124916 | Val Corr: 0.3183
+  Epoch   20/500 | Train: 0.047471 | Val Loss: 0.077491 | Val Corr: 0.6881
+  Epoch   40/500 | Train: 0.043112 | Val Loss: 0.069720 | Val Corr: 0.6971
+  Epoch   60/500 | Train: 0.038533 | Val Loss: 0.075086 | Val Corr: 0.5853
+  Epoch   80/500 | Train: 0.035210 | Val Loss: 0.086962 | Val Corr: 0.4944
+  Epoch  100/500 | Train: 0.026651 | Val Loss: 0.072810 | Val Corr: 0.6248
+  Epoch  120/500 | Train: 0.023876 | Val Loss: 0.096860 | Val Corr: 0.6928
+  Epoch  140/500 | Train: 0.026428 | Val Loss: 0.079202 | Val Corr: 0.5502
+  Epoch  160/500 | Train: 0.021830 | Val Loss: 0.099373 | Val Corr: 0.6831
+  Early stopping at epoch 176
+    [xavier] s777: R²=0.4699, MAPE=16.28%
+  Epoch    1/500 | Train: 0.082706 | Val Loss: 0.108137 | Val Corr: 0.2675
+  Epoch   20/500 | Train: 0.044413 | Val Loss: 0.080524 | Val Corr: 0.6956
+  Epoch   40/500 | Train: 0.035963 | Val Loss: 0.100136 | Val Corr: 0.6849
+  Epoch   60/500 | Train: 0.029423 | Val Loss: 0.083348 | Val Corr: 0.6635
+  Epoch   80/500 | Train: 0.029848 | Val Loss: 0.123579 | Val Corr: 0.6511
+  Epoch  100/500 | Train: 0.027145 | Val Loss: 0.115137 | Val Corr: 0.6387
+  Epoch  120/500 | Train: 0.027094 | Val Loss: 0.083138 | Val Corr: 0.5683
+  Epoch  140/500 | Train: 0.024658 | Val Loss: 0.129523 | Val Corr: 0.6366
+  Epoch  160/500 | Train: 0.019426 | Val Loss: 0.100477 | Val Corr: 0.6112
+  Early stopping at epoch 169
+    [xavier] s314: R²=0.3323, MAPE=19.41%
+  Epoch    1/500 | Train: 0.097929 | Val Loss: 0.101710 | Val Corr: 0.0264
+  Epoch   20/500 | Train: 0.043221 | Val Loss: 0.089667 | Val Corr: 0.6655
+  Epoch   40/500 | Train: 0.039214 | Val Loss: 0.067592 | Val Corr: 0.7282
+  Epoch   60/500 | Train: 0.033474 | Val Loss: 0.073692 | Val Corr: 0.6800
+  Epoch   80/500 | Train: 0.030655 | Val Loss: 0.070523 | Val Corr: 0.6211
+  Epoch  100/500 | Train: 0.025775 | Val Loss: 0.087598 | Val Corr: 0.6619
+  Epoch  120/500 | Train: 0.025887 | Val Loss: 0.099474 | Val Corr: 0.6509
+  Epoch  140/500 | Train: 0.024917 | Val Loss: 0.096298 | Val Corr: 0.5718
+  Epoch  160/500 | Train: 0.025904 | Val Loss: 0.084004 | Val Corr: 0.5534
+  Early stopping at epoch 176
+    [xavier] s2025: R²=0.3595, MAPE=17.43%
+  Epoch    1/500 | Train: 0.080603 | Val Loss: 0.107786 | Val Corr: 0.1294
+  Epoch   20/500 | Train: 0.042142 | Val Loss: 0.075021 | Val Corr: 0.7184
+  Epoch   40/500 | Train: 0.038443 | Val Loss: 0.077893 | Val Corr: 0.6815
+  Epoch   60/500 | Train: 0.031184 | Val Loss: 0.080934 | Val Corr: 0.7456
+  Epoch   80/500 | Train: 0.030802 | Val Loss: 0.070904 | Val Corr: 0.6771
+  Epoch  100/500 | Train: 0.024057 | Val Loss: 0.072734 | Val Corr: 0.6901
+  Epoch  120/500 | Train: 0.026438 | Val Loss: 0.071953 | Val Corr: 0.7116
+  Epoch  140/500 | Train: 0.024922 | Val Loss: 0.103999 | Val Corr: 0.6876
+  Epoch  160/500 | Train: 0.022059 | Val Loss: 0.082851 | Val Corr: 0.6657
+  Early stopping at epoch 172
+    [xavier] s0: R²=0.3896, MAPE=19.24%
+  Epoch    1/500 | Train: 0.096792 | Val Loss: 0.118002 | Val Corr: -0.0411
+  Epoch   20/500 | Train: 0.045288 | Val Loss: 0.073741 | Val Corr: 0.7211
+  Epoch   40/500 | Train: 0.034764 | Val Loss: 0.061049 | Val Corr: 0.6970
+  Epoch   60/500 | Train: 0.034251 | Val Loss: 0.069286 | Val Corr: 0.6809
+  Epoch   80/500 | Train: 0.028507 | Val Loss: 0.069965 | Val Corr: 0.6378
+  Epoch  100/500 | Train: 0.026882 | Val Loss: 0.068438 | Val Corr: 0.6422
+  Epoch  120/500 | Train: 0.024729 | Val Loss: 0.079664 | Val Corr: 0.6233
+  Epoch  140/500 | Train: 0.024999 | Val Loss: 0.088697 | Val Corr: 0.6689
+  Epoch  160/500 | Train: 0.021994 | Val Loss: 0.079237 | Val Corr: 0.6456
+  Early stopping at epoch 171
+    [xavier] s1: R²=0.3625, MAPE=17.40%
+  Epoch    1/500 | Train: 0.070443 | Val Loss: 0.121155 | Val Corr: 0.0593
+  Epoch   20/500 | Train: 0.046740 | Val Loss: 0.084758 | Val Corr: 0.6679
+  Epoch   40/500 | Train: 0.038226 | Val Loss: 0.082284 | Val Corr: 0.6901
+  Epoch   60/500 | Train: 0.036734 | Val Loss: 0.078637 | Val Corr: 0.6655
+  Epoch   80/500 | Train: 0.027987 | Val Loss: 0.084850 | Val Corr: 0.6394
+  Epoch  100/500 | Train: 0.024001 | Val Loss: 0.127157 | Val Corr: 0.6470
+  Epoch  120/500 | Train: 0.024058 | Val Loss: 0.090406 | Val Corr: 0.6181
+  Epoch  140/500 | Train: 0.020868 | Val Loss: 0.100326 | Val Corr: 0.6474
+  Epoch  160/500 | Train: 0.020974 | Val Loss: 0.098314 | Val Corr: 0.6587
+  Early stopping at epoch 175
+    [xavier] s2: R²=0.2857, MAPE=18.18%
+  Epoch    1/500 | Train: 0.075286 | Val Loss: 0.125294 | Val Corr: 0.2777
+  Epoch   20/500 | Train: 0.047998 | Val Loss: 0.097319 | Val Corr: 0.5177
+  Epoch   40/500 | Train: 0.038300 | Val Loss: 0.068848 | Val Corr: 0.7141
+  Epoch   60/500 | Train: 0.032379 | Val Loss: 0.080702 | Val Corr: 0.7005
+  Epoch   80/500 | Train: 0.030362 | Val Loss: 0.069221 | Val Corr: 0.6311
+  Epoch  100/500 | Train: 0.025973 | Val Loss: 0.100622 | Val Corr: 0.6018
+  Epoch  120/500 | Train: 0.026078 | Val Loss: 0.080641 | Val Corr: 0.6328
+  Epoch  140/500 | Train: 0.023414 | Val Loss: 0.097071 | Val Corr: 0.6286
+  Epoch  160/500 | Train: 0.022728 | Val Loss: 0.089147 | Val Corr: 0.5697
+  Epoch  180/500 | Train: 0.022831 | Val Loss: 0.107758 | Val Corr: 0.6137
+  Early stopping at epoch 191
+    [xavier] s3: R²=0.3839, MAPE=18.06%
+  Epoch    1/500 | Train: 0.077569 | Val Loss: 0.102782 | Val Corr: 0.1039
+  Epoch   20/500 | Train: 0.039045 | Val Loss: 0.088842 | Val Corr: 0.7295
+  Epoch   40/500 | Train: 0.037618 | Val Loss: 0.086362 | Val Corr: 0.6870
+  Epoch   60/500 | Train: 0.036130 | Val Loss: 0.077282 | Val Corr: 0.6849
+  Epoch   80/500 | Train: 0.029531 | Val Loss: 0.107750 | Val Corr: 0.6942
+  Epoch  100/500 | Train: 0.030254 | Val Loss: 0.090609 | Val Corr: 0.6289
+  Epoch  120/500 | Train: 0.023352 | Val Loss: 0.128865 | Val Corr: 0.6511
+  Epoch  140/500 | Train: 0.022602 | Val Loss: 0.129910 | Val Corr: 0.6284
+  Epoch  160/500 | Train: 0.022579 | Val Loss: 0.132731 | Val Corr: 0.6666
+  Early stopping at epoch 167
+    [xavier] s4: R²=0.3893, MAPE=18.83%
+  Epoch    1/500 | Train: 0.073879 | Val Loss: 0.114578 | Val Corr: -0.4002
+  Epoch   20/500 | Train: 0.044240 | Val Loss: 0.080276 | Val Corr: 0.6883
+  Epoch   40/500 | Train: 0.033123 | Val Loss: 0.077704 | Val Corr: 0.6889
+  Epoch   60/500 | Train: 0.033989 | Val Loss: 0.097555 | Val Corr: 0.7067
+  Epoch   80/500 | Train: 0.030950 | Val Loss: 0.076081 | Val Corr: 0.6791
+  Epoch  100/500 | Train: 0.025166 | Val Loss: 0.108470 | Val Corr: 0.7055
+  Epoch  120/500 | Train: 0.027039 | Val Loss: 0.100267 | Val Corr: 0.6730
+  Epoch  140/500 | Train: 0.026321 | Val Loss: 0.103018 | Val Corr: 0.6605
+  Epoch  160/500 | Train: 0.024683 | Val Loss: 0.092911 | Val Corr: 0.6715
+  Epoch  180/500 | Train: 0.023164 | Val Loss: 0.100717 | Val Corr: 0.6508
+  Early stopping at epoch 180
+    [xavier] s5: R²=0.3611, MAPE=17.73%
+  Epoch    1/500 | Train: 0.106386 | Val Loss: 0.103485 | Val Corr: 0.4455
+  Epoch   20/500 | Train: 0.046900 | Val Loss: 0.074683 | Val Corr: 0.7403
+  Epoch   40/500 | Train: 0.042176 | Val Loss: 0.077636 | Val Corr: 0.7346
+  Epoch   60/500 | Train: 0.035873 | Val Loss: 0.065102 | Val Corr: 0.6787
+  Epoch   80/500 | Train: 0.031717 | Val Loss: 0.074338 | Val Corr: 0.6950
+  Epoch  100/500 | Train: 0.029434 | Val Loss: 0.095256 | Val Corr: 0.6993
+  Epoch  120/500 | Train: 0.028253 | Val Loss: 0.087292 | Val Corr: 0.7025
+  Epoch  140/500 | Train: 0.024182 | Val Loss: 0.099095 | Val Corr: 0.7047
+  Epoch  160/500 | Train: 0.022878 | Val Loss: 0.081336 | Val Corr: 0.5772
+  Epoch  180/500 | Train: 0.021229 | Val Loss: 0.118774 | Val Corr: 0.6258
+  Early stopping at epoch 181
+    [xavier] s6: R²=0.3522, MAPE=17.56%
+  Epoch    1/500 | Train: 0.091048 | Val Loss: 0.102466 | Val Corr: 0.3037
+  Epoch   20/500 | Train: 0.043546 | Val Loss: 0.075772 | Val Corr: 0.6686
+  Epoch   40/500 | Train: 0.038310 | Val Loss: 0.108826 | Val Corr: 0.6635
+  Epoch   60/500 | Train: 0.031375 | Val Loss: 0.067183 | Val Corr: 0.6060
+  Epoch   80/500 | Train: 0.026040 | Val Loss: 0.072899 | Val Corr: 0.5959
+  Epoch  100/500 | Train: 0.026104 | Val Loss: 0.084240 | Val Corr: 0.6429
+  Epoch  120/500 | Train: 0.021192 | Val Loss: 0.069525 | Val Corr: 0.5256
+  Epoch  140/500 | Train: 0.024289 | Val Loss: 0.095818 | Val Corr: 0.6011
+  Epoch  160/500 | Train: 0.021037 | Val Loss: 0.118343 | Val Corr: 0.6180
+  Epoch  180/500 | Train: 0.019162 | Val Loss: 0.109704 | Val Corr: 0.5932
+  Early stopping at epoch 197
+    [xavier] s8: R²=0.3644, MAPE=18.05%
+  Epoch    1/500 | Train: 0.085693 | Val Loss: 0.115758 | Val Corr: 0.3288
+  Epoch   20/500 | Train: 0.047408 | Val Loss: 0.075578 | Val Corr: 0.7336
+  Epoch   40/500 | Train: 0.037290 | Val Loss: 0.083362 | Val Corr: 0.7027
+  Epoch   60/500 | Train: 0.031319 | Val Loss: 0.097492 | Val Corr: 0.6943
+  Epoch   80/500 | Train: 0.028172 | Val Loss: 0.075516 | Val Corr: 0.6414
+  Epoch  100/500 | Train: 0.027092 | Val Loss: 0.081629 | Val Corr: 0.6449
+  Epoch  120/500 | Train: 0.027753 | Val Loss: 0.073158 | Val Corr: 0.6007
+  Epoch  140/500 | Train: 0.023470 | Val Loss: 0.070704 | Val Corr: 0.6298
+  Epoch  160/500 | Train: 0.025787 | Val Loss: 0.085733 | Val Corr: 0.6004
+  Early stopping at epoch 175
+    [xavier] s9: R²=0.2876, MAPE=19.67%
+  Epoch    1/500 | Train: 0.081517 | Val Loss: 0.097900 | Val Corr: 0.4579
+  Epoch   20/500 | Train: 0.048617 | Val Loss: 0.092860 | Val Corr: 0.6659
+  Epoch   40/500 | Train: 0.035477 | Val Loss: 0.072891 | Val Corr: 0.7137
+  Epoch   60/500 | Train: 0.034858 | Val Loss: 0.090696 | Val Corr: 0.6932
+  Epoch   80/500 | Train: 0.031155 | Val Loss: 0.091481 | Val Corr: 0.6156
+  Epoch  100/500 | Train: 0.024014 | Val Loss: 0.085403 | Val Corr: 0.6361
+  Epoch  120/500 | Train: 0.022566 | Val Loss: 0.072030 | Val Corr: 0.5931
+  Epoch  140/500 | Train: 0.026421 | Val Loss: 0.072369 | Val Corr: 0.6199
+  Epoch  160/500 | Train: 0.022626 | Val Loss: 0.129344 | Val Corr: 0.6424
+  Early stopping at epoch 175
+    [xavier] s10: R²=0.2079, MAPE=20.90%
+  Epoch    1/500 | Train: 0.096327 | Val Loss: 0.110372 | Val Corr: 0.3243
+  Epoch   20/500 | Train: 0.045745 | Val Loss: 0.073778 | Val Corr: 0.7405
+  Epoch   40/500 | Train: 0.036869 | Val Loss: 0.094113 | Val Corr: 0.7520
+  Epoch   60/500 | Train: 0.034446 | Val Loss: 0.101085 | Val Corr: 0.7071
+  Epoch   80/500 | Train: 0.037772 | Val Loss: 0.090025 | Val Corr: 0.7424
+  Epoch  100/500 | Train: 0.024216 | Val Loss: 0.114780 | Val Corr: 0.6934
+  Epoch  120/500 | Train: 0.025243 | Val Loss: 0.133176 | Val Corr: 0.6302
+  Epoch  140/500 | Train: 0.023950 | Val Loss: 0.120493 | Val Corr: 0.6895
+  Epoch  160/500 | Train: 0.022644 | Val Loss: 0.088132 | Val Corr: 0.6801
+  Early stopping at epoch 176
+    [xavier] s11: R²=0.2727, MAPE=19.21%
+  Epoch    1/500 | Train: 0.085380 | Val Loss: 0.131292 | Val Corr: -0.3868
+  Epoch   20/500 | Train: 0.048733 | Val Loss: 0.080850 | Val Corr: 0.7343
+  Epoch   40/500 | Train: 0.039539 | Val Loss: 0.078995 | Val Corr: 0.7315
+  Epoch   60/500 | Train: 0.033414 | Val Loss: 0.073045 | Val Corr: 0.6464
+  Epoch   80/500 | Train: 0.033877 | Val Loss: 0.081738 | Val Corr: 0.5576
+  Epoch  100/500 | Train: 0.030552 | Val Loss: 0.065096 | Val Corr: 0.5224
+  Epoch  120/500 | Train: 0.027310 | Val Loss: 0.076294 | Val Corr: 0.5359
+  Epoch  140/500 | Train: 0.026486 | Val Loss: 0.087423 | Val Corr: 0.6458
+  Epoch  160/500 | Train: 0.022296 | Val Loss: 0.081681 | Val Corr: 0.6005
+  Epoch  180/500 | Train: 0.024609 | Val Loss: 0.087633 | Val Corr: 0.6309
+  Early stopping at epoch 194
+    [xavier] s12: R²=0.4549, MAPE=17.89%
+  Epoch    1/500 | Train: 0.083437 | Val Loss: 0.104315 | Val Corr: 0.3361
+  Epoch   20/500 | Train: 0.047189 | Val Loss: 0.078724 | Val Corr: 0.7132
+  Epoch   40/500 | Train: 0.041668 | Val Loss: 0.071118 | Val Corr: 0.7513
+  Epoch   60/500 | Train: 0.039460 | Val Loss: 0.099308 | Val Corr: 0.7551
+  Epoch   80/500 | Train: 0.031835 | Val Loss: 0.099858 | Val Corr: 0.7251
+  Epoch  100/500 | Train: 0.029244 | Val Loss: 0.098576 | Val Corr: 0.7061
+  Epoch  120/500 | Train: 0.027371 | Val Loss: 0.095148 | Val Corr: 0.7093
+  Epoch  140/500 | Train: 0.023687 | Val Loss: 0.074341 | Val Corr: 0.6100
+  Epoch  160/500 | Train: 0.023266 | Val Loss: 0.092761 | Val Corr: 0.6529
+  Epoch  180/500 | Train: 0.022778 | Val Loss: 0.136535 | Val Corr: 0.5931
+  Epoch  200/500 | Train: 0.017661 | Val Loss: 0.130305 | Val Corr: 0.6138
+  Early stopping at epoch 214
+    [xavier] s14: R²=0.4306, MAPE=17.07%
+  Epoch    1/500 | Train: 0.075006 | Val Loss: 0.114610 | Val Corr: 0.0882
+  Epoch   20/500 | Train: 0.045792 | Val Loss: 0.091625 | Val Corr: 0.6836
+  Epoch   40/500 | Train: 0.040428 | Val Loss: 0.072495 | Val Corr: 0.6864
+  Epoch   60/500 | Train: 0.034816 | Val Loss: 0.079473 | Val Corr: 0.6921
+  Epoch   80/500 | Train: 0.032614 | Val Loss: 0.066291 | Val Corr: 0.5852
+  Epoch  100/500 | Train: 0.026685 | Val Loss: 0.090780 | Val Corr: 0.6724
+  Epoch  120/500 | Train: 0.025279 | Val Loss: 0.075627 | Val Corr: 0.5448
+  Epoch  140/500 | Train: 0.024008 | Val Loss: 0.085072 | Val Corr: 0.6679
+  Epoch  160/500 | Train: 0.021960 | Val Loss: 0.071614 | Val Corr: 0.5819
+  Early stopping at epoch 165
+    [xavier] s15: R²=0.3282, MAPE=17.57%
+  Epoch    1/500 | Train: 0.089714 | Val Loss: 0.096671 | Val Corr: 0.2416
+  Epoch   20/500 | Train: 0.048093 | Val Loss: 0.085543 | Val Corr: 0.6577
+  Epoch   40/500 | Train: 0.035628 | Val Loss: 0.063845 | Val Corr: 0.6758
+  Epoch   60/500 | Train: 0.034840 | Val Loss: 0.078859 | Val Corr: 0.6423
+  Epoch   80/500 | Train: 0.029018 | Val Loss: 0.082672 | Val Corr: 0.6856
+  Epoch  100/500 | Train: 0.028276 | Val Loss: 0.088190 | Val Corr: 0.6224
+  Epoch  120/500 | Train: 0.024845 | Val Loss: 0.117366 | Val Corr: 0.6621
+  Epoch  140/500 | Train: 0.022331 | Val Loss: 0.103898 | Val Corr: 0.6843
+  Epoch  160/500 | Train: 0.022049 | Val Loss: 0.101102 | Val Corr: 0.6707
+  Epoch  180/500 | Train: 0.021860 | Val Loss: 0.095701 | Val Corr: 0.6678
+  Early stopping at epoch 199
+    [xavier] s16: R²=0.4723, MAPE=17.62%
+  Epoch    1/500 | Train: 0.103168 | Val Loss: 0.130722 | Val Corr: 0.6402
+  Epoch   20/500 | Train: 0.046757 | Val Loss: 0.085611 | Val Corr: 0.7291
+  Epoch   40/500 | Train: 0.039746 | Val Loss: 0.086885 | Val Corr: 0.7162
+  Epoch   60/500 | Train: 0.027263 | Val Loss: 0.077611 | Val Corr: 0.6391
+  Epoch   80/500 | Train: 0.031764 | Val Loss: 0.073722 | Val Corr: 0.6033
+  Epoch  100/500 | Train: 0.030287 | Val Loss: 0.096676 | Val Corr: 0.6529
+  Epoch  120/500 | Train: 0.026589 | Val Loss: 0.103891 | Val Corr: 0.7091
+  Epoch  140/500 | Train: 0.024235 | Val Loss: 0.081336 | Val Corr: 0.6388
+  Epoch  160/500 | Train: 0.021285 | Val Loss: 0.089487 | Val Corr: 0.6304
+  Early stopping at epoch 164
+    [xavier] s17: R²=0.4992, MAPE=16.58%
+  Epoch    1/500 | Train: 0.088446 | Val Loss: 0.115112 | Val Corr: 0.3555
+  Epoch   20/500 | Train: 0.046871 | Val Loss: 0.090015 | Val Corr: 0.7611
+  Epoch   40/500 | Train: 0.039781 | Val Loss: 0.071428 | Val Corr: 0.7412
+  Epoch   60/500 | Train: 0.031565 | Val Loss: 0.099744 | Val Corr: 0.6930
+  Epoch   80/500 | Train: 0.032474 | Val Loss: 0.073612 | Val Corr: 0.6807
+  Epoch  100/500 | Train: 0.026429 | Val Loss: 0.100075 | Val Corr: 0.6765
+  Epoch  120/500 | Train: 0.025355 | Val Loss: 0.076272 | Val Corr: 0.7168
+  Epoch  140/500 | Train: 0.020132 | Val Loss: 0.106793 | Val Corr: 0.6745
+  Epoch  160/500 | Train: 0.022516 | Val Loss: 0.093252 | Val Corr: 0.7051
+  Epoch  180/500 | Train: 0.019837 | Val Loss: 0.110581 | Val Corr: 0.6744
+  Early stopping at epoch 188
+    [xavier] s18: R²=0.3599, MAPE=19.90%
+  Epoch    1/500 | Train: 0.080693 | Val Loss: 0.113551 | Val Corr: 0.0995
+  Epoch   20/500 | Train: 0.048257 | Val Loss: 0.075210 | Val Corr: 0.6950
+  Epoch   40/500 | Train: 0.039558 | Val Loss: 0.084653 | Val Corr: 0.6685
+  Epoch   60/500 | Train: 0.033996 | Val Loss: 0.086085 | Val Corr: 0.6353
+  Epoch   80/500 | Train: 0.028907 | Val Loss: 0.092482 | Val Corr: 0.6396
+  Epoch  100/500 | Train: 0.026763 | Val Loss: 0.098518 | Val Corr: 0.6602
+  Epoch  120/500 | Train: 0.024015 | Val Loss: 0.100376 | Val Corr: 0.6438
+  Epoch  140/500 | Train: 0.020549 | Val Loss: 0.085879 | Val Corr: 0.6618
+  Epoch  160/500 | Train: 0.022989 | Val Loss: 0.074738 | Val Corr: 0.5625
+  Early stopping at epoch 175
+    [xavier] s19: R²=0.3973, MAPE=17.02%
+  Epoch    1/500 | Train: 0.076200 | Val Loss: 0.090454 | Val Corr: 0.0772
+  Epoch   20/500 | Train: 0.047601 | Val Loss: 0.080442 | Val Corr: 0.7434
+  Epoch   40/500 | Train: 0.034630 | Val Loss: 0.061472 | Val Corr: 0.6383
+  Epoch   60/500 | Train: 0.031808 | Val Loss: 0.078815 | Val Corr: 0.7438
+  Epoch   80/500 | Train: 0.033244 | Val Loss: 0.093396 | Val Corr: 0.7006
+  Epoch  100/500 | Train: 0.025027 | Val Loss: 0.096511 | Val Corr: 0.6637
+  Epoch  120/500 | Train: 0.024204 | Val Loss: 0.079779 | Val Corr: 0.6492
+  Epoch  140/500 | Train: 0.021745 | Val Loss: 0.098096 | Val Corr: 0.6868
+  Epoch  160/500 | Train: 0.022632 | Val Loss: 0.111388 | Val Corr: 0.6931
+  Early stopping at epoch 166
+    [xavier] s20: R²=0.4880, MAPE=17.23%
+  Epoch    1/500 | Train: 0.068866 | Val Loss: 0.105953 | Val Corr: 0.3725
+  Epoch   20/500 | Train: 0.049621 | Val Loss: 0.079956 | Val Corr: 0.7035
+  Epoch   40/500 | Train: 0.040136 | Val Loss: 0.078724 | Val Corr: 0.7213
+  Epoch   60/500 | Train: 0.034092 | Val Loss: 0.090373 | Val Corr: 0.6904
+  Epoch   80/500 | Train: 0.027183 | Val Loss: 0.113149 | Val Corr: 0.6902
+  Epoch  100/500 | Train: 0.027105 | Val Loss: 0.098722 | Val Corr: 0.6827
+  Epoch  120/500 | Train: 0.025113 | Val Loss: 0.107580 | Val Corr: 0.6865
+  Epoch  140/500 | Train: 0.022912 | Val Loss: 0.102932 | Val Corr: 0.6543
+  Epoch  160/500 | Train: 0.019825 | Val Loss: 0.111805 | Val Corr: 0.6837
+  Early stopping at epoch 177
+    [xavier] s21: R²=0.3174, MAPE=17.59%
+  Epoch    1/500 | Train: 0.086854 | Val Loss: 0.116101 | Val Corr: 0.4112
+  Epoch   20/500 | Train: 0.049055 | Val Loss: 0.082581 | Val Corr: 0.5400
+  Epoch   40/500 | Train: 0.037600 | Val Loss: 0.076343 | Val Corr: 0.7191
+  Epoch   60/500 | Train: 0.035186 | Val Loss: 0.074073 | Val Corr: 0.7066
+  Epoch   80/500 | Train: 0.034118 | Val Loss: 0.082465 | Val Corr: 0.5845
+  Epoch  100/500 | Train: 0.027680 | Val Loss: 0.100379 | Val Corr: 0.7040
+  Epoch  120/500 | Train: 0.029390 | Val Loss: 0.105260 | Val Corr: 0.6928
+  Epoch  140/500 | Train: 0.026373 | Val Loss: 0.106240 | Val Corr: 0.6701
+  Epoch  160/500 | Train: 0.025318 | Val Loss: 0.109018 | Val Corr: 0.6584
+  Early stopping at epoch 178
+    [xavier] s22: R²=0.3649, MAPE=18.51%
+  Epoch    1/500 | Train: 0.069930 | Val Loss: 0.097469 | Val Corr: 0.2552
+  Epoch   20/500 | Train: 0.047410 | Val Loss: 0.083421 | Val Corr: 0.7698
+  Epoch   40/500 | Train: 0.039983 | Val Loss: 0.063678 | Val Corr: 0.6772
+  Epoch   60/500 | Train: 0.036405 | Val Loss: 0.089177 | Val Corr: 0.7197
+  Epoch   80/500 | Train: 0.033169 | Val Loss: 0.067734 | Val Corr: 0.5154
+  Epoch  100/500 | Train: 0.031941 | Val Loss: 0.119986 | Val Corr: 0.6989
+  Epoch  120/500 | Train: 0.025009 | Val Loss: 0.119078 | Val Corr: 0.6672
+  Epoch  140/500 | Train: 0.027613 | Val Loss: 0.072584 | Val Corr: 0.6242
+  Epoch  160/500 | Train: 0.024516 | Val Loss: 0.134746 | Val Corr: 0.6057
+  Early stopping at epoch 177
+    [xavier] s23: R²=0.3083, MAPE=16.93%
+  Epoch    1/500 | Train: 0.077869 | Val Loss: 0.122843 | Val Corr: -0.1779
+  Epoch   20/500 | Train: 0.048674 | Val Loss: 0.092045 | Val Corr: 0.7086
+  Epoch   40/500 | Train: 0.035850 | Val Loss: 0.104360 | Val Corr: 0.6693
+  Epoch   60/500 | Train: 0.033298 | Val Loss: 0.084348 | Val Corr: 0.6818
+  Epoch   80/500 | Train: 0.028163 | Val Loss: 0.074261 | Val Corr: 0.6030
+  Epoch  100/500 | Train: 0.025417 | Val Loss: 0.075459 | Val Corr: 0.6989
+  Epoch  120/500 | Train: 0.025828 | Val Loss: 0.071051 | Val Corr: 0.7418
+  Epoch  140/500 | Train: 0.024346 | Val Loss: 0.075681 | Val Corr: 0.7243
+  Epoch  160/500 | Train: 0.017946 | Val Loss: 0.091545 | Val Corr: 0.7286
+  Epoch  180/500 | Train: 0.023802 | Val Loss: 0.076802 | Val Corr: 0.5612
+  Epoch  200/500 | Train: 0.019281 | Val Loss: 0.098708 | Val Corr: 0.6715
+  Epoch  220/500 | Train: 0.019076 | Val Loss: 0.089025 | Val Corr: 0.7041
+  Epoch  240/500 | Train: 0.016563 | Val Loss: 0.108873 | Val Corr: 0.7062
+  Epoch  260/500 | Train: 0.018979 | Val Loss: 0.105295 | Val Corr: 0.6930
+  Early stopping at epoch 270
+    [xavier] s24: R²=0.3460, MAPE=18.29%
+  Epoch    1/500 | Train: 0.082445 | Val Loss: 0.114894 | Val Corr: -0.1516
+  Epoch   20/500 | Train: 0.045771 | Val Loss: 0.078338 | Val Corr: 0.7539
+  Epoch   40/500 | Train: 0.036209 | Val Loss: 0.060008 | Val Corr: 0.7191
+  Epoch   60/500 | Train: 0.031159 | Val Loss: 0.060655 | Val Corr: 0.7016
+  Epoch   80/500 | Train: 0.026274 | Val Loss: 0.075222 | Val Corr: 0.6893
+  Epoch  100/500 | Train: 0.023478 | Val Loss: 0.078301 | Val Corr: 0.6780
+  Epoch  120/500 | Train: 0.026284 | Val Loss: 0.094621 | Val Corr: 0.7256
+  Epoch  140/500 | Train: 0.022683 | Val Loss: 0.081384 | Val Corr: 0.6657
+  Epoch  160/500 | Train: 0.023496 | Val Loss: 0.079813 | Val Corr: 0.6308
+  Early stopping at epoch 179
+    [xavier] s25: R²=0.3681, MAPE=18.54%
+  Epoch    1/500 | Train: 0.083136 | Val Loss: 0.121253 | Val Corr: 0.5665
+  Epoch   20/500 | Train: 0.044255 | Val Loss: 0.091040 | Val Corr: 0.7236
+  Epoch   40/500 | Train: 0.038364 | Val Loss: 0.084826 | Val Corr: 0.7168
+  Epoch   60/500 | Train: 0.034988 | Val Loss: 0.097477 | Val Corr: 0.7283
+  Epoch   80/500 | Train: 0.032947 | Val Loss: 0.097870 | Val Corr: 0.7199
+  Epoch  100/500 | Train: 0.026216 | Val Loss: 0.104956 | Val Corr: 0.6788
+  Epoch  120/500 | Train: 0.028006 | Val Loss: 0.117319 | Val Corr: 0.6890
+  Epoch  140/500 | Train: 0.024266 | Val Loss: 0.082797 | Val Corr: 0.7009
+  Epoch  160/500 | Train: 0.021429 | Val Loss: 0.112156 | Val Corr: 0.6800
+  Epoch  180/500 | Train: 0.022402 | Val Loss: 0.120956 | Val Corr: 0.6804
+  Epoch  200/500 | Train: 0.016780 | Val Loss: 0.106293 | Val Corr: 0.7051
+  Early stopping at epoch 204
+    [xavier] s26: R²=0.3486, MAPE=19.22%
+  Epoch    1/500 | Train: 0.089831 | Val Loss: 0.105385 | Val Corr: -0.0257
+  Epoch   20/500 | Train: 0.045303 | Val Loss: 0.084398 | Val Corr: 0.7500
+  Epoch   40/500 | Train: 0.042096 | Val Loss: 0.072986 | Val Corr: 0.5904
+  Epoch   60/500 | Train: 0.037887 | Val Loss: 0.080430 | Val Corr: 0.6281
+  Epoch   80/500 | Train: 0.031944 | Val Loss: 0.079649 | Val Corr: 0.6351
+  Epoch  100/500 | Train: 0.031950 | Val Loss: 0.104805 | Val Corr: 0.6393
+  Epoch  120/500 | Train: 0.022250 | Val Loss: 0.091397 | Val Corr: 0.5653
+  Epoch  140/500 | Train: 0.025003 | Val Loss: 0.091323 | Val Corr: 0.5950
+  Epoch  160/500 | Train: 0.024218 | Val Loss: 0.121961 | Val Corr: 0.6438
+  Early stopping at epoch 170
+    [xavier] s27: R²=0.2161, MAPE=18.79%
+  Epoch    1/500 | Train: 0.072828 | Val Loss: 0.108541 | Val Corr: 0.1914
+  Epoch   20/500 | Train: 0.049281 | Val Loss: 0.083063 | Val Corr: 0.6864
+  Epoch   40/500 | Train: 0.037222 | Val Loss: 0.087701 | Val Corr: 0.7100
+  Epoch   60/500 | Train: 0.036586 | Val Loss: 0.080606 | Val Corr: 0.6827
+  Epoch   80/500 | Train: 0.035122 | Val Loss: 0.072496 | Val Corr: 0.7051
+  Epoch  100/500 | Train: 0.025159 | Val Loss: 0.065207 | Val Corr: 0.6722
+  Epoch  120/500 | Train: 0.027249 | Val Loss: 0.068469 | Val Corr: 0.7172
+  Epoch  140/500 | Train: 0.021336 | Val Loss: 0.073579 | Val Corr: 0.7405
+  Epoch  160/500 | Train: 0.024742 | Val Loss: 0.089162 | Val Corr: 0.7348
+  Epoch  180/500 | Train: 0.023796 | Val Loss: 0.079635 | Val Corr: 0.6951
+  Epoch  200/500 | Train: 0.021075 | Val Loss: 0.072540 | Val Corr: 0.6713
+  Epoch  220/500 | Train: 0.020781 | Val Loss: 0.090319 | Val Corr: 0.7018
+  Epoch  240/500 | Train: 0.021715 | Val Loss: 0.071547 | Val Corr: 0.6817
+  Epoch  260/500 | Train: 0.016995 | Val Loss: 0.079699 | Val Corr: 0.7069
+  Early stopping at epoch 266
+    [xavier] s28: R²=0.4940, MAPE=16.44%
+  Epoch    1/500 | Train: 0.099637 | Val Loss: 0.109738 | Val Corr: 0.3477
+  Epoch   20/500 | Train: 0.045809 | Val Loss: 0.082820 | Val Corr: 0.7263
+  Epoch   40/500 | Train: 0.042387 | Val Loss: 0.073095 | Val Corr: 0.7374
+  Epoch   60/500 | Train: 0.031314 | Val Loss: 0.067436 | Val Corr: 0.6829
+  Epoch   80/500 | Train: 0.032325 | Val Loss: 0.100567 | Val Corr: 0.6935
+  Epoch  100/500 | Train: 0.027410 | Val Loss: 0.088528 | Val Corr: 0.6693
+  Epoch  120/500 | Train: 0.027702 | Val Loss: 0.087395 | Val Corr: 0.6316
+  Epoch  140/500 | Train: 0.023841 | Val Loss: 0.092192 | Val Corr: 0.6520
+  Epoch  160/500 | Train: 0.019892 | Val Loss: 0.074647 | Val Corr: 0.6191
+  Early stopping at epoch 167
+    [xavier] s29: R²=0.3572, MAPE=18.42%
+  Epoch    1/500 | Train: 0.072624 | Val Loss: 0.129850 | Val Corr: 0.1885
+  Epoch   20/500 | Train: 0.040908 | Val Loss: 0.095508 | Val Corr: 0.7137
+  Epoch   40/500 | Train: 0.035428 | Val Loss: 0.072766 | Val Corr: 0.6209
+  Epoch   60/500 | Train: 0.031016 | Val Loss: 0.100966 | Val Corr: 0.6710
+  Epoch   80/500 | Train: 0.029129 | Val Loss: 0.077391 | Val Corr: 0.5866
+  Epoch  100/500 | Train: 0.024273 | Val Loss: 0.100094 | Val Corr: 0.6621
+  Epoch  120/500 | Train: 0.023963 | Val Loss: 0.100613 | Val Corr: 0.6483
+  Epoch  140/500 | Train: 0.024596 | Val Loss: 0.128206 | Val Corr: 0.6174
+  Epoch  160/500 | Train: 0.022057 | Val Loss: 0.119024 | Val Corr: 0.6153
+  Epoch  180/500 | Train: 0.021614 | Val Loss: 0.113199 | Val Corr: 0.6025
+  Early stopping at epoch 184
+    [xavier] s30: R²=0.4555, MAPE=16.72%
+  Epoch    1/500 | Train: 0.079893 | Val Loss: 0.091726 | Val Corr: 0.4621
+  Epoch   20/500 | Train: 0.043049 | Val Loss: 0.077683 | Val Corr: 0.7465
+  Epoch   40/500 | Train: 0.038817 | Val Loss: 0.070596 | Val Corr: 0.7264
+  Epoch   60/500 | Train: 0.041109 | Val Loss: 0.067418 | Val Corr: 0.6797
+  Epoch   80/500 | Train: 0.029614 | Val Loss: 0.063949 | Val Corr: 0.5858
+  Epoch  100/500 | Train: 0.028913 | Val Loss: 0.068177 | Val Corr: 0.6141
+  Epoch  120/500 | Train: 0.024976 | Val Loss: 0.075047 | Val Corr: 0.6242
+  Epoch  140/500 | Train: 0.023864 | Val Loss: 0.089341 | Val Corr: 0.6900
+  Epoch  160/500 | Train: 0.020394 | Val Loss: 0.075247 | Val Corr: 0.6064
+  Early stopping at epoch 171
+    [xavier] s31: R²=0.4709, MAPE=17.99%
+  Epoch    1/500 | Train: 0.086342 | Val Loss: 0.110554 | Val Corr: 0.1651
+  Epoch   20/500 | Train: 0.042288 | Val Loss: 0.081446 | Val Corr: 0.7391
+  Epoch   40/500 | Train: 0.036819 | Val Loss: 0.083965 | Val Corr: 0.6782
+  Epoch   60/500 | Train: 0.034165 | Val Loss: 0.077117 | Val Corr: 0.6593
+  Epoch   80/500 | Train: 0.031462 | Val Loss: 0.096773 | Val Corr: 0.6759
+  Epoch  100/500 | Train: 0.028168 | Val Loss: 0.076116 | Val Corr: 0.5020
+  Epoch  120/500 | Train: 0.023760 | Val Loss: 0.094990 | Val Corr: 0.6506
+  Epoch  140/500 | Train: 0.022022 | Val Loss: 0.097756 | Val Corr: 0.6041
+  Epoch  160/500 | Train: 0.022369 | Val Loss: 0.109879 | Val Corr: 0.6393
+  Early stopping at epoch 168
+    [xavier] s32: R²=0.2964, MAPE=19.30%
+  Epoch    1/500 | Train: 0.085026 | Val Loss: 0.105045 | Val Corr: 0.3667
+  Epoch   20/500 | Train: 0.047796 | Val Loss: 0.074556 | Val Corr: 0.7849
+  Epoch   40/500 | Train: 0.041445 | Val Loss: 0.089735 | Val Corr: 0.6866
+  Epoch   60/500 | Train: 0.033894 | Val Loss: 0.065429 | Val Corr: 0.6662
+  Epoch   80/500 | Train: 0.028420 | Val Loss: 0.112907 | Val Corr: 0.6979
+  Epoch  100/500 | Train: 0.028275 | Val Loss: 0.072757 | Val Corr: 0.6765
+  Epoch  120/500 | Train: 0.028233 | Val Loss: 0.116249 | Val Corr: 0.6619
+  Epoch  140/500 | Train: 0.023805 | Val Loss: 0.082661 | Val Corr: 0.6651
+  Epoch  160/500 | Train: 0.023082 | Val Loss: 0.079966 | Val Corr: 0.6519
+  Early stopping at epoch 170
+    [xavier] s33: R²=0.4776, MAPE=17.03%
+  Epoch    1/500 | Train: 0.102338 | Val Loss: 0.110271 | Val Corr: 0.2501
+  Epoch   20/500 | Train: 0.048159 | Val Loss: 0.095532 | Val Corr: 0.7456
+  Epoch   40/500 | Train: 0.037876 | Val Loss: 0.078587 | Val Corr: 0.7196
+  Epoch   60/500 | Train: 0.038412 | Val Loss: 0.099451 | Val Corr: 0.6815
+  Epoch   80/500 | Train: 0.026622 | Val Loss: 0.073893 | Val Corr: 0.5394
+  Epoch  100/500 | Train: 0.027862 | Val Loss: 0.086560 | Val Corr: 0.6417
+  Epoch  120/500 | Train: 0.026357 | Val Loss: 0.096223 | Val Corr: 0.6629
+  Epoch  140/500 | Train: 0.022171 | Val Loss: 0.114809 | Val Corr: 0.6647
+  Epoch  160/500 | Train: 0.024590 | Val Loss: 0.119909 | Val Corr: 0.6285
+  Early stopping at epoch 177
+    [xavier] s34: R²=0.3275, MAPE=19.97%
+  Epoch    1/500 | Train: 0.094063 | Val Loss: 0.119475 | Val Corr: -0.1484
+  Epoch   20/500 | Train: 0.047988 | Val Loss: 0.095930 | Val Corr: 0.6550
+  Epoch   40/500 | Train: 0.038540 | Val Loss: 0.079672 | Val Corr: 0.6739
+  Epoch   60/500 | Train: 0.032621 | Val Loss: 0.070773 | Val Corr: 0.5395
+  Epoch   80/500 | Train: 0.030738 | Val Loss: 0.080342 | Val Corr: 0.6831
+  Epoch  100/500 | Train: 0.028113 | Val Loss: 0.103263 | Val Corr: 0.6836
+  Epoch  120/500 | Train: 0.029123 | Val Loss: 0.075556 | Val Corr: 0.5327
+  Epoch  140/500 | Train: 0.024855 | Val Loss: 0.084870 | Val Corr: 0.6019
+  Epoch  160/500 | Train: 0.027398 | Val Loss: 0.110746 | Val Corr: 0.6587
+  Epoch  180/500 | Train: 0.022909 | Val Loss: 0.090180 | Val Corr: 0.6637
+  Epoch  200/500 | Train: 0.019977 | Val Loss: 0.121124 | Val Corr: 0.6654
+  Epoch  220/500 | Train: 0.019158 | Val Loss: 0.102491 | Val Corr: 0.6769
+  Epoch  240/500 | Train: 0.024898 | Val Loss: 0.102140 | Val Corr: 0.6657
+  Early stopping at epoch 255
+    [xavier] s35: R²=0.4075, MAPE=18.54%
+  Epoch    1/500 | Train: 0.116702 | Val Loss: 0.106291 | Val Corr: 0.3354
+  Epoch   20/500 | Train: 0.052496 | Val Loss: 0.080390 | Val Corr: 0.6944
+  Epoch   40/500 | Train: 0.043048 | Val Loss: 0.071737 | Val Corr: 0.7245
+  Epoch   60/500 | Train: 0.038909 | Val Loss: 0.072866 | Val Corr: 0.7017
+  Epoch   80/500 | Train: 0.029279 | Val Loss: 0.070092 | Val Corr: 0.6567
+  Epoch  100/500 | Train: 0.026403 | Val Loss: 0.075653 | Val Corr: 0.6169
+  Epoch  120/500 | Train: 0.028407 | Val Loss: 0.079049 | Val Corr: 0.6982
+  Epoch  140/500 | Train: 0.022512 | Val Loss: 0.117521 | Val Corr: 0.6493
+  Epoch  160/500 | Train: 0.023543 | Val Loss: 0.106079 | Val Corr: 0.6431
+  Epoch  180/500 | Train: 0.020984 | Val Loss: 0.119813 | Val Corr: 0.6163
+  Early stopping at epoch 181
+    [xavier] s36: R²=0.1819, MAPE=20.88%
+  Epoch    1/500 | Train: 0.083747 | Val Loss: 0.120452 | Val Corr: 0.1725
+  Epoch   20/500 | Train: 0.047217 | Val Loss: 0.060109 | Val Corr: 0.7432
+  Epoch   40/500 | Train: 0.044332 | Val Loss: 0.077592 | Val Corr: 0.5832
+  Epoch   60/500 | Train: 0.040116 | Val Loss: 0.070196 | Val Corr: 0.7070
+  Epoch   80/500 | Train: 0.033918 | Val Loss: 0.064287 | Val Corr: 0.6577
+  Epoch  100/500 | Train: 0.028423 | Val Loss: 0.067838 | Val Corr: 0.6496
+  Epoch  120/500 | Train: 0.029679 | Val Loss: 0.070208 | Val Corr: 0.4958
+  Epoch  140/500 | Train: 0.023333 | Val Loss: 0.068291 | Val Corr: 0.6023
+  Epoch  160/500 | Train: 0.021743 | Val Loss: 0.069329 | Val Corr: 0.6196
+  Early stopping at epoch 167
+    [xavier] s37: R²=0.4752, MAPE=15.91%
+  Epoch    1/500 | Train: 0.103179 | Val Loss: 0.112136 | Val Corr: -0.0636
+  Epoch   20/500 | Train: 0.042005 | Val Loss: 0.096904 | Val Corr: 0.7128
+  Epoch   40/500 | Train: 0.040523 | Val Loss: 0.077319 | Val Corr: 0.6306
+  Epoch   60/500 | Train: 0.035042 | Val Loss: 0.080690 | Val Corr: 0.6813
+  Epoch   80/500 | Train: 0.028835 | Val Loss: 0.097200 | Val Corr: 0.6915
+  Epoch  100/500 | Train: 0.024845 | Val Loss: 0.074521 | Val Corr: 0.6347
+  Epoch  120/500 | Train: 0.021759 | Val Loss: 0.086154 | Val Corr: 0.6468
+  Epoch  140/500 | Train: 0.023098 | Val Loss: 0.084472 | Val Corr: 0.5605
+  Epoch  160/500 | Train: 0.021687 | Val Loss: 0.091541 | Val Corr: 0.6061
+  Early stopping at epoch 168
+    [xavier] s38: R²=0.2119, MAPE=19.70%
+  Epoch    1/500 | Train: 0.072853 | Val Loss: 0.114990 | Val Corr: 0.0237
+  Epoch   20/500 | Train: 0.037839 | Val Loss: 0.070809 | Val Corr: 0.7336
+  Epoch   40/500 | Train: 0.035636 | Val Loss: 0.071555 | Val Corr: 0.6851
+  Epoch   60/500 | Train: 0.031770 | Val Loss: 0.083952 | Val Corr: 0.6631
+  Epoch   80/500 | Train: 0.028955 | Val Loss: 0.076078 | Val Corr: 0.6720
+  Epoch  100/500 | Train: 0.024137 | Val Loss: 0.063832 | Val Corr: 0.5621
+  Epoch  120/500 | Train: 0.024928 | Val Loss: 0.083699 | Val Corr: 0.5963
+  Epoch  140/500 | Train: 0.022902 | Val Loss: 0.111895 | Val Corr: 0.6434
+  Epoch  160/500 | Train: 0.020944 | Val Loss: 0.102988 | Val Corr: 0.6754
+  Epoch  180/500 | Train: 0.023085 | Val Loss: 0.112749 | Val Corr: 0.6460
+  Early stopping at epoch 180
+    [xavier] s39: R²=0.4839, MAPE=16.94%
+  Epoch    1/500 | Train: 0.112655 | Val Loss: 0.110191 | Val Corr: 0.0682
+  Epoch   20/500 | Train: 0.045961 | Val Loss: 0.086665 | Val Corr: 0.7176
+  Epoch   40/500 | Train: 0.039119 | Val Loss: 0.087538 | Val Corr: 0.7106
+  Epoch   60/500 | Train: 0.038998 | Val Loss: 0.090516 | Val Corr: 0.7234
+  Epoch   80/500 | Train: 0.034145 | Val Loss: 0.109404 | Val Corr: 0.6973
+  Epoch  100/500 | Train: 0.027048 | Val Loss: 0.078427 | Val Corr: 0.6586
+  Epoch  120/500 | Train: 0.028846 | Val Loss: 0.125869 | Val Corr: 0.6451
+  Epoch  140/500 | Train: 0.023184 | Val Loss: 0.079651 | Val Corr: 0.5848
+  Epoch  160/500 | Train: 0.020834 | Val Loss: 0.097259 | Val Corr: 0.6760
+  Epoch  180/500 | Train: 0.025059 | Val Loss: 0.125533 | Val Corr: 0.6244
+  Early stopping at epoch 180
+    [xavier] s40: R²=0.4805, MAPE=17.25%
+  Epoch    1/500 | Train: 0.092776 | Val Loss: 0.107840 | Val Corr: -0.6500
+  Epoch   20/500 | Train: 0.047945 | Val Loss: 0.073167 | Val Corr: 0.7231
+  Epoch   40/500 | Train: 0.036830 | Val Loss: 0.066702 | Val Corr: 0.5755
+  Epoch   60/500 | Train: 0.031938 | Val Loss: 0.087751 | Val Corr: 0.6344
+  Epoch   80/500 | Train: 0.030926 | Val Loss: 0.112328 | Val Corr: 0.6428
+  Epoch  100/500 | Train: 0.032949 | Val Loss: 0.100752 | Val Corr: 0.6666
+  Epoch  120/500 | Train: 0.028247 | Val Loss: 0.121426 | Val Corr: 0.6286
+  Epoch  140/500 | Train: 0.023896 | Val Loss: 0.115371 | Val Corr: 0.6192
+  Epoch  160/500 | Train: 0.022478 | Val Loss: 0.119443 | Val Corr: 0.6387
+  Early stopping at epoch 168
+    [xavier] s41: R²=0.3648, MAPE=19.30%
+  Epoch    1/500 | Train: 0.113388 | Val Loss: 0.124302 | Val Corr: 0.0901
+  Epoch   20/500 | Train: 0.045998 | Val Loss: 0.095837 | Val Corr: 0.7330
+  Epoch   40/500 | Train: 0.041927 | Val Loss: 0.077862 | Val Corr: 0.7460
+  Epoch   60/500 | Train: 0.033848 | Val Loss: 0.109843 | Val Corr: 0.7259
+  Epoch   80/500 | Train: 0.030991 | Val Loss: 0.110869 | Val Corr: 0.6880
+  Epoch  100/500 | Train: 0.031476 | Val Loss: 0.111207 | Val Corr: 0.6511
+  Epoch  120/500 | Train: 0.024608 | Val Loss: 0.112569 | Val Corr: 0.6137
+  Epoch  140/500 | Train: 0.023598 | Val Loss: 0.124869 | Val Corr: 0.6533
+  Epoch  160/500 | Train: 0.023991 | Val Loss: 0.093042 | Val Corr: 0.5295
+  Early stopping at epoch 173
+    [xavier] s100: R²=0.4810, MAPE=17.92%
+  Epoch    1/500 | Train: 0.075888 | Val Loss: 0.112478 | Val Corr: 0.1092
+  Epoch   20/500 | Train: 0.052255 | Val Loss: 0.087853 | Val Corr: 0.6421
+  Epoch   40/500 | Train: 0.044500 | Val Loss: 0.077614 | Val Corr: 0.7360
+  Epoch   60/500 | Train: 0.035691 | Val Loss: 0.104817 | Val Corr: 0.6674
+  Epoch   80/500 | Train: 0.035451 | Val Loss: 0.083290 | Val Corr: 0.7099
+  Epoch  100/500 | Train: 0.031669 | Val Loss: 0.095104 | Val Corr: 0.7451
+  Epoch  120/500 | Train: 0.023575 | Val Loss: 0.087947 | Val Corr: 0.7142
+  Epoch  140/500 | Train: 0.022344 | Val Loss: 0.126160 | Val Corr: 0.7150
+  Epoch  160/500 | Train: 0.022469 | Val Loss: 0.109783 | Val Corr: 0.6796
+  Epoch  180/500 | Train: 0.023577 | Val Loss: 0.098664 | Val Corr: 0.6895
+  Early stopping at epoch 196
+    [xavier] s200: R²=0.5026, MAPE=16.59%
+  Epoch    1/500 | Train: 0.077494 | Val Loss: 0.120135 | Val Corr: -0.0387
+  Epoch   20/500 | Train: 0.048011 | Val Loss: 0.079359 | Val Corr: 0.7228
+  Epoch   40/500 | Train: 0.037368 | Val Loss: 0.072963 | Val Corr: 0.7119
+  Epoch   60/500 | Train: 0.032492 | Val Loss: 0.082619 | Val Corr: 0.6802
+  Epoch   80/500 | Train: 0.029072 | Val Loss: 0.080974 | Val Corr: 0.6197
+  Epoch  100/500 | Train: 0.026524 | Val Loss: 0.073822 | Val Corr: 0.6422
+  Epoch  120/500 | Train: 0.027129 | Val Loss: 0.104042 | Val Corr: 0.6942
+  Epoch  140/500 | Train: 0.021682 | Val Loss: 0.114123 | Val Corr: 0.6785
+  Epoch  160/500 | Train: 0.024490 | Val Loss: 0.076379 | Val Corr: 0.6285
+  Early stopping at epoch 165
+    [xavier] s500: R²=0.4288, MAPE=17.16%
+  Epoch    1/500 | Train: 0.080284 | Val Loss: 0.106681 | Val Corr: 0.1281
+  Epoch   20/500 | Train: 0.044870 | Val Loss: 0.080106 | Val Corr: 0.7690
+  Epoch   40/500 | Train: 0.039229 | Val Loss: 0.082085 | Val Corr: 0.7453
+  Epoch   60/500 | Train: 0.033302 | Val Loss: 0.067706 | Val Corr: 0.6831
+  Epoch   80/500 | Train: 0.028348 | Val Loss: 0.071066 | Val Corr: 0.6355
+  Epoch  100/500 | Train: 0.027673 | Val Loss: 0.079485 | Val Corr: 0.6324
+  Epoch  120/500 | Train: 0.028338 | Val Loss: 0.107291 | Val Corr: 0.5948
+  Epoch  140/500 | Train: 0.021588 | Val Loss: 0.096178 | Val Corr: 0.5841
+  Epoch  160/500 | Train: 0.022965 | Val Loss: 0.099269 | Val Corr: 0.5575
+  Early stopping at epoch 170
+    [xavier] s1000: R²=0.3587, MAPE=19.20%
+  Epoch    1/500 | Train: 0.087629 | Val Loss: 0.106365 | Val Corr: 0.4366
+  Epoch   20/500 | Train: 0.042186 | Val Loss: 0.095406 | Val Corr: 0.6988
+  Epoch   40/500 | Train: 0.034671 | Val Loss: 0.087349 | Val Corr: 0.6681
+  Epoch   60/500 | Train: 0.029426 | Val Loss: 0.107847 | Val Corr: 0.6559
+  Epoch   80/500 | Train: 0.028832 | Val Loss: 0.107186 | Val Corr: 0.6651
+  Epoch  100/500 | Train: 0.025840 | Val Loss: 0.092516 | Val Corr: 0.6681
+  Epoch  120/500 | Train: 0.024194 | Val Loss: 0.120451 | Val Corr: 0.6362
+  Epoch  140/500 | Train: 0.021926 | Val Loss: 0.093008 | Val Corr: 0.6844
+  Epoch  160/500 | Train: 0.021323 | Val Loss: 0.107192 | Val Corr: 0.6407
+  Early stopping at epoch 168
+    [orthogonal] s42: R²=0.3586, MAPE=18.05%
+  Epoch    1/500 | Train: 0.066994 | Val Loss: 0.099835 | Val Corr: 0.3110
+  Epoch   20/500 | Train: 0.037957 | Val Loss: 0.070088 | Val Corr: 0.7562
+  Epoch   40/500 | Train: 0.036447 | Val Loss: 0.078368 | Val Corr: 0.7145
+  Epoch   60/500 | Train: 0.030383 | Val Loss: 0.069034 | Val Corr: 0.6479
+  Epoch   80/500 | Train: 0.025708 | Val Loss: 0.104356 | Val Corr: 0.6779
+  Epoch  100/500 | Train: 0.025711 | Val Loss: 0.089387 | Val Corr: 0.6852
+  Epoch  120/500 | Train: 0.023700 | Val Loss: 0.078148 | Val Corr: 0.5632
+  Epoch  140/500 | Train: 0.020096 | Val Loss: 0.082754 | Val Corr: 0.6295
+  Epoch  160/500 | Train: 0.020550 | Val Loss: 0.087385 | Val Corr: 0.5806
+  Early stopping at epoch 165
+    [orthogonal] s7: R²=0.4585, MAPE=16.59%
+  Epoch    1/500 | Train: 0.090860 | Val Loss: 0.094798 | Val Corr: 0.1352
+  Epoch   20/500 | Train: 0.044330 | Val Loss: 0.069906 | Val Corr: 0.6961
+  Epoch   40/500 | Train: 0.038038 | Val Loss: 0.068486 | Val Corr: 0.7121
+  Epoch   60/500 | Train: 0.030561 | Val Loss: 0.086698 | Val Corr: 0.6464
+  Epoch   80/500 | Train: 0.030113 | Val Loss: 0.101639 | Val Corr: 0.6373
+  Epoch  100/500 | Train: 0.026220 | Val Loss: 0.081128 | Val Corr: 0.6552
+  Epoch  120/500 | Train: 0.022010 | Val Loss: 0.112913 | Val Corr: 0.6558
+  Epoch  140/500 | Train: 0.026986 | Val Loss: 0.124673 | Val Corr: 0.6278
+  Epoch  160/500 | Train: 0.023823 | Val Loss: 0.102981 | Val Corr: 0.6092
+  Epoch  180/500 | Train: 0.018753 | Val Loss: 0.096926 | Val Corr: 0.5599
+  Early stopping at epoch 189
+    [orthogonal] s123: R²=0.3958, MAPE=17.33%
+  Epoch    1/500 | Train: 0.062670 | Val Loss: 0.113965 | Val Corr: 0.4754
+  Epoch   20/500 | Train: 0.041786 | Val Loss: 0.080302 | Val Corr: 0.6871
+  Epoch   40/500 | Train: 0.038635 | Val Loss: 0.083239 | Val Corr: 0.6830
+  Epoch   60/500 | Train: 0.030447 | Val Loss: 0.084736 | Val Corr: 0.5978
+  Epoch   80/500 | Train: 0.031388 | Val Loss: 0.065246 | Val Corr: 0.7174
+  Epoch  100/500 | Train: 0.029756 | Val Loss: 0.086719 | Val Corr: 0.5331
+  Epoch  120/500 | Train: 0.025142 | Val Loss: 0.077838 | Val Corr: 0.6414
+  Epoch  140/500 | Train: 0.020305 | Val Loss: 0.084957 | Val Corr: 0.6639
+  Epoch  160/500 | Train: 0.022943 | Val Loss: 0.100874 | Val Corr: 0.6592
+  Epoch  180/500 | Train: 0.023400 | Val Loss: 0.108708 | Val Corr: 0.6484
+  Epoch  200/500 | Train: 0.021379 | Val Loss: 0.096959 | Val Corr: 0.6752
+  Epoch  220/500 | Train: 0.019082 | Val Loss: 0.090671 | Val Corr: 0.6043
+  Early stopping at epoch 230
+    [orthogonal] s2024: R²=0.2585, MAPE=18.67%
+  Epoch    1/500 | Train: 0.085302 | Val Loss: 0.120845 | Val Corr: 0.2672
+  Epoch   20/500 | Train: 0.046367 | Val Loss: 0.095286 | Val Corr: 0.7469
+  Epoch   40/500 | Train: 0.037960 | Val Loss: 0.089905 | Val Corr: 0.7449
+  Epoch   60/500 | Train: 0.034358 | Val Loss: 0.082971 | Val Corr: 0.7470
+  Epoch   80/500 | Train: 0.030232 | Val Loss: 0.094921 | Val Corr: 0.7434
+  Epoch  100/500 | Train: 0.026790 | Val Loss: 0.076461 | Val Corr: 0.6860
+  Epoch  120/500 | Train: 0.023839 | Val Loss: 0.083346 | Val Corr: 0.6393
+  Epoch  140/500 | Train: 0.022440 | Val Loss: 0.066340 | Val Corr: 0.6546
+  Epoch  160/500 | Train: 0.020055 | Val Loss: 0.082100 | Val Corr: 0.6680
+  Early stopping at epoch 161
+    [orthogonal] s99: R²=0.3198, MAPE=18.74%
+  Epoch    1/500 | Train: 0.078761 | Val Loss: 0.102789 | Val Corr: 0.1303
+  Epoch   20/500 | Train: 0.047384 | Val Loss: 0.074500 | Val Corr: 0.6595
+  Epoch   40/500 | Train: 0.037119 | Val Loss: 0.072830 | Val Corr: 0.6171
+  Epoch   60/500 | Train: 0.033304 | Val Loss: 0.092270 | Val Corr: 0.6754
+  Epoch   80/500 | Train: 0.026659 | Val Loss: 0.096664 | Val Corr: 0.6570
+  Epoch  100/500 | Train: 0.026047 | Val Loss: 0.106859 | Val Corr: 0.6425
+  Epoch  120/500 | Train: 0.024086 | Val Loss: 0.088987 | Val Corr: 0.6766
+  Epoch  140/500 | Train: 0.023486 | Val Loss: 0.095921 | Val Corr: 0.6784
+  Epoch  160/500 | Train: 0.020871 | Val Loss: 0.100071 | Val Corr: 0.6603
+  Early stopping at epoch 169
+    [orthogonal] s13: R²=0.4095, MAPE=18.37%
+  Epoch    1/500 | Train: 0.072090 | Val Loss: 0.109715 | Val Corr: 0.1228
+  Epoch   20/500 | Train: 0.044147 | Val Loss: 0.089024 | Val Corr: 0.7173
+  Epoch   40/500 | Train: 0.034339 | Val Loss: 0.085820 | Val Corr: 0.6908
+  Epoch   60/500 | Train: 0.034959 | Val Loss: 0.078910 | Val Corr: 0.5874
+  Epoch   80/500 | Train: 0.029972 | Val Loss: 0.085834 | Val Corr: 0.6720
+  Epoch  100/500 | Train: 0.027062 | Val Loss: 0.102473 | Val Corr: 0.5986
+  Epoch  120/500 | Train: 0.025320 | Val Loss: 0.075810 | Val Corr: 0.5868
+  Epoch  140/500 | Train: 0.022283 | Val Loss: 0.109775 | Val Corr: 0.5968
+  Epoch  160/500 | Train: 0.023008 | Val Loss: 0.120254 | Val Corr: 0.6171
+  Early stopping at epoch 179
+    [orthogonal] s55: R²=0.4966, MAPE=17.16%
+  Epoch    1/500 | Train: 0.076650 | Val Loss: 0.111028 | Val Corr: 0.1497
+  Epoch   20/500 | Train: 0.044303 | Val Loss: 0.077737 | Val Corr: 0.6944
+  Epoch   40/500 | Train: 0.043845 | Val Loss: 0.064561 | Val Corr: 0.6713
+  Epoch   60/500 | Train: 0.033907 | Val Loss: 0.094381 | Val Corr: 0.6332
+  Epoch   80/500 | Train: 0.031988 | Val Loss: 0.072026 | Val Corr: 0.5900
+  Epoch  100/500 | Train: 0.025310 | Val Loss: 0.112522 | Val Corr: 0.6795
+  Epoch  120/500 | Train: 0.023590 | Val Loss: 0.094111 | Val Corr: 0.6710
+  Epoch  140/500 | Train: 0.025711 | Val Loss: 0.103533 | Val Corr: 0.6148
+  Epoch  160/500 | Train: 0.020347 | Val Loss: 0.098085 | Val Corr: 0.6824
+  Early stopping at epoch 173
+    [orthogonal] s777: R²=0.4096, MAPE=16.94%
+  Epoch    1/500 | Train: 0.067853 | Val Loss: 0.104295 | Val Corr: 0.4177
+  Epoch   20/500 | Train: 0.043194 | Val Loss: 0.073958 | Val Corr: 0.7046
+  Epoch   40/500 | Train: 0.035497 | Val Loss: 0.090828 | Val Corr: 0.7286
+  Epoch   60/500 | Train: 0.032568 | Val Loss: 0.092750 | Val Corr: 0.7047
+  Epoch   80/500 | Train: 0.029169 | Val Loss: 0.095260 | Val Corr: 0.6943
+  Epoch  100/500 | Train: 0.029486 | Val Loss: 0.098412 | Val Corr: 0.6835
+  Epoch  120/500 | Train: 0.022435 | Val Loss: 0.096711 | Val Corr: 0.6658
+  Epoch  140/500 | Train: 0.022101 | Val Loss: 0.126040 | Val Corr: 0.6819
+  Epoch  160/500 | Train: 0.020960 | Val Loss: 0.106407 | Val Corr: 0.6739
+  Early stopping at epoch 162
+    [orthogonal] s314: R²=0.4359, MAPE=18.58%
+  Epoch    1/500 | Train: 0.079332 | Val Loss: 0.108482 | Val Corr: 0.0003
+  Epoch   20/500 | Train: 0.044233 | Val Loss: 0.078281 | Val Corr: 0.7307
+  Epoch   40/500 | Train: 0.036869 | Val Loss: 0.064872 | Val Corr: 0.7379
+  Epoch   60/500 | Train: 0.029897 | Val Loss: 0.081090 | Val Corr: 0.6718
+  Epoch   80/500 | Train: 0.031272 | Val Loss: 0.106232 | Val Corr: 0.6861
+  Epoch  100/500 | Train: 0.030311 | Val Loss: 0.105842 | Val Corr: 0.6425
+  Epoch  120/500 | Train: 0.024284 | Val Loss: 0.123864 | Val Corr: 0.6312
+  Epoch  140/500 | Train: 0.023087 | Val Loss: 0.105750 | Val Corr: 0.6452
+  Epoch  160/500 | Train: 0.023824 | Val Loss: 0.099129 | Val Corr: 0.6475
+  Early stopping at epoch 165
+    [orthogonal] s2025: R²=0.3856, MAPE=18.05%
+  Epoch    1/500 | Train: 0.072432 | Val Loss: 0.111917 | Val Corr: -0.0601
+  Epoch   20/500 | Train: 0.042218 | Val Loss: 0.078772 | Val Corr: 0.6449
+  Epoch   40/500 | Train: 0.038251 | Val Loss: 0.080253 | Val Corr: 0.7201
+  Epoch   60/500 | Train: 0.032957 | Val Loss: 0.075054 | Val Corr: 0.6458
+  Epoch   80/500 | Train: 0.028110 | Val Loss: 0.073822 | Val Corr: 0.6363
+  Epoch  100/500 | Train: 0.025225 | Val Loss: 0.073553 | Val Corr: 0.6683
+  Epoch  120/500 | Train: 0.023987 | Val Loss: 0.088293 | Val Corr: 0.6442
+  Epoch  140/500 | Train: 0.025279 | Val Loss: 0.114053 | Val Corr: 0.6911
+  Epoch  160/500 | Train: 0.023234 | Val Loss: 0.100015 | Val Corr: 0.6677
+  Early stopping at epoch 175
+    [orthogonal] s0: R²=0.3981, MAPE=18.50%
+  Epoch    1/500 | Train: 0.075517 | Val Loss: 0.113951 | Val Corr: 0.1201
+  Epoch   20/500 | Train: 0.045009 | Val Loss: 0.085529 | Val Corr: 0.7147
+  Epoch   40/500 | Train: 0.036082 | Val Loss: 0.094389 | Val Corr: 0.6675
+  Epoch   60/500 | Train: 0.031319 | Val Loss: 0.095599 | Val Corr: 0.6479
+  Epoch   80/500 | Train: 0.027306 | Val Loss: 0.122902 | Val Corr: 0.6248
+  Epoch  100/500 | Train: 0.026820 | Val Loss: 0.095181 | Val Corr: 0.6151
+  Epoch  120/500 | Train: 0.023381 | Val Loss: 0.116896 | Val Corr: 0.6455
+  Epoch  140/500 | Train: 0.021677 | Val Loss: 0.125937 | Val Corr: 0.6111
+  Epoch  160/500 | Train: 0.023515 | Val Loss: 0.111498 | Val Corr: 0.6138
+  Early stopping at epoch 171
+    [orthogonal] s1: R²=0.3833, MAPE=17.64%
+  Epoch    1/500 | Train: 0.073915 | Val Loss: 0.128074 | Val Corr: -0.0177
+  Epoch   20/500 | Train: 0.047009 | Val Loss: 0.088143 | Val Corr: 0.7449
+  Epoch   40/500 | Train: 0.035681 | Val Loss: 0.075158 | Val Corr: 0.7084
+  Epoch   60/500 | Train: 0.032893 | Val Loss: 0.067167 | Val Corr: 0.6843
+  Epoch   80/500 | Train: 0.027934 | Val Loss: 0.092483 | Val Corr: 0.7045
+  Epoch  100/500 | Train: 0.023567 | Val Loss: 0.086851 | Val Corr: 0.7165
+  Epoch  120/500 | Train: 0.023770 | Val Loss: 0.095647 | Val Corr: 0.6767
+  Epoch  140/500 | Train: 0.020838 | Val Loss: 0.088003 | Val Corr: 0.6429
+  Epoch  160/500 | Train: 0.022483 | Val Loss: 0.107803 | Val Corr: 0.6920
+  Early stopping at epoch 171
+    [orthogonal] s2: R²=0.1930, MAPE=18.22%
+  Epoch    1/500 | Train: 0.068506 | Val Loss: 0.113830 | Val Corr: 0.1743
+  Epoch   20/500 | Train: 0.048728 | Val Loss: 0.073869 | Val Corr: 0.7269
+  Epoch   40/500 | Train: 0.042072 | Val Loss: 0.078449 | Val Corr: 0.6800
+  Epoch   60/500 | Train: 0.033161 | Val Loss: 0.073222 | Val Corr: 0.6839
+  Epoch   80/500 | Train: 0.028477 | Val Loss: 0.103435 | Val Corr: 0.6943
+  Epoch  100/500 | Train: 0.029764 | Val Loss: 0.070252 | Val Corr: 0.5983
+  Epoch  120/500 | Train: 0.027139 | Val Loss: 0.082890 | Val Corr: 0.7076
+  Epoch  140/500 | Train: 0.024359 | Val Loss: 0.121747 | Val Corr: 0.6399
+  Epoch  160/500 | Train: 0.023078 | Val Loss: 0.075068 | Val Corr: 0.5705
+  Epoch  180/500 | Train: 0.022434 | Val Loss: 0.098445 | Val Corr: 0.6385
+  Epoch  200/500 | Train: 0.023721 | Val Loss: 0.101371 | Val Corr: 0.5900
+  Epoch  220/500 | Train: 0.020473 | Val Loss: 0.100495 | Val Corr: 0.6880
+  Early stopping at epoch 228
+    [orthogonal] s3: R²=0.4016, MAPE=18.82%
+  Epoch    1/500 | Train: 0.068072 | Val Loss: 0.111255 | Val Corr: 0.2463
+  Epoch   20/500 | Train: 0.039222 | Val Loss: 0.089982 | Val Corr: 0.6864
+  Epoch   40/500 | Train: 0.034543 | Val Loss: 0.068073 | Val Corr: 0.6901
+  Epoch   60/500 | Train: 0.032876 | Val Loss: 0.075398 | Val Corr: 0.5276
+  Epoch   80/500 | Train: 0.029067 | Val Loss: 0.080326 | Val Corr: 0.6656
+  Epoch  100/500 | Train: 0.030303 | Val Loss: 0.101736 | Val Corr: 0.6675
+  Epoch  120/500 | Train: 0.024395 | Val Loss: 0.139080 | Val Corr: 0.6035
+  Epoch  140/500 | Train: 0.022735 | Val Loss: 0.096825 | Val Corr: 0.5968
+  Epoch  160/500 | Train: 0.020681 | Val Loss: 0.091758 | Val Corr: 0.6094
+  Early stopping at epoch 173
+    [orthogonal] s4: R²=0.4732, MAPE=17.65%
+  Epoch    1/500 | Train: 0.068773 | Val Loss: 0.107321 | Val Corr: 0.1086
+  Epoch   20/500 | Train: 0.046872 | Val Loss: 0.066594 | Val Corr: 0.6637
+  Epoch   40/500 | Train: 0.032076 | Val Loss: 0.067681 | Val Corr: 0.6619
+  Epoch   60/500 | Train: 0.029735 | Val Loss: 0.102722 | Val Corr: 0.6931
+  Epoch   80/500 | Train: 0.031749 | Val Loss: 0.118187 | Val Corr: 0.6539
+  Epoch  100/500 | Train: 0.026162 | Val Loss: 0.081411 | Val Corr: 0.4947
+  Epoch  120/500 | Train: 0.023975 | Val Loss: 0.106331 | Val Corr: 0.6472
+  Epoch  140/500 | Train: 0.024773 | Val Loss: 0.097539 | Val Corr: 0.6240
+  Epoch  160/500 | Train: 0.022962 | Val Loss: 0.097428 | Val Corr: 0.5943
+  Early stopping at epoch 164
+    [orthogonal] s5: R²=0.1472, MAPE=19.43%
+  Epoch    1/500 | Train: 0.091073 | Val Loss: 0.125103 | Val Corr: 0.3368
+  Epoch   20/500 | Train: 0.043821 | Val Loss: 0.089999 | Val Corr: 0.7451
+  Epoch   40/500 | Train: 0.040293 | Val Loss: 0.086251 | Val Corr: 0.6807
+  Epoch   60/500 | Train: 0.034084 | Val Loss: 0.071715 | Val Corr: 0.6835
+  Epoch   80/500 | Train: 0.028927 | Val Loss: 0.080727 | Val Corr: 0.6401
+  Epoch  100/500 | Train: 0.030194 | Val Loss: 0.094381 | Val Corr: 0.7033
+  Epoch  120/500 | Train: 0.026624 | Val Loss: 0.078697 | Val Corr: 0.6862
+  Epoch  140/500 | Train: 0.024915 | Val Loss: 0.070430 | Val Corr: 0.6136
+  Epoch  160/500 | Train: 0.021098 | Val Loss: 0.078266 | Val Corr: 0.5308
+  Early stopping at epoch 168
+    [orthogonal] s6: R²=0.3889, MAPE=18.52%
+  Epoch    1/500 | Train: 0.079641 | Val Loss: 0.112267 | Val Corr: 0.6199
+  Epoch   20/500 | Train: 0.048089 | Val Loss: 0.074786 | Val Corr: 0.7629
+  Epoch   40/500 | Train: 0.037601 | Val Loss: 0.082462 | Val Corr: 0.6883
+  Epoch   60/500 | Train: 0.034862 | Val Loss: 0.094509 | Val Corr: 0.6799
+  Epoch   80/500 | Train: 0.031504 | Val Loss: 0.092220 | Val Corr: 0.5236
+  Epoch  100/500 | Train: 0.025607 | Val Loss: 0.125137 | Val Corr: 0.6609
+  Epoch  120/500 | Train: 0.020050 | Val Loss: 0.098712 | Val Corr: 0.5843
+  Epoch  140/500 | Train: 0.025519 | Val Loss: 0.102270 | Val Corr: 0.6337
+  Epoch  160/500 | Train: 0.024349 | Val Loss: 0.120698 | Val Corr: 0.5901
+  Early stopping at epoch 170
+    [orthogonal] s8: R²=0.2648, MAPE=18.85%
+  Epoch    1/500 | Train: 0.074009 | Val Loss: 0.111021 | Val Corr: 0.1401
+  Epoch   20/500 | Train: 0.047005 | Val Loss: 0.086566 | Val Corr: 0.7011
+  Epoch   40/500 | Train: 0.038352 | Val Loss: 0.079089 | Val Corr: 0.7144
+  Epoch   60/500 | Train: 0.031741 | Val Loss: 0.096738 | Val Corr: 0.6720
+  Epoch   80/500 | Train: 0.028652 | Val Loss: 0.097145 | Val Corr: 0.6374
+  Epoch  100/500 | Train: 0.027490 | Val Loss: 0.115363 | Val Corr: 0.6573
+  Epoch  120/500 | Train: 0.023860 | Val Loss: 0.090932 | Val Corr: 0.6336
+  Epoch  140/500 | Train: 0.023046 | Val Loss: 0.094198 | Val Corr: 0.6086
+  Epoch  160/500 | Train: 0.025613 | Val Loss: 0.085129 | Val Corr: 0.5917
+  Early stopping at epoch 162
+    [orthogonal] s9: R²=0.2137, MAPE=19.39%
+  Epoch    1/500 | Train: 0.068951 | Val Loss: 0.109809 | Val Corr: 0.3627
+  Epoch   20/500 | Train: 0.044678 | Val Loss: 0.082872 | Val Corr: 0.7384
+  Epoch   40/500 | Train: 0.036046 | Val Loss: 0.095034 | Val Corr: 0.6956
+  Epoch   60/500 | Train: 0.035736 | Val Loss: 0.094353 | Val Corr: 0.7309
+  Epoch   80/500 | Train: 0.029843 | Val Loss: 0.115596 | Val Corr: 0.6811
+  Epoch  100/500 | Train: 0.025731 | Val Loss: 0.078993 | Val Corr: 0.7002
+  Epoch  120/500 | Train: 0.023379 | Val Loss: 0.123768 | Val Corr: 0.6685
+  Epoch  140/500 | Train: 0.025665 | Val Loss: 0.102037 | Val Corr: 0.6715
+  Epoch  160/500 | Train: 0.021900 | Val Loss: 0.141392 | Val Corr: 0.6416
+  Epoch  180/500 | Train: 0.021201 | Val Loss: 0.143154 | Val Corr: 0.6428
+  Early stopping at epoch 184
+    [orthogonal] s10: R²=0.4887, MAPE=15.94%
+  Epoch    1/500 | Train: 0.088289 | Val Loss: 0.101039 | Val Corr: 0.2396
+  Epoch   20/500 | Train: 0.045067 | Val Loss: 0.066848 | Val Corr: 0.7265
+  Epoch   40/500 | Train: 0.036755 | Val Loss: 0.090979 | Val Corr: 0.7021
+  Epoch   60/500 | Train: 0.032294 | Val Loss: 0.071608 | Val Corr: 0.6509
+  Epoch   80/500 | Train: 0.032084 | Val Loss: 0.106394 | Val Corr: 0.6585
+  Epoch  100/500 | Train: 0.025112 | Val Loss: 0.114893 | Val Corr: 0.6762
+  Epoch  120/500 | Train: 0.022784 | Val Loss: 0.144241 | Val Corr: 0.5832
+  Epoch  140/500 | Train: 0.024771 | Val Loss: 0.129004 | Val Corr: 0.6383
+  Epoch  160/500 | Train: 0.024844 | Val Loss: 0.107436 | Val Corr: 0.6051
+  Early stopping at epoch 164
+    [orthogonal] s11: R²=0.4511, MAPE=17.57%
+  Epoch    1/500 | Train: 0.075446 | Val Loss: 0.117162 | Val Corr: -0.2030
+  Epoch   20/500 | Train: 0.043296 | Val Loss: 0.074082 | Val Corr: 0.7346
+  Epoch   40/500 | Train: 0.036805 | Val Loss: 0.067938 | Val Corr: 0.6459
+  Epoch   60/500 | Train: 0.031349 | Val Loss: 0.075176 | Val Corr: 0.5831
+  Epoch   80/500 | Train: 0.032176 | Val Loss: 0.101958 | Val Corr: 0.6663
+  Epoch  100/500 | Train: 0.024612 | Val Loss: 0.073509 | Val Corr: 0.6855
+  Epoch  120/500 | Train: 0.024685 | Val Loss: 0.077711 | Val Corr: 0.5887
+  Epoch  140/500 | Train: 0.021772 | Val Loss: 0.097290 | Val Corr: 0.6870
+  Epoch  160/500 | Train: 0.023737 | Val Loss: 0.079727 | Val Corr: 0.5908
+  Early stopping at epoch 163
+    [orthogonal] s12: R²=0.3325, MAPE=17.53%
+  Epoch    1/500 | Train: 0.077119 | Val Loss: 0.087514 | Val Corr: 0.6662
+  Epoch   20/500 | Train: 0.045625 | Val Loss: 0.084800 | Val Corr: 0.7350
+  Epoch   40/500 | Train: 0.040386 | Val Loss: 0.075658 | Val Corr: 0.6899
+  Epoch   60/500 | Train: 0.035109 | Val Loss: 0.085737 | Val Corr: 0.6965
+  Epoch   80/500 | Train: 0.027842 | Val Loss: 0.100087 | Val Corr: 0.6656
+  Epoch  100/500 | Train: 0.022314 | Val Loss: 0.114541 | Val Corr: 0.6525
+  Epoch  120/500 | Train: 0.022390 | Val Loss: 0.095417 | Val Corr: 0.6771
+  Epoch  140/500 | Train: 0.026038 | Val Loss: 0.131078 | Val Corr: 0.6158
+  Epoch  160/500 | Train: 0.023525 | Val Loss: 0.125513 | Val Corr: 0.6265
+  Early stopping at epoch 169
+    [orthogonal] s14: R²=0.4485, MAPE=17.23%
+  Epoch    1/500 | Train: 0.067177 | Val Loss: 0.116607 | Val Corr: 0.1198
+  Epoch   20/500 | Train: 0.044406 | Val Loss: 0.079628 | Val Corr: 0.6892
+  Epoch   40/500 | Train: 0.041548 | Val Loss: 0.069270 | Val Corr: 0.7283
+  Epoch   60/500 | Train: 0.038670 | Val Loss: 0.078206 | Val Corr: 0.7279
+  Epoch   80/500 | Train: 0.030634 | Val Loss: 0.066566 | Val Corr: 0.5917
+  Epoch  100/500 | Train: 0.028963 | Val Loss: 0.103069 | Val Corr: 0.7119
+  Epoch  120/500 | Train: 0.026391 | Val Loss: 0.086392 | Val Corr: 0.7004
+  Epoch  140/500 | Train: 0.022403 | Val Loss: 0.085979 | Val Corr: 0.6969
+  Epoch  160/500 | Train: 0.021410 | Val Loss: 0.105205 | Val Corr: 0.6903
+  Epoch  180/500 | Train: 0.020380 | Val Loss: 0.084518 | Val Corr: 0.6164
+  Early stopping at epoch 183
+    [orthogonal] s15: R²=0.5007, MAPE=16.16%
+  Epoch    1/500 | Train: 0.079479 | Val Loss: 0.099110 | Val Corr: 0.2189
+  Epoch   20/500 | Train: 0.044868 | Val Loss: 0.074888 | Val Corr: 0.6948
+  Epoch   40/500 | Train: 0.037754 | Val Loss: 0.080220 | Val Corr: 0.7082
+  Epoch   60/500 | Train: 0.031638 | Val Loss: 0.091477 | Val Corr: 0.6488
+  Epoch   80/500 | Train: 0.027329 | Val Loss: 0.082285 | Val Corr: 0.6092
+  Epoch  100/500 | Train: 0.028286 | Val Loss: 0.115470 | Val Corr: 0.6640
+  Epoch  120/500 | Train: 0.023596 | Val Loss: 0.122516 | Val Corr: 0.6300
+  Epoch  140/500 | Train: 0.023537 | Val Loss: 0.114958 | Val Corr: 0.6053
+  Epoch  160/500 | Train: 0.020744 | Val Loss: 0.129020 | Val Corr: 0.6110
+  Early stopping at epoch 168
+    [orthogonal] s16: R²=0.4420, MAPE=17.59%
+  Epoch    1/500 | Train: 0.094657 | Val Loss: 0.135057 | Val Corr: 0.3325
+  Epoch   20/500 | Train: 0.047316 | Val Loss: 0.082096 | Val Corr: 0.6816
+  Epoch   40/500 | Train: 0.039607 | Val Loss: 0.092294 | Val Corr: 0.6964
+  Epoch   60/500 | Train: 0.032879 | Val Loss: 0.079663 | Val Corr: 0.7008
+  Epoch   80/500 | Train: 0.027220 | Val Loss: 0.118120 | Val Corr: 0.7157
+  Epoch  100/500 | Train: 0.028495 | Val Loss: 0.108528 | Val Corr: 0.6742
+  Epoch  120/500 | Train: 0.023060 | Val Loss: 0.081761 | Val Corr: 0.6669
+  Epoch  140/500 | Train: 0.021934 | Val Loss: 0.090354 | Val Corr: 0.6798
+  Epoch  160/500 | Train: 0.020345 | Val Loss: 0.085081 | Val Corr: 0.6904
+  Epoch  180/500 | Train: 0.016081 | Val Loss: 0.079195 | Val Corr: 0.6610
+  Early stopping at epoch 182
+    [orthogonal] s17: R²=0.3550, MAPE=18.55%
+  Epoch    1/500 | Train: 0.077404 | Val Loss: 0.115861 | Val Corr: 0.1871
+  Epoch   20/500 | Train: 0.045592 | Val Loss: 0.084346 | Val Corr: 0.7197
+  Epoch   40/500 | Train: 0.037353 | Val Loss: 0.087070 | Val Corr: 0.6371
+  Epoch   60/500 | Train: 0.028109 | Val Loss: 0.085668 | Val Corr: 0.6609
+  Epoch   80/500 | Train: 0.028728 | Val Loss: 0.094662 | Val Corr: 0.6432
+  Epoch  100/500 | Train: 0.024172 | Val Loss: 0.106568 | Val Corr: 0.6752
+  Epoch  120/500 | Train: 0.022688 | Val Loss: 0.103805 | Val Corr: 0.6794
+  Epoch  140/500 | Train: 0.020483 | Val Loss: 0.131032 | Val Corr: 0.6079
+  Epoch  160/500 | Train: 0.021088 | Val Loss: 0.119465 | Val Corr: 0.6385
+  Early stopping at epoch 167
+    [orthogonal] s18: R²=0.2702, MAPE=20.11%
+  Epoch    1/500 | Train: 0.074725 | Val Loss: 0.104000 | Val Corr: 0.2842
+  Epoch   20/500 | Train: 0.044436 | Val Loss: 0.063910 | Val Corr: 0.7443
+  Epoch   40/500 | Train: 0.037274 | Val Loss: 0.066142 | Val Corr: 0.6900
+  Epoch   60/500 | Train: 0.028299 | Val Loss: 0.086036 | Val Corr: 0.6522
+  Epoch   80/500 | Train: 0.028392 | Val Loss: 0.085596 | Val Corr: 0.6319
+  Epoch  100/500 | Train: 0.023961 | Val Loss: 0.076800 | Val Corr: 0.6215
+  Epoch  120/500 | Train: 0.023794 | Val Loss: 0.082183 | Val Corr: 0.6650
+  Epoch  140/500 | Train: 0.019448 | Val Loss: 0.116543 | Val Corr: 0.6357
+  Epoch  160/500 | Train: 0.021966 | Val Loss: 0.077102 | Val Corr: 0.6707
+  Early stopping at epoch 170
+    [orthogonal] s19: R²=0.3270, MAPE=18.71%
+  Epoch    1/500 | Train: 0.067521 | Val Loss: 0.105715 | Val Corr: 0.1993
+  Epoch   20/500 | Train: 0.046874 | Val Loss: 0.077568 | Val Corr: 0.7477
+  Epoch   40/500 | Train: 0.033909 | Val Loss: 0.077293 | Val Corr: 0.7372
+  Epoch   60/500 | Train: 0.031088 | Val Loss: 0.080063 | Val Corr: 0.7110
+  Epoch   80/500 | Train: 0.029212 | Val Loss: 0.079387 | Val Corr: 0.7110
+  Epoch  100/500 | Train: 0.025661 | Val Loss: 0.109215 | Val Corr: 0.6851
+  Epoch  120/500 | Train: 0.024090 | Val Loss: 0.076429 | Val Corr: 0.6976
+  Epoch  140/500 | Train: 0.025719 | Val Loss: 0.068661 | Val Corr: 0.7057
+  Epoch  160/500 | Train: 0.021627 | Val Loss: 0.129835 | Val Corr: 0.6668
+  Early stopping at epoch 176
+    [orthogonal] s20: R²=0.4780, MAPE=17.03%
+  Epoch    1/500 | Train: 0.075152 | Val Loss: 0.109020 | Val Corr: 0.3635
+  Epoch   20/500 | Train: 0.049688 | Val Loss: 0.072969 | Val Corr: 0.7372
+  Epoch   40/500 | Train: 0.039803 | Val Loss: 0.067472 | Val Corr: 0.6671
+  Epoch   60/500 | Train: 0.031168 | Val Loss: 0.067063 | Val Corr: 0.5945
+  Epoch   80/500 | Train: 0.029553 | Val Loss: 0.078869 | Val Corr: 0.6483
+  Epoch  100/500 | Train: 0.025768 | Val Loss: 0.074730 | Val Corr: 0.4863
+  Epoch  120/500 | Train: 0.026880 | Val Loss: 0.092209 | Val Corr: 0.6552
+  Epoch  140/500 | Train: 0.025743 | Val Loss: 0.095686 | Val Corr: 0.6476
+  Epoch  160/500 | Train: 0.018656 | Val Loss: 0.124080 | Val Corr: 0.6749
+  Early stopping at epoch 174
+    [orthogonal] s21: R²=0.4189, MAPE=17.86%
+  Epoch    1/500 | Train: 0.073125 | Val Loss: 0.110351 | Val Corr: 0.4612
+  Epoch   20/500 | Train: 0.044998 | Val Loss: 0.089538 | Val Corr: 0.6713
+  Epoch   40/500 | Train: 0.036590 | Val Loss: 0.099386 | Val Corr: 0.6591
+  Epoch   60/500 | Train: 0.034547 | Val Loss: 0.088394 | Val Corr: 0.6439
+  Epoch   80/500 | Train: 0.027748 | Val Loss: 0.095455 | Val Corr: 0.6752
+  Epoch  100/500 | Train: 0.027450 | Val Loss: 0.101359 | Val Corr: 0.6686
+  Epoch  120/500 | Train: 0.025981 | Val Loss: 0.126583 | Val Corr: 0.6523
+  Epoch  140/500 | Train: 0.023769 | Val Loss: 0.115149 | Val Corr: 0.6866
+  Epoch  160/500 | Train: 0.022732 | Val Loss: 0.116723 | Val Corr: 0.6742
+  Early stopping at epoch 160
+    [orthogonal] s22: R²=0.3739, MAPE=17.73%
+  Epoch    1/500 | Train: 0.068572 | Val Loss: 0.103591 | Val Corr: 0.1434
+  Epoch   20/500 | Train: 0.047219 | Val Loss: 0.079127 | Val Corr: 0.7401
+  Epoch   40/500 | Train: 0.039986 | Val Loss: 0.064891 | Val Corr: 0.7313
+  Epoch   60/500 | Train: 0.038616 | Val Loss: 0.059534 | Val Corr: 0.6712
+  Epoch   80/500 | Train: 0.036108 | Val Loss: 0.066386 | Val Corr: 0.6299
+  Epoch  100/500 | Train: 0.030279 | Val Loss: 0.065174 | Val Corr: 0.6741
+  Epoch  120/500 | Train: 0.022923 | Val Loss: 0.078409 | Val Corr: 0.6031
+  Epoch  140/500 | Train: 0.022812 | Val Loss: 0.068654 | Val Corr: 0.6278
+  Epoch  160/500 | Train: 0.020297 | Val Loss: 0.081430 | Val Corr: 0.6636
+  Early stopping at epoch 174
+    [orthogonal] s23: R²=0.3802, MAPE=19.61%
+  Epoch    1/500 | Train: 0.075806 | Val Loss: 0.109678 | Val Corr: -0.2370
+  Epoch   20/500 | Train: 0.046648 | Val Loss: 0.079996 | Val Corr: 0.7104
+  Epoch   40/500 | Train: 0.039898 | Val Loss: 0.091684 | Val Corr: 0.6538
+  Epoch   60/500 | Train: 0.030108 | Val Loss: 0.081015 | Val Corr: 0.6740
+  Epoch   80/500 | Train: 0.032263 | Val Loss: 0.089557 | Val Corr: 0.6521
+  Epoch  100/500 | Train: 0.026049 | Val Loss: 0.089531 | Val Corr: 0.6389
+  Epoch  120/500 | Train: 0.023528 | Val Loss: 0.080387 | Val Corr: 0.5608
+  Epoch  140/500 | Train: 0.024425 | Val Loss: 0.081134 | Val Corr: 0.5202
+  Epoch  160/500 | Train: 0.022720 | Val Loss: 0.103490 | Val Corr: 0.6885
+  Early stopping at epoch 166
+    [orthogonal] s24: R²=0.2590, MAPE=19.92%
+  Epoch    1/500 | Train: 0.078261 | Val Loss: 0.103541 | Val Corr: -0.0866
+  Epoch   20/500 | Train: 0.043734 | Val Loss: 0.080129 | Val Corr: 0.7406
+  Epoch   40/500 | Train: 0.038516 | Val Loss: 0.064812 | Val Corr: 0.6964
+  Epoch   60/500 | Train: 0.032910 | Val Loss: 0.094171 | Val Corr: 0.6949
+  Epoch   80/500 | Train: 0.028914 | Val Loss: 0.102019 | Val Corr: 0.6730
+  Epoch  100/500 | Train: 0.025713 | Val Loss: 0.077402 | Val Corr: 0.5534
+  Epoch  120/500 | Train: 0.024272 | Val Loss: 0.072832 | Val Corr: 0.6307
+  Epoch  140/500 | Train: 0.022643 | Val Loss: 0.074684 | Val Corr: 0.6266
+  Epoch  160/500 | Train: 0.025079 | Val Loss: 0.077764 | Val Corr: 0.6049
+  Early stopping at epoch 179
+    [orthogonal] s25: R²=0.4090, MAPE=17.69%
+  Epoch    1/500 | Train: 0.079906 | Val Loss: 0.098265 | Val Corr: 0.2536
+  Epoch   20/500 | Train: 0.042953 | Val Loss: 0.081135 | Val Corr: 0.7568
+  Epoch   40/500 | Train: 0.035593 | Val Loss: 0.091340 | Val Corr: 0.7475
+  Epoch   60/500 | Train: 0.033787 | Val Loss: 0.077992 | Val Corr: 0.7264
+  Epoch   80/500 | Train: 0.030061 | Val Loss: 0.113067 | Val Corr: 0.7155
+  Epoch  100/500 | Train: 0.022975 | Val Loss: 0.085613 | Val Corr: 0.6930
+  Epoch  120/500 | Train: 0.024690 | Val Loss: 0.109579 | Val Corr: 0.6966
+  Epoch  140/500 | Train: 0.023094 | Val Loss: 0.104363 | Val Corr: 0.6787
+  Epoch  160/500 | Train: 0.019831 | Val Loss: 0.105859 | Val Corr: 0.6771
+  Early stopping at epoch 173
+    [orthogonal] s26: R²=0.4310, MAPE=17.13%
+  Epoch    1/500 | Train: 0.081114 | Val Loss: 0.116735 | Val Corr: 0.0768
+  Epoch   20/500 | Train: 0.041206 | Val Loss: 0.082451 | Val Corr: 0.6589
+  Epoch   40/500 | Train: 0.032821 | Val Loss: 0.068262 | Val Corr: 0.6533
+  Epoch   60/500 | Train: 0.031438 | Val Loss: 0.075281 | Val Corr: 0.7076
+  Epoch   80/500 | Train: 0.031913 | Val Loss: 0.072322 | Val Corr: 0.6944
+  Epoch  100/500 | Train: 0.028612 | Val Loss: 0.074601 | Val Corr: 0.7104
+  Epoch  120/500 | Train: 0.021172 | Val Loss: 0.100650 | Val Corr: 0.6800
+  Epoch  140/500 | Train: 0.022458 | Val Loss: 0.117304 | Val Corr: 0.6607
+  Epoch  160/500 | Train: 0.022349 | Val Loss: 0.110626 | Val Corr: 0.6938
+  Epoch  180/500 | Train: 0.019195 | Val Loss: 0.126539 | Val Corr: 0.6818
+  Epoch  200/500 | Train: 0.019340 | Val Loss: 0.106188 | Val Corr: 0.6876
+  Early stopping at epoch 201
+    [orthogonal] s27: R²=0.3799, MAPE=18.46%
+  Epoch    1/500 | Train: 0.067353 | Val Loss: 0.103316 | Val Corr: 0.0918
+  Epoch   20/500 | Train: 0.043302 | Val Loss: 0.076088 | Val Corr: 0.7210
+  Epoch   40/500 | Train: 0.034571 | Val Loss: 0.082762 | Val Corr: 0.7130
+  Epoch   60/500 | Train: 0.033283 | Val Loss: 0.104963 | Val Corr: 0.6547
+  Epoch   80/500 | Train: 0.027465 | Val Loss: 0.091271 | Val Corr: 0.6836
+  Epoch  100/500 | Train: 0.023003 | Val Loss: 0.073240 | Val Corr: 0.6188
+  Epoch  120/500 | Train: 0.023757 | Val Loss: 0.076832 | Val Corr: 0.6557
+  Epoch  140/500 | Train: 0.021520 | Val Loss: 0.081530 | Val Corr: 0.6830
+  Epoch  160/500 | Train: 0.024908 | Val Loss: 0.122061 | Val Corr: 0.6709
+  Epoch  180/500 | Train: 0.019282 | Val Loss: 0.090535 | Val Corr: 0.6894
+  Early stopping at epoch 182
+    [orthogonal] s28: R²=0.4491, MAPE=15.56%
+  Epoch    1/500 | Train: 0.085510 | Val Loss: 0.124732 | Val Corr: 0.2172
+  Epoch   20/500 | Train: 0.045150 | Val Loss: 0.085918 | Val Corr: 0.6908
+  Epoch   40/500 | Train: 0.041630 | Val Loss: 0.062669 | Val Corr: 0.7257
+  Epoch   60/500 | Train: 0.031821 | Val Loss: 0.082907 | Val Corr: 0.6821
+  Epoch   80/500 | Train: 0.029189 | Val Loss: 0.082229 | Val Corr: 0.7465
+  Epoch  100/500 | Train: 0.028217 | Val Loss: 0.103744 | Val Corr: 0.6553
+  Epoch  120/500 | Train: 0.024460 | Val Loss: 0.133195 | Val Corr: 0.6852
+  Epoch  140/500 | Train: 0.021332 | Val Loss: 0.124293 | Val Corr: 0.6875
+  Epoch  160/500 | Train: 0.021300 | Val Loss: 0.115216 | Val Corr: 0.7054
+  Early stopping at epoch 165
+    [orthogonal] s29: R²=0.2763, MAPE=19.12%
+  Epoch    1/500 | Train: 0.068778 | Val Loss: 0.113542 | Val Corr: 0.5140
+  Epoch   20/500 | Train: 0.043526 | Val Loss: 0.075356 | Val Corr: 0.7693
+  Epoch   40/500 | Train: 0.035415 | Val Loss: 0.061353 | Val Corr: 0.6352
+  Epoch   60/500 | Train: 0.030836 | Val Loss: 0.068870 | Val Corr: 0.6773
+  Epoch   80/500 | Train: 0.029913 | Val Loss: 0.093678 | Val Corr: 0.6839
+  Epoch  100/500 | Train: 0.024120 | Val Loss: 0.107202 | Val Corr: 0.7086
+  Epoch  120/500 | Train: 0.028500 | Val Loss: 0.071582 | Val Corr: 0.5888
+  Epoch  140/500 | Train: 0.020858 | Val Loss: 0.083476 | Val Corr: 0.6360
+  Epoch  160/500 | Train: 0.018851 | Val Loss: 0.081818 | Val Corr: 0.6084
+  Early stopping at epoch 170
+    [orthogonal] s30: R²=0.3670, MAPE=19.23%
+  Epoch    1/500 | Train: 0.072487 | Val Loss: 0.115703 | Val Corr: 0.0403
+  Epoch   20/500 | Train: 0.039835 | Val Loss: 0.089107 | Val Corr: 0.6488
+  Epoch   40/500 | Train: 0.036868 | Val Loss: 0.093059 | Val Corr: 0.7064
+  Epoch   60/500 | Train: 0.032479 | Val Loss: 0.100501 | Val Corr: 0.7039
+  Epoch   80/500 | Train: 0.027182 | Val Loss: 0.071009 | Val Corr: 0.6471
+  Epoch  100/500 | Train: 0.027907 | Val Loss: 0.077075 | Val Corr: 0.6893
+  Epoch  120/500 | Train: 0.025037 | Val Loss: 0.073985 | Val Corr: 0.5871
+  Epoch  140/500 | Train: 0.026287 | Val Loss: 0.074356 | Val Corr: 0.6165
+  Epoch  160/500 | Train: 0.019138 | Val Loss: 0.101673 | Val Corr: 0.6491
+  Early stopping at epoch 164
+    [orthogonal] s31: R²=0.4409, MAPE=17.11%
+  Epoch    1/500 | Train: 0.080078 | Val Loss: 0.107879 | Val Corr: 0.0737
+  Epoch   20/500 | Train: 0.043643 | Val Loss: 0.079857 | Val Corr: 0.6809
+  Epoch   40/500 | Train: 0.040057 | Val Loss: 0.080379 | Val Corr: 0.7044
+  Epoch   60/500 | Train: 0.032073 | Val Loss: 0.083255 | Val Corr: 0.6829
+  Epoch   80/500 | Train: 0.028977 | Val Loss: 0.092533 | Val Corr: 0.6724
+  Epoch  100/500 | Train: 0.025708 | Val Loss: 0.077325 | Val Corr: 0.4692
+  Epoch  120/500 | Train: 0.022151 | Val Loss: 0.071642 | Val Corr: 0.5908
+  Epoch  140/500 | Train: 0.021996 | Val Loss: 0.069916 | Val Corr: 0.6008
+  Epoch  160/500 | Train: 0.020357 | Val Loss: 0.074308 | Val Corr: 0.6042
+  Early stopping at epoch 161
+    [orthogonal] s32: R²=0.0796, MAPE=19.12%
+  Epoch    1/500 | Train: 0.086211 | Val Loss: 0.105257 | Val Corr: 0.4505
+  Epoch   20/500 | Train: 0.046897 | Val Loss: 0.072929 | Val Corr: 0.7220
+  Epoch   40/500 | Train: 0.039473 | Val Loss: 0.074722 | Val Corr: 0.7134
+  Epoch   60/500 | Train: 0.034426 | Val Loss: 0.072509 | Val Corr: 0.6264
+  Epoch   80/500 | Train: 0.031118 | Val Loss: 0.085835 | Val Corr: 0.6489
+  Epoch  100/500 | Train: 0.025621 | Val Loss: 0.085552 | Val Corr: 0.6910
+  Epoch  120/500 | Train: 0.025410 | Val Loss: 0.106106 | Val Corr: 0.6407
+  Epoch  140/500 | Train: 0.019439 | Val Loss: 0.083592 | Val Corr: 0.6947
+  Epoch  160/500 | Train: 0.019603 | Val Loss: 0.119500 | Val Corr: 0.6176
+  Early stopping at epoch 163
+    [orthogonal] s33: R²=0.2738, MAPE=18.73%
+  Epoch    1/500 | Train: 0.089243 | Val Loss: 0.103102 | Val Corr: 0.0201
+  Epoch   20/500 | Train: 0.049597 | Val Loss: 0.094040 | Val Corr: 0.6702
+  Epoch   40/500 | Train: 0.038131 | Val Loss: 0.074767 | Val Corr: 0.6842
+  Epoch   60/500 | Train: 0.034494 | Val Loss: 0.079498 | Val Corr: 0.6410
+  Epoch   80/500 | Train: 0.027744 | Val Loss: 0.081144 | Val Corr: 0.6847
+  Epoch  100/500 | Train: 0.025278 | Val Loss: 0.073731 | Val Corr: 0.6357
+  Epoch  120/500 | Train: 0.024015 | Val Loss: 0.078179 | Val Corr: 0.6459
+  Epoch  140/500 | Train: 0.023771 | Val Loss: 0.113782 | Val Corr: 0.7289
+  Epoch  160/500 | Train: 0.022643 | Val Loss: 0.079551 | Val Corr: 0.6489
+  Epoch  180/500 | Train: 0.020597 | Val Loss: 0.103861 | Val Corr: 0.7294
+  Early stopping at epoch 187
+    [orthogonal] s34: R²=0.2816, MAPE=19.57%
+  Epoch    1/500 | Train: 0.070504 | Val Loss: 0.108318 | Val Corr: -0.0419
+  Epoch   20/500 | Train: 0.046758 | Val Loss: 0.074527 | Val Corr: 0.7242
+  Epoch   40/500 | Train: 0.042965 | Val Loss: 0.070536 | Val Corr: 0.6994
+  Epoch   60/500 | Train: 0.029723 | Val Loss: 0.073173 | Val Corr: 0.6047
+  Epoch   80/500 | Train: 0.033491 | Val Loss: 0.103791 | Val Corr: 0.6968
+  Epoch  100/500 | Train: 0.027143 | Val Loss: 0.110706 | Val Corr: 0.6786
+  Epoch  120/500 | Train: 0.023369 | Val Loss: 0.072396 | Val Corr: 0.6164
+  Epoch  140/500 | Train: 0.022865 | Val Loss: 0.108896 | Val Corr: 0.6683
+  Epoch  160/500 | Train: 0.023736 | Val Loss: 0.122975 | Val Corr: 0.6376
+  Early stopping at epoch 177
+    [orthogonal] s35: R²=0.4394, MAPE=17.55%
+  Epoch    1/500 | Train: 0.103537 | Val Loss: 0.098421 | Val Corr: 0.0097
+  Epoch   20/500 | Train: 0.050587 | Val Loss: 0.095248 | Val Corr: 0.6347
+  Epoch   40/500 | Train: 0.040981 | Val Loss: 0.079154 | Val Corr: 0.7002
+  Epoch   60/500 | Train: 0.035310 | Val Loss: 0.089393 | Val Corr: 0.6934
+  Epoch   80/500 | Train: 0.025340 | Val Loss: 0.074776 | Val Corr: 0.6658
+  Epoch  100/500 | Train: 0.026092 | Val Loss: 0.110545 | Val Corr: 0.6855
+  Epoch  120/500 | Train: 0.025793 | Val Loss: 0.105392 | Val Corr: 0.6995
+  Epoch  140/500 | Train: 0.020520 | Val Loss: 0.101718 | Val Corr: 0.6840
+  Epoch  160/500 | Train: 0.021499 | Val Loss: 0.110990 | Val Corr: 0.7239
+  Early stopping at epoch 177
+    [orthogonal] s36: R²=0.3463, MAPE=19.24%
+  Epoch    1/500 | Train: 0.071505 | Val Loss: 0.106433 | Val Corr: 0.1497
+  Epoch   20/500 | Train: 0.045379 | Val Loss: 0.064809 | Val Corr: 0.7177
+  Epoch   40/500 | Train: 0.042769 | Val Loss: 0.093140 | Val Corr: 0.7000
+  Epoch   60/500 | Train: 0.037841 | Val Loss: 0.086668 | Val Corr: 0.6171
+  Epoch   80/500 | Train: 0.030282 | Val Loss: 0.071047 | Val Corr: 0.6500
+  Epoch  100/500 | Train: 0.026928 | Val Loss: 0.095403 | Val Corr: 0.6665
+  Epoch  120/500 | Train: 0.023732 | Val Loss: 0.117960 | Val Corr: 0.6591
+  Epoch  140/500 | Train: 0.021735 | Val Loss: 0.084957 | Val Corr: 0.6727
+  Epoch  160/500 | Train: 0.019529 | Val Loss: 0.090095 | Val Corr: 0.6639
+  Epoch  180/500 | Train: 0.018852 | Val Loss: 0.115453 | Val Corr: 0.6828
+  Early stopping at epoch 181
+    [orthogonal] s37: R²=0.3825, MAPE=17.65%
+  Epoch    1/500 | Train: 0.085036 | Val Loss: 0.107047 | Val Corr: -0.2146
+  Epoch   20/500 | Train: 0.045110 | Val Loss: 0.078139 | Val Corr: 0.7567
+  Epoch   40/500 | Train: 0.039079 | Val Loss: 0.066282 | Val Corr: 0.7043
+  Epoch   60/500 | Train: 0.035604 | Val Loss: 0.076676 | Val Corr: 0.6737
+  Epoch   80/500 | Train: 0.030703 | Val Loss: 0.082425 | Val Corr: 0.7082
+  Epoch  100/500 | Train: 0.025128 | Val Loss: 0.076055 | Val Corr: 0.6646
+  Epoch  120/500 | Train: 0.022440 | Val Loss: 0.070556 | Val Corr: 0.6739
+  Epoch  140/500 | Train: 0.024777 | Val Loss: 0.069395 | Val Corr: 0.6368
+  Epoch  160/500 | Train: 0.024942 | Val Loss: 0.094648 | Val Corr: 0.6763
+  Early stopping at epoch 176
+    [orthogonal] s38: R²=0.5664, MAPE=15.16%
+  Epoch    1/500 | Train: 0.068249 | Val Loss: 0.107579 | Val Corr: 0.0857
+  Epoch   20/500 | Train: 0.043673 | Val Loss: 0.073821 | Val Corr: 0.7160
+  Epoch   40/500 | Train: 0.035816 | Val Loss: 0.084225 | Val Corr: 0.6958
+  Epoch   60/500 | Train: 0.029557 | Val Loss: 0.100286 | Val Corr: 0.6977
+  Epoch   80/500 | Train: 0.027185 | Val Loss: 0.069734 | Val Corr: 0.6235
+  Epoch  100/500 | Train: 0.021055 | Val Loss: 0.066157 | Val Corr: 0.6369
+  Epoch  120/500 | Train: 0.023201 | Val Loss: 0.079716 | Val Corr: 0.6057
+  Epoch  140/500 | Train: 0.021208 | Val Loss: 0.102601 | Val Corr: 0.6953
+  Epoch  160/500 | Train: 0.021601 | Val Loss: 0.083240 | Val Corr: 0.6921
+  Early stopping at epoch 177
+    [orthogonal] s39: R²=0.3840, MAPE=19.13%
+  Epoch    1/500 | Train: 0.087526 | Val Loss: 0.124678 | Val Corr: 0.0868
+  Epoch   20/500 | Train: 0.045311 | Val Loss: 0.075436 | Val Corr: 0.7111
+  Epoch   40/500 | Train: 0.040361 | Val Loss: 0.069117 | Val Corr: 0.6626
+  Epoch   60/500 | Train: 0.038492 | Val Loss: 0.073730 | Val Corr: 0.6941
+  Epoch   80/500 | Train: 0.031187 | Val Loss: 0.098215 | Val Corr: 0.7077
+  Epoch  100/500 | Train: 0.028095 | Val Loss: 0.064485 | Val Corr: 0.6665
+  Epoch  120/500 | Train: 0.024360 | Val Loss: 0.098810 | Val Corr: 0.7007
+  Epoch  140/500 | Train: 0.027566 | Val Loss: 0.105747 | Val Corr: 0.6424
+  Epoch  160/500 | Train: 0.019323 | Val Loss: 0.132388 | Val Corr: 0.6597
+  Early stopping at epoch 178
+    [orthogonal] s40: R²=0.2352, MAPE=19.14%
+  Epoch    1/500 | Train: 0.082387 | Val Loss: 0.114083 | Val Corr: -0.1317
+  Epoch   20/500 | Train: 0.047712 | Val Loss: 0.088600 | Val Corr: 0.7101
+  Epoch   40/500 | Train: 0.036879 | Val Loss: 0.100865 | Val Corr: 0.6776
+  Epoch   60/500 | Train: 0.032902 | Val Loss: 0.098701 | Val Corr: 0.7000
+  Epoch   80/500 | Train: 0.031117 | Val Loss: 0.106806 | Val Corr: 0.6829
+  Epoch  100/500 | Train: 0.028788 | Val Loss: 0.093067 | Val Corr: 0.6400
+  Epoch  120/500 | Train: 0.030620 | Val Loss: 0.093874 | Val Corr: 0.6411
+  Epoch  140/500 | Train: 0.024150 | Val Loss: 0.094437 | Val Corr: 0.6963
+  Epoch  160/500 | Train: 0.020570 | Val Loss: 0.078811 | Val Corr: 0.7110
+  Early stopping at epoch 167
+    [orthogonal] s41: R²=0.4008, MAPE=17.63%
+  Epoch    1/500 | Train: 0.092586 | Val Loss: 0.108545 | Val Corr: 0.2963
+  Epoch   20/500 | Train: 0.042517 | Val Loss: 0.087818 | Val Corr: 0.7491
+  Epoch   40/500 | Train: 0.039041 | Val Loss: 0.072310 | Val Corr: 0.6993
+  Epoch   60/500 | Train: 0.033434 | Val Loss: 0.096000 | Val Corr: 0.6838
+  Epoch   80/500 | Train: 0.031296 | Val Loss: 0.084731 | Val Corr: 0.6380
+  Epoch  100/500 | Train: 0.026918 | Val Loss: 0.114121 | Val Corr: 0.6258
+  Epoch  120/500 | Train: 0.025778 | Val Loss: 0.105400 | Val Corr: 0.6321
+  Epoch  140/500 | Train: 0.021425 | Val Loss: 0.118356 | Val Corr: 0.6520
+  Epoch  160/500 | Train: 0.022086 | Val Loss: 0.126863 | Val Corr: 0.5977
+  Early stopping at epoch 160
+    [orthogonal] s100: R²=0.2895, MAPE=19.27%
+  Epoch    1/500 | Train: 0.069831 | Val Loss: 0.110692 | Val Corr: 0.4090
+  Epoch   20/500 | Train: 0.044840 | Val Loss: 0.075686 | Val Corr: 0.7422
+  Epoch   40/500 | Train: 0.035990 | Val Loss: 0.090344 | Val Corr: 0.7143
+  Epoch   60/500 | Train: 0.028512 | Val Loss: 0.082568 | Val Corr: 0.6909
+  Epoch   80/500 | Train: 0.032663 | Val Loss: 0.099726 | Val Corr: 0.7095
+  Epoch  100/500 | Train: 0.027640 | Val Loss: 0.108053 | Val Corr: 0.6851
+  Epoch  120/500 | Train: 0.022707 | Val Loss: 0.106121 | Val Corr: 0.7032
+  Epoch  140/500 | Train: 0.024876 | Val Loss: 0.101951 | Val Corr: 0.7003
+  Epoch  160/500 | Train: 0.021422 | Val Loss: 0.097200 | Val Corr: 0.6957
+  Early stopping at epoch 166
+    [orthogonal] s200: R²=0.3316, MAPE=18.05%
+  Epoch    1/500 | Train: 0.072154 | Val Loss: 0.139620 | Val Corr: -0.0423
+  Epoch   20/500 | Train: 0.043732 | Val Loss: 0.086938 | Val Corr: 0.7473
+  Epoch   40/500 | Train: 0.035026 | Val Loss: 0.056590 | Val Corr: 0.6685
+  Epoch   60/500 | Train: 0.032491 | Val Loss: 0.088471 | Val Corr: 0.7382
+  Epoch   80/500 | Train: 0.029985 | Val Loss: 0.072855 | Val Corr: 0.7488
+  Epoch  100/500 | Train: 0.027420 | Val Loss: 0.062784 | Val Corr: 0.7350
+  Epoch  120/500 | Train: 0.023176 | Val Loss: 0.076729 | Val Corr: 0.7032
+  Epoch  140/500 | Train: 0.022899 | Val Loss: 0.091851 | Val Corr: 0.6917
+  Epoch  160/500 | Train: 0.021762 | Val Loss: 0.093748 | Val Corr: 0.7035
+  Early stopping at epoch 168
+    [orthogonal] s500: R²=0.3629, MAPE=19.90%
+  Epoch    1/500 | Train: 0.070314 | Val Loss: 0.105445 | Val Corr: 0.1015
+  Epoch   20/500 | Train: 0.043055 | Val Loss: 0.069133 | Val Corr: 0.7536
+  Epoch   40/500 | Train: 0.039787 | Val Loss: 0.082011 | Val Corr: 0.7538
+  Epoch   60/500 | Train: 0.032260 | Val Loss: 0.071813 | Val Corr: 0.7150
+  Epoch   80/500 | Train: 0.027282 | Val Loss: 0.068905 | Val Corr: 0.6843
+  Epoch  100/500 | Train: 0.025760 | Val Loss: 0.084290 | Val Corr: 0.7370
+  Epoch  120/500 | Train: 0.023125 | Val Loss: 0.070504 | Val Corr: 0.6647
+  Epoch  140/500 | Train: 0.021615 | Val Loss: 0.090896 | Val Corr: 0.6987
+  Epoch  160/500 | Train: 0.020216 | Val Loss: 0.068724 | Val Corr: 0.5977
+  Early stopping at epoch 167
+    [orthogonal] s1000: R²=0.3773, MAPE=17.97%
+  Epoch    1/500 | Train: 0.109081 | Val Loss: 0.102890 | Val Corr: 0.2987
+  Epoch   20/500 | Train: 0.045836 | Val Loss: 0.072151 | Val Corr: 0.7013
+  Epoch   40/500 | Train: 0.038298 | Val Loss: 0.073810 | Val Corr: 0.7711
+  Epoch   60/500 | Train: 0.031562 | Val Loss: 0.070222 | Val Corr: 0.7215
+  Epoch   80/500 | Train: 0.028084 | Val Loss: 0.082486 | Val Corr: 0.7101
+  Epoch  100/500 | Train: 0.026824 | Val Loss: 0.066198 | Val Corr: 0.7026
+  Epoch  120/500 | Train: 0.025226 | Val Loss: 0.091984 | Val Corr: 0.6471
+  Epoch  140/500 | Train: 0.022068 | Val Loss: 0.079226 | Val Corr: 0.6227
+  Epoch  160/500 | Train: 0.020849 | Val Loss: 0.105728 | Val Corr: 0.6647
+  Epoch  180/500 | Train: 0.018579 | Val Loss: 0.072527 | Val Corr: 0.6022
+  Early stopping at epoch 190
+    [lecun] s42: R²=0.6060, MAPE=15.47%
+  Epoch    1/500 | Train: 0.076792 | Val Loss: 0.100777 | Val Corr: 0.4217
+  Epoch   20/500 | Train: 0.038964 | Val Loss: 0.074403 | Val Corr: 0.7296
+  Epoch   40/500 | Train: 0.034469 | Val Loss: 0.061510 | Val Corr: 0.6400
+  Epoch   60/500 | Train: 0.028347 | Val Loss: 0.111552 | Val Corr: 0.6705
+  Epoch   80/500 | Train: 0.027593 | Val Loss: 0.108434 | Val Corr: 0.6982
+  Epoch  100/500 | Train: 0.023872 | Val Loss: 0.085822 | Val Corr: 0.7196
+  Epoch  120/500 | Train: 0.022406 | Val Loss: 0.116057 | Val Corr: 0.6561
+  Epoch  140/500 | Train: 0.018151 | Val Loss: 0.086881 | Val Corr: 0.7018
+  Epoch  160/500 | Train: 0.019009 | Val Loss: 0.081946 | Val Corr: 0.5806
+  Epoch  180/500 | Train: 0.019451 | Val Loss: 0.073894 | Val Corr: 0.5487
+  Epoch  200/500 | Train: 0.017599 | Val Loss: 0.072813 | Val Corr: 0.6774
+  Epoch  220/500 | Train: 0.016856 | Val Loss: 0.076564 | Val Corr: 0.6841
+  Epoch  240/500 | Train: 0.018483 | Val Loss: 0.080154 | Val Corr: 0.6623
+  Epoch  260/500 | Train: 0.018758 | Val Loss: 0.115436 | Val Corr: 0.6829
+  Early stopping at epoch 279
+    [lecun] s7: R²=0.3196, MAPE=17.96%
+  Epoch    1/500 | Train: 0.101457 | Val Loss: 0.094722 | Val Corr: 0.3176
+  Epoch   20/500 | Train: 0.047917 | Val Loss: 0.093819 | Val Corr: 0.5493
+  Epoch   40/500 | Train: 0.036906 | Val Loss: 0.065922 | Val Corr: 0.4788
+  Epoch   60/500 | Train: 0.029374 | Val Loss: 0.072867 | Val Corr: 0.4643
+  Epoch   80/500 | Train: 0.027118 | Val Loss: 0.088805 | Val Corr: 0.6182
+  Epoch  100/500 | Train: 0.025338 | Val Loss: 0.083761 | Val Corr: 0.4961
+  Epoch  120/500 | Train: 0.021818 | Val Loss: 0.103956 | Val Corr: 0.6120
+  Epoch  140/500 | Train: 0.023430 | Val Loss: 0.077483 | Val Corr: 0.5742
+  Epoch  160/500 | Train: 0.023324 | Val Loss: 0.084219 | Val Corr: 0.5759
+  Early stopping at epoch 178
+    [lecun] s123: R²=0.4845, MAPE=16.71%
+  Epoch    1/500 | Train: 0.069972 | Val Loss: 0.125313 | Val Corr: 0.5075
+  Epoch   20/500 | Train: 0.040566 | Val Loss: 0.076256 | Val Corr: 0.7024
+  Epoch   40/500 | Train: 0.035196 | Val Loss: 0.082008 | Val Corr: 0.7021
+  Epoch   60/500 | Train: 0.028448 | Val Loss: 0.113741 | Val Corr: 0.6319
+  Epoch   80/500 | Train: 0.031258 | Val Loss: 0.083579 | Val Corr: 0.6124
+  Epoch  100/500 | Train: 0.024262 | Val Loss: 0.095086 | Val Corr: 0.5142
+  Epoch  120/500 | Train: 0.023185 | Val Loss: 0.100847 | Val Corr: 0.6348
+  Epoch  140/500 | Train: 0.023572 | Val Loss: 0.087058 | Val Corr: 0.6653
+  Epoch  160/500 | Train: 0.020407 | Val Loss: 0.099791 | Val Corr: 0.6503
+  Early stopping at epoch 164
+    [lecun] s2024: R²=0.5345, MAPE=15.67%
+  Epoch    1/500 | Train: 0.115042 | Val Loss: 0.120514 | Val Corr: 0.3292
+  Epoch   20/500 | Train: 0.044631 | Val Loss: 0.111272 | Val Corr: 0.6149
+  Epoch   40/500 | Train: 0.039025 | Val Loss: 0.109108 | Val Corr: 0.6415
+  Epoch   60/500 | Train: 0.030636 | Val Loss: 0.098895 | Val Corr: 0.7520
+  Epoch   80/500 | Train: 0.030440 | Val Loss: 0.076529 | Val Corr: 0.7344
+  Epoch  100/500 | Train: 0.029475 | Val Loss: 0.113004 | Val Corr: 0.7096
+  Epoch  120/500 | Train: 0.026210 | Val Loss: 0.103408 | Val Corr: 0.7470
+  Epoch  140/500 | Train: 0.022599 | Val Loss: 0.062416 | Val Corr: 0.6462
+  Epoch  160/500 | Train: 0.017819 | Val Loss: 0.123342 | Val Corr: 0.6666
+  Epoch  180/500 | Train: 0.021076 | Val Loss: 0.139911 | Val Corr: 0.6278
+  Epoch  200/500 | Train: 0.017857 | Val Loss: 0.110443 | Val Corr: 0.6878
+  Epoch  220/500 | Train: 0.018063 | Val Loss: 0.078755 | Val Corr: 0.7351
+  Epoch  240/500 | Train: 0.019663 | Val Loss: 0.080080 | Val Corr: 0.6234
+  Early stopping at epoch 247
+    [lecun] s99: R²=0.4940, MAPE=16.00%
+  Epoch    1/500 | Train: 0.090838 | Val Loss: 0.098338 | Val Corr: 0.1809
+  Epoch   20/500 | Train: 0.047770 | Val Loss: 0.080806 | Val Corr: 0.6219
+  Epoch   40/500 | Train: 0.040517 | Val Loss: 0.069272 | Val Corr: 0.5951
+  Epoch   60/500 | Train: 0.028939 | Val Loss: 0.093044 | Val Corr: 0.7063
+  Epoch   80/500 | Train: 0.029511 | Val Loss: 0.075377 | Val Corr: 0.6356
+  Epoch  100/500 | Train: 0.025687 | Val Loss: 0.071213 | Val Corr: 0.6333
+  Epoch  120/500 | Train: 0.024654 | Val Loss: 0.096761 | Val Corr: 0.6873
+  Epoch  140/500 | Train: 0.024299 | Val Loss: 0.097467 | Val Corr: 0.6827
+  Epoch  160/500 | Train: 0.022179 | Val Loss: 0.096592 | Val Corr: 0.6564
+  Epoch  180/500 | Train: 0.020428 | Val Loss: 0.089189 | Val Corr: 0.6964
+  Epoch  200/500 | Train: 0.020190 | Val Loss: 0.093888 | Val Corr: 0.6708
+  Epoch  220/500 | Train: 0.016845 | Val Loss: 0.091667 | Val Corr: 0.6676
+  Early stopping at epoch 223
+    [lecun] s13: R²=0.4273, MAPE=17.52%
+  Epoch    1/500 | Train: 0.087585 | Val Loss: 0.115034 | Val Corr: -0.0851
+  Epoch   20/500 | Train: 0.041874 | Val Loss: 0.082764 | Val Corr: 0.7271
+  Epoch   40/500 | Train: 0.035526 | Val Loss: 0.081229 | Val Corr: 0.6070
+  Epoch   60/500 | Train: 0.031009 | Val Loss: 0.111415 | Val Corr: 0.5766
+  Epoch   80/500 | Train: 0.027024 | Val Loss: 0.103398 | Val Corr: 0.6168
+  Epoch  100/500 | Train: 0.024523 | Val Loss: 0.122488 | Val Corr: 0.6955
+  Epoch  120/500 | Train: 0.021096 | Val Loss: 0.078018 | Val Corr: 0.5642
+  Epoch  140/500 | Train: 0.021500 | Val Loss: 0.091507 | Val Corr: 0.6359
+  Epoch  160/500 | Train: 0.019886 | Val Loss: 0.079937 | Val Corr: 0.6178
+  Early stopping at epoch 170
+    [lecun] s55: R²=0.3530, MAPE=18.84%
+  Epoch    1/500 | Train: 0.095639 | Val Loss: 0.109327 | Val Corr: 0.1876
+  Epoch   20/500 | Train: 0.050743 | Val Loss: 0.072904 | Val Corr: 0.6846
+  Epoch   40/500 | Train: 0.039058 | Val Loss: 0.075632 | Val Corr: 0.7043
+  Epoch   60/500 | Train: 0.034694 | Val Loss: 0.067089 | Val Corr: 0.7068
+  Epoch   80/500 | Train: 0.033594 | Val Loss: 0.075216 | Val Corr: 0.5280
+  Epoch  100/500 | Train: 0.027052 | Val Loss: 0.071189 | Val Corr: 0.7121
+  Epoch  120/500 | Train: 0.025412 | Val Loss: 0.083383 | Val Corr: 0.7123
+  Epoch  140/500 | Train: 0.026322 | Val Loss: 0.087357 | Val Corr: 0.6567
+  Epoch  160/500 | Train: 0.023046 | Val Loss: 0.089206 | Val Corr: 0.6895
+  Epoch  180/500 | Train: 0.018622 | Val Loss: 0.107944 | Val Corr: 0.7267
+  Epoch  200/500 | Train: 0.017961 | Val Loss: 0.130829 | Val Corr: 0.6744
+  Early stopping at epoch 217
+    [lecun] s777: R²=0.3458, MAPE=17.99%
+  Epoch    1/500 | Train: 0.087288 | Val Loss: 0.105800 | Val Corr: 0.6274
+  Epoch   20/500 | Train: 0.043124 | Val Loss: 0.067782 | Val Corr: 0.7133
+  Epoch   40/500 | Train: 0.033358 | Val Loss: 0.087811 | Val Corr: 0.6824
+  Epoch   60/500 | Train: 0.029637 | Val Loss: 0.111862 | Val Corr: 0.6277
+  Epoch   80/500 | Train: 0.028365 | Val Loss: 0.126982 | Val Corr: 0.6373
+  Epoch  100/500 | Train: 0.029902 | Val Loss: 0.126491 | Val Corr: 0.6372
+  Epoch  120/500 | Train: 0.023005 | Val Loss: 0.130256 | Val Corr: 0.6726
+  Epoch  140/500 | Train: 0.021771 | Val Loss: 0.132220 | Val Corr: 0.6438
+  Epoch  160/500 | Train: 0.018921 | Val Loss: 0.129378 | Val Corr: 0.6177
+  Epoch  180/500 | Train: 0.023442 | Val Loss: 0.132043 | Val Corr: 0.6309
+  Early stopping at epoch 182
+    [lecun] s314: R²=0.4883, MAPE=17.96%
+  Epoch    1/500 | Train: 0.100777 | Val Loss: 0.112221 | Val Corr: 0.1711
+  Epoch   20/500 | Train: 0.042839 | Val Loss: 0.072586 | Val Corr: 0.7011
+  Epoch   40/500 | Train: 0.035947 | Val Loss: 0.097348 | Val Corr: 0.5763
+  Epoch   60/500 | Train: 0.037182 | Val Loss: 0.092197 | Val Corr: 0.6359
+  Epoch   80/500 | Train: 0.032062 | Val Loss: 0.096316 | Val Corr: 0.6113
+  Epoch  100/500 | Train: 0.028490 | Val Loss: 0.078492 | Val Corr: 0.7007
+  Epoch  120/500 | Train: 0.023269 | Val Loss: 0.087069 | Val Corr: 0.6506
+  Epoch  140/500 | Train: 0.022900 | Val Loss: 0.114163 | Val Corr: 0.6826
+  Epoch  160/500 | Train: 0.022000 | Val Loss: 0.078583 | Val Corr: 0.5890
+  Epoch  180/500 | Train: 0.019979 | Val Loss: 0.091317 | Val Corr: 0.6515
+  Early stopping at epoch 184
+    [lecun] s2025: R²=0.4654, MAPE=16.67%
+  Epoch    1/500 | Train: 0.088896 | Val Loss: 0.097168 | Val Corr: 0.2267
+  Epoch   20/500 | Train: 0.041126 | Val Loss: 0.085065 | Val Corr: 0.7388
+  Epoch   40/500 | Train: 0.037310 | Val Loss: 0.103986 | Val Corr: 0.7146
+  Epoch   60/500 | Train: 0.029730 | Val Loss: 0.069679 | Val Corr: 0.7168
+  Epoch   80/500 | Train: 0.026574 | Val Loss: 0.068580 | Val Corr: 0.6563
+  Epoch  100/500 | Train: 0.026072 | Val Loss: 0.068051 | Val Corr: 0.7306
+  Epoch  120/500 | Train: 0.025246 | Val Loss: 0.090867 | Val Corr: 0.7663
+  Epoch  140/500 | Train: 0.024759 | Val Loss: 0.093131 | Val Corr: 0.7129
+  Epoch  160/500 | Train: 0.021033 | Val Loss: 0.064871 | Val Corr: 0.7361
+  Epoch  180/500 | Train: 0.020128 | Val Loss: 0.086483 | Val Corr: 0.7459
+  Epoch  200/500 | Train: 0.021215 | Val Loss: 0.087788 | Val Corr: 0.6937
+  Epoch  220/500 | Train: 0.018871 | Val Loss: 0.077250 | Val Corr: 0.5479
+  Epoch  240/500 | Train: 0.016664 | Val Loss: 0.081012 | Val Corr: 0.6677
+  Epoch  260/500 | Train: 0.020645 | Val Loss: 0.076135 | Val Corr: 0.6237
+  Epoch  280/500 | Train: 0.019201 | Val Loss: 0.102172 | Val Corr: 0.6923
+  Epoch  300/500 | Train: 0.016673 | Val Loss: 0.092059 | Val Corr: 0.6872
+  Early stopping at epoch 308
+    [lecun] s0: R²=0.4737, MAPE=17.60%
+  Epoch    1/500 | Train: 0.097317 | Val Loss: 0.133916 | Val Corr: -0.1876
+  Epoch   20/500 | Train: 0.045567 | Val Loss: 0.081344 | Val Corr: 0.7284
+  Epoch   40/500 | Train: 0.036863 | Val Loss: 0.082396 | Val Corr: 0.7093
+  Epoch   60/500 | Train: 0.035134 | Val Loss: 0.077651 | Val Corr: 0.7647
+  Epoch   80/500 | Train: 0.025638 | Val Loss: 0.070134 | Val Corr: 0.7305
+  Epoch  100/500 | Train: 0.024386 | Val Loss: 0.097280 | Val Corr: 0.7443
+  Epoch  120/500 | Train: 0.021179 | Val Loss: 0.092897 | Val Corr: 0.7328
+  Epoch  140/500 | Train: 0.025018 | Val Loss: 0.086586 | Val Corr: 0.7267
+  Epoch  160/500 | Train: 0.019156 | Val Loss: 0.084544 | Val Corr: 0.7146
+  Epoch  180/500 | Train: 0.020422 | Val Loss: 0.087249 | Val Corr: 0.7315
+  Epoch  200/500 | Train: 0.016997 | Val Loss: 0.105135 | Val Corr: 0.7216
+  Epoch  220/500 | Train: 0.016790 | Val Loss: 0.115286 | Val Corr: 0.7361
+  Epoch  240/500 | Train: 0.016723 | Val Loss: 0.116371 | Val Corr: 0.6828
+  Early stopping at epoch 243
+    [lecun] s1: R²=0.2260, MAPE=19.62%
+  Epoch    1/500 | Train: 0.071456 | Val Loss: 0.107489 | Val Corr: 0.0286
+  Epoch   20/500 | Train: 0.042563 | Val Loss: 0.081248 | Val Corr: 0.6272
+  Epoch   40/500 | Train: 0.036854 | Val Loss: 0.068663 | Val Corr: 0.6984
+  Epoch   60/500 | Train: 0.031116 | Val Loss: 0.091361 | Val Corr: 0.6489
+  Epoch   80/500 | Train: 0.026298 | Val Loss: 0.078601 | Val Corr: 0.6309
+  Epoch  100/500 | Train: 0.022232 | Val Loss: 0.077005 | Val Corr: 0.6802
+  Epoch  120/500 | Train: 0.020545 | Val Loss: 0.098076 | Val Corr: 0.6982
+  Epoch  140/500 | Train: 0.020279 | Val Loss: 0.085365 | Val Corr: 0.6902
+  Epoch  160/500 | Train: 0.022874 | Val Loss: 0.077988 | Val Corr: 0.5569
+  Early stopping at epoch 165
+    [lecun] s2: R²=0.2940, MAPE=17.20%
+  Epoch    1/500 | Train: 0.077406 | Val Loss: 0.132028 | Val Corr: 0.2354
+  Epoch   20/500 | Train: 0.045771 | Val Loss: 0.092838 | Val Corr: 0.6084
+  Epoch   40/500 | Train: 0.037808 | Val Loss: 0.076285 | Val Corr: 0.6773
+  Epoch   60/500 | Train: 0.030433 | Val Loss: 0.085472 | Val Corr: 0.6936
+  Epoch   80/500 | Train: 0.026660 | Val Loss: 0.106935 | Val Corr: 0.6644
+  Epoch  100/500 | Train: 0.023967 | Val Loss: 0.111014 | Val Corr: 0.6071
+  Epoch  120/500 | Train: 0.023814 | Val Loss: 0.106954 | Val Corr: 0.6757
+  Epoch  140/500 | Train: 0.025291 | Val Loss: 0.086734 | Val Corr: 0.6282
+  Epoch  160/500 | Train: 0.021560 | Val Loss: 0.073756 | Val Corr: 0.6542
+  Early stopping at epoch 168
+    [lecun] s3: R²=0.3058, MAPE=18.06%
+  Epoch    1/500 | Train: 0.077172 | Val Loss: 0.104698 | Val Corr: 0.0133
+  Epoch   20/500 | Train: 0.037195 | Val Loss: 0.105897 | Val Corr: 0.7018
+  Epoch   40/500 | Train: 0.034934 | Val Loss: 0.107683 | Val Corr: 0.6936
+  Epoch   60/500 | Train: 0.033672 | Val Loss: 0.090031 | Val Corr: 0.6226
+  Epoch   80/500 | Train: 0.032294 | Val Loss: 0.102695 | Val Corr: 0.6988
+  Epoch  100/500 | Train: 0.026866 | Val Loss: 0.093853 | Val Corr: 0.6956
+  Epoch  120/500 | Train: 0.020256 | Val Loss: 0.115479 | Val Corr: 0.6638
+  Epoch  140/500 | Train: 0.023309 | Val Loss: 0.122444 | Val Corr: 0.6599
+  Epoch  160/500 | Train: 0.020564 | Val Loss: 0.111763 | Val Corr: 0.6873
+  Early stopping at epoch 167
+    [lecun] s4: R²=0.4255, MAPE=17.79%
+  Epoch    1/500 | Train: 0.082949 | Val Loss: 0.086474 | Val Corr: 0.0766
+  Epoch   20/500 | Train: 0.044389 | Val Loss: 0.070382 | Val Corr: 0.6584
+  Epoch   40/500 | Train: 0.033519 | Val Loss: 0.063271 | Val Corr: 0.7078
+  Epoch   60/500 | Train: 0.034625 | Val Loss: 0.096081 | Val Corr: 0.6989
+  Epoch   80/500 | Train: 0.030927 | Val Loss: 0.071271 | Val Corr: 0.6574
+  Epoch  100/500 | Train: 0.027757 | Val Loss: 0.115541 | Val Corr: 0.6928
+  Epoch  120/500 | Train: 0.028254 | Val Loss: 0.079258 | Val Corr: 0.7113
+  Epoch  140/500 | Train: 0.024936 | Val Loss: 0.087328 | Val Corr: 0.7081
+  Epoch  160/500 | Train: 0.022060 | Val Loss: 0.078019 | Val Corr: 0.6722
+  Epoch  180/500 | Train: 0.022248 | Val Loss: 0.131432 | Val Corr: 0.6370
+  Early stopping at epoch 186
+    [lecun] s5: R²=0.1037, MAPE=20.63%
+  Epoch    1/500 | Train: 0.109541 | Val Loss: 0.103699 | Val Corr: 0.3238
+  Epoch   20/500 | Train: 0.045627 | Val Loss: 0.075389 | Val Corr: 0.7375
+  Epoch   40/500 | Train: 0.037661 | Val Loss: 0.079808 | Val Corr: 0.7202
+  Epoch   60/500 | Train: 0.031787 | Val Loss: 0.079458 | Val Corr: 0.7112
+  Epoch   80/500 | Train: 0.028009 | Val Loss: 0.082491 | Val Corr: 0.7046
+  Epoch  100/500 | Train: 0.025989 | Val Loss: 0.107879 | Val Corr: 0.6939
+  Epoch  120/500 | Train: 0.023959 | Val Loss: 0.074295 | Val Corr: 0.6963
+  Epoch  140/500 | Train: 0.021621 | Val Loss: 0.114418 | Val Corr: 0.6623
+  Epoch  160/500 | Train: 0.022664 | Val Loss: 0.104683 | Val Corr: 0.6860
+  Early stopping at epoch 167
+    [lecun] s6: R²=0.3618, MAPE=16.34%
+  Epoch    1/500 | Train: 0.091610 | Val Loss: 0.109159 | Val Corr: 0.5944
+  Epoch   20/500 | Train: 0.042318 | Val Loss: 0.074315 | Val Corr: 0.7235
+  Epoch   40/500 | Train: 0.032825 | Val Loss: 0.085844 | Val Corr: 0.7028
+  Epoch   60/500 | Train: 0.031498 | Val Loss: 0.082777 | Val Corr: 0.6692
+  Epoch   80/500 | Train: 0.029028 | Val Loss: 0.081417 | Val Corr: 0.5472
+  Epoch  100/500 | Train: 0.026810 | Val Loss: 0.101786 | Val Corr: 0.6522
+  Epoch  120/500 | Train: 0.022313 | Val Loss: 0.082058 | Val Corr: 0.5052
+  Epoch  140/500 | Train: 0.021188 | Val Loss: 0.102963 | Val Corr: 0.6353
+  Epoch  160/500 | Train: 0.019679 | Val Loss: 0.102824 | Val Corr: 0.6074
+  Early stopping at epoch 174
+    [lecun] s8: R²=0.3828, MAPE=17.97%
+  Epoch    1/500 | Train: 0.094052 | Val Loss: 0.115400 | Val Corr: 0.4509
+  Epoch   20/500 | Train: 0.044436 | Val Loss: 0.070227 | Val Corr: 0.7464
+  Epoch   40/500 | Train: 0.034222 | Val Loss: 0.060050 | Val Corr: 0.6831
+  Epoch   60/500 | Train: 0.029479 | Val Loss: 0.066418 | Val Corr: 0.6991
+  Epoch   80/500 | Train: 0.026226 | Val Loss: 0.070774 | Val Corr: 0.6599
+  Epoch  100/500 | Train: 0.026807 | Val Loss: 0.082806 | Val Corr: 0.7051
+  Epoch  120/500 | Train: 0.025525 | Val Loss: 0.075999 | Val Corr: 0.6534
+  Epoch  140/500 | Train: 0.020009 | Val Loss: 0.076324 | Val Corr: 0.6145
+  Epoch  160/500 | Train: 0.022678 | Val Loss: 0.077578 | Val Corr: 0.6154
+  Early stopping at epoch 175
+    [lecun] s9: R²=0.3595, MAPE=18.21%
+  Epoch    1/500 | Train: 0.084102 | Val Loss: 0.100319 | Val Corr: 0.2925
+  Epoch   20/500 | Train: 0.045454 | Val Loss: 0.082186 | Val Corr: 0.6600
+  Epoch   40/500 | Train: 0.035427 | Val Loss: 0.085793 | Val Corr: 0.7129
+  Epoch   60/500 | Train: 0.034544 | Val Loss: 0.067217 | Val Corr: 0.6791
+  Epoch   80/500 | Train: 0.027495 | Val Loss: 0.074494 | Val Corr: 0.5715
+  Epoch  100/500 | Train: 0.023446 | Val Loss: 0.112582 | Val Corr: 0.6621
+  Epoch  120/500 | Train: 0.021691 | Val Loss: 0.074333 | Val Corr: 0.6640
+  Epoch  140/500 | Train: 0.023566 | Val Loss: 0.090413 | Val Corr: 0.7000
+  Epoch  160/500 | Train: 0.019122 | Val Loss: 0.080132 | Val Corr: 0.6521
+  Epoch  180/500 | Train: 0.019934 | Val Loss: 0.093578 | Val Corr: 0.7140
+  Epoch  200/500 | Train: 0.018876 | Val Loss: 0.087708 | Val Corr: 0.7175
+  Epoch  220/500 | Train: 0.017894 | Val Loss: 0.106274 | Val Corr: 0.6940
+  Epoch  240/500 | Train: 0.018012 | Val Loss: 0.088401 | Val Corr: 0.6765
+  Epoch  260/500 | Train: 0.016147 | Val Loss: 0.101893 | Val Corr: 0.7153
+  Epoch  280/500 | Train: 0.015675 | Val Loss: 0.118851 | Val Corr: 0.6847
+  Epoch  300/500 | Train: 0.017241 | Val Loss: 0.114457 | Val Corr: 0.6937
+  Early stopping at epoch 307
+    [lecun] s10: R²=0.1817, MAPE=20.61%
+  Epoch    1/500 | Train: 0.094715 | Val Loss: 0.090100 | Val Corr: 0.3478
+  Epoch   20/500 | Train: 0.044347 | Val Loss: 0.081126 | Val Corr: 0.6871
+  Epoch   40/500 | Train: 0.035220 | Val Loss: 0.104154 | Val Corr: 0.7246
+  Epoch   60/500 | Train: 0.033217 | Val Loss: 0.084096 | Val Corr: 0.7268
+  Epoch   80/500 | Train: 0.028221 | Val Loss: 0.075378 | Val Corr: 0.6642
+  Epoch  100/500 | Train: 0.021841 | Val Loss: 0.126263 | Val Corr: 0.6366
+  Epoch  120/500 | Train: 0.021436 | Val Loss: 0.130426 | Val Corr: 0.6071
+  Epoch  140/500 | Train: 0.019841 | Val Loss: 0.124894 | Val Corr: 0.6893
+  Epoch  160/500 | Train: 0.017723 | Val Loss: 0.111734 | Val Corr: 0.6856
+  Epoch  180/500 | Train: 0.018413 | Val Loss: 0.121460 | Val Corr: 0.6481
+  Early stopping at epoch 199
+    [lecun] s11: R²=0.1554, MAPE=21.00%
+  Epoch    1/500 | Train: 0.083064 | Val Loss: 0.121303 | Val Corr: -0.0796
+  Epoch   20/500 | Train: 0.048075 | Val Loss: 0.085443 | Val Corr: 0.6479
+  Epoch   40/500 | Train: 0.036572 | Val Loss: 0.075683 | Val Corr: 0.7071
+  Epoch   60/500 | Train: 0.029745 | Val Loss: 0.094523 | Val Corr: 0.6999
+  Epoch   80/500 | Train: 0.028249 | Val Loss: 0.089272 | Val Corr: 0.6782
+  Epoch  100/500 | Train: 0.029055 | Val Loss: 0.099755 | Val Corr: 0.6725
+  Epoch  120/500 | Train: 0.025421 | Val Loss: 0.114553 | Val Corr: 0.6260
+  Epoch  140/500 | Train: 0.022783 | Val Loss: 0.080918 | Val Corr: 0.6215
+  Epoch  160/500 | Train: 0.019546 | Val Loss: 0.120639 | Val Corr: 0.6397
+  Epoch  180/500 | Train: 0.020314 | Val Loss: 0.097282 | Val Corr: 0.6140
+  Early stopping at epoch 181
+    [lecun] s12: R²=0.4306, MAPE=17.42%
+  Epoch    1/500 | Train: 0.086337 | Val Loss: 0.097650 | Val Corr: 0.4591
+  Epoch   20/500 | Train: 0.047468 | Val Loss: 0.071311 | Val Corr: 0.6875
+  Epoch   40/500 | Train: 0.038708 | Val Loss: 0.083695 | Val Corr: 0.7373
+  Epoch   60/500 | Train: 0.034609 | Val Loss: 0.065826 | Val Corr: 0.6934
+  Epoch   80/500 | Train: 0.027857 | Val Loss: 0.108757 | Val Corr: 0.7106
+  Epoch  100/500 | Train: 0.026199 | Val Loss: 0.085610 | Val Corr: 0.6671
+  Epoch  120/500 | Train: 0.022696 | Val Loss: 0.104860 | Val Corr: 0.7064
+  Epoch  140/500 | Train: 0.021767 | Val Loss: 0.087791 | Val Corr: 0.7021
+  Epoch  160/500 | Train: 0.021928 | Val Loss: 0.080765 | Val Corr: 0.6933
+  Early stopping at epoch 172
+    [lecun] s14: R²=0.3290, MAPE=18.19%
+  Epoch    1/500 | Train: 0.075094 | Val Loss: 0.098518 | Val Corr: 0.2127
+  Epoch   20/500 | Train: 0.042442 | Val Loss: 0.084930 | Val Corr: 0.7217
+  Epoch   40/500 | Train: 0.038916 | Val Loss: 0.070923 | Val Corr: 0.6731
+  Epoch   60/500 | Train: 0.032989 | Val Loss: 0.069531 | Val Corr: 0.6816
+  Epoch   80/500 | Train: 0.031638 | Val Loss: 0.071447 | Val Corr: 0.6882
+  Epoch  100/500 | Train: 0.025343 | Val Loss: 0.095024 | Val Corr: 0.7446
+  Epoch  120/500 | Train: 0.021924 | Val Loss: 0.064944 | Val Corr: 0.5816
+  Epoch  140/500 | Train: 0.022470 | Val Loss: 0.114743 | Val Corr: 0.7138
+  Epoch  160/500 | Train: 0.021301 | Val Loss: 0.080507 | Val Corr: 0.7759
+  Epoch  180/500 | Train: 0.019163 | Val Loss: 0.111629 | Val Corr: 0.7005
+  Epoch  200/500 | Train: 0.017058 | Val Loss: 0.089108 | Val Corr: 0.7151
+  Epoch  220/500 | Train: 0.021148 | Val Loss: 0.089264 | Val Corr: 0.7397
+  Epoch  240/500 | Train: 0.018680 | Val Loss: 0.106759 | Val Corr: 0.6755
+  Epoch  260/500 | Train: 0.018817 | Val Loss: 0.115865 | Val Corr: 0.6915
+  Early stopping at epoch 274
+    [lecun] s15: R²=0.2783, MAPE=19.66%
+  Epoch    1/500 | Train: 0.092729 | Val Loss: 0.089835 | Val Corr: 0.3456
+  Epoch   20/500 | Train: 0.047128 | Val Loss: 0.082436 | Val Corr: 0.6784
+  Epoch   40/500 | Train: 0.035486 | Val Loss: 0.068918 | Val Corr: 0.6267
+  Epoch   60/500 | Train: 0.029489 | Val Loss: 0.091272 | Val Corr: 0.5147
+  Epoch   80/500 | Train: 0.026705 | Val Loss: 0.073590 | Val Corr: 0.5508
+  Epoch  100/500 | Train: 0.028317 | Val Loss: 0.085835 | Val Corr: 0.4957
+  Epoch  120/500 | Train: 0.022466 | Val Loss: 0.137807 | Val Corr: 0.6038
+  Epoch  140/500 | Train: 0.019718 | Val Loss: 0.121799 | Val Corr: 0.6262
+  Epoch  160/500 | Train: 0.018750 | Val Loss: 0.101580 | Val Corr: 0.6341
+  Early stopping at epoch 179
+    [lecun] s16: R²=0.4135, MAPE=16.64%
+  Epoch    1/500 | Train: 0.108608 | Val Loss: 0.129511 | Val Corr: 0.4998
+  Epoch   20/500 | Train: 0.040524 | Val Loss: 0.093677 | Val Corr: 0.7437
+  Epoch   40/500 | Train: 0.039345 | Val Loss: 0.082128 | Val Corr: 0.7332
+  Epoch   60/500 | Train: 0.031568 | Val Loss: 0.081851 | Val Corr: 0.7287
+  Epoch   80/500 | Train: 0.028129 | Val Loss: 0.104229 | Val Corr: 0.7361
+  Epoch  100/500 | Train: 0.025551 | Val Loss: 0.126210 | Val Corr: 0.6482
+  Epoch  120/500 | Train: 0.024895 | Val Loss: 0.105708 | Val Corr: 0.7245
+  Epoch  140/500 | Train: 0.020368 | Val Loss: 0.108041 | Val Corr: 0.7020
+  Epoch  160/500 | Train: 0.017633 | Val Loss: 0.127263 | Val Corr: 0.6966
+  Early stopping at epoch 168
+    [lecun] s17: R²=0.3262, MAPE=18.46%
+  Epoch    1/500 | Train: 0.096952 | Val Loss: 0.107792 | Val Corr: 0.3127
+  Epoch   20/500 | Train: 0.040712 | Val Loss: 0.072489 | Val Corr: 0.6494
+  Epoch   40/500 | Train: 0.032660 | Val Loss: 0.089779 | Val Corr: 0.6903
+  Epoch   60/500 | Train: 0.027115 | Val Loss: 0.070612 | Val Corr: 0.6091
+  Epoch   80/500 | Train: 0.028965 | Val Loss: 0.075976 | Val Corr: 0.6016
+  Epoch  100/500 | Train: 0.027194 | Val Loss: 0.121133 | Val Corr: 0.6172
+  Epoch  120/500 | Train: 0.023495 | Val Loss: 0.067196 | Val Corr: 0.6741
+  Epoch  140/500 | Train: 0.021122 | Val Loss: 0.090460 | Val Corr: 0.6655
+  Epoch  160/500 | Train: 0.020802 | Val Loss: 0.080647 | Val Corr: 0.6721
+  Early stopping at epoch 175
+    [lecun] s18: R²=0.4254, MAPE=17.34%
+  Epoch    1/500 | Train: 0.087542 | Val Loss: 0.116103 | Val Corr: 0.2576
+  Epoch   20/500 | Train: 0.047938 | Val Loss: 0.072966 | Val Corr: 0.6505
+  Epoch   40/500 | Train: 0.035925 | Val Loss: 0.104537 | Val Corr: 0.6479
+  Epoch   60/500 | Train: 0.028265 | Val Loss: 0.073521 | Val Corr: 0.6169
+  Epoch   80/500 | Train: 0.027431 | Val Loss: 0.103369 | Val Corr: 0.6588
+  Epoch  100/500 | Train: 0.023473 | Val Loss: 0.095461 | Val Corr: 0.6659
+  Epoch  120/500 | Train: 0.024330 | Val Loss: 0.092959 | Val Corr: 0.6303
+  Epoch  140/500 | Train: 0.019607 | Val Loss: 0.092042 | Val Corr: 0.6693
+  Epoch  160/500 | Train: 0.020564 | Val Loss: 0.090608 | Val Corr: 0.6439
+  Epoch  180/500 | Train: 0.018911 | Val Loss: 0.087160 | Val Corr: 0.6376
+  Epoch  200/500 | Train: 0.016846 | Val Loss: 0.098553 | Val Corr: 0.6737
+  Early stopping at epoch 206
+    [lecun] s19: R²=0.2565, MAPE=20.98%
+  Epoch    1/500 | Train: 0.083825 | Val Loss: 0.099400 | Val Corr: 0.1501
+  Epoch   20/500 | Train: 0.047082 | Val Loss: 0.097347 | Val Corr: 0.7474
+  Epoch   40/500 | Train: 0.035658 | Val Loss: 0.091822 | Val Corr: 0.5795
+  Epoch   60/500 | Train: 0.027347 | Val Loss: 0.102288 | Val Corr: 0.6546
+  Epoch   80/500 | Train: 0.030226 | Val Loss: 0.110331 | Val Corr: 0.6983
+  Epoch  100/500 | Train: 0.024142 | Val Loss: 0.096363 | Val Corr: 0.6459
+  Epoch  120/500 | Train: 0.024202 | Val Loss: 0.088594 | Val Corr: 0.6895
+  Epoch  140/500 | Train: 0.022609 | Val Loss: 0.068419 | Val Corr: 0.6605
+  Epoch  160/500 | Train: 0.021375 | Val Loss: 0.078664 | Val Corr: 0.6443
+  Epoch  180/500 | Train: 0.022581 | Val Loss: 0.113789 | Val Corr: 0.6643
+  Epoch  200/500 | Train: 0.017018 | Val Loss: 0.120567 | Val Corr: 0.6869
+  Epoch  220/500 | Train: 0.019341 | Val Loss: 0.119553 | Val Corr: 0.6780
+  Epoch  240/500 | Train: 0.016013 | Val Loss: 0.083944 | Val Corr: 0.6874
+  Epoch  260/500 | Train: 0.015495 | Val Loss: 0.108800 | Val Corr: 0.7111
+  Epoch  280/500 | Train: 0.018028 | Val Loss: 0.132406 | Val Corr: 0.6572
+  Epoch  300/500 | Train: 0.014985 | Val Loss: 0.098847 | Val Corr: 0.7404
+  Epoch  320/500 | Train: 0.016196 | Val Loss: 0.109553 | Val Corr: 0.7006
+  Epoch  340/500 | Train: 0.014587 | Val Loss: 0.119951 | Val Corr: 0.7015
+  Epoch  360/500 | Train: 0.013313 | Val Loss: 0.135368 | Val Corr: 0.6721
+  Epoch  380/500 | Train: 0.013459 | Val Loss: 0.102396 | Val Corr: 0.7300
+  Epoch  400/500 | Train: 0.014611 | Val Loss: 0.117479 | Val Corr: 0.7289
+  Epoch  420/500 | Train: 0.014429 | Val Loss: 0.139309 | Val Corr: 0.6566
+  Epoch  440/500 | Train: 0.012457 | Val Loss: 0.111661 | Val Corr: 0.7116
+  Early stopping at epoch 458
+    [lecun] s20: R²=0.3529, MAPE=19.07%
+  Epoch    1/500 | Train: 0.072706 | Val Loss: 0.107037 | Val Corr: 0.4457
+  Epoch   20/500 | Train: 0.049192 | Val Loss: 0.085705 | Val Corr: 0.7342
+  Epoch   40/500 | Train: 0.038514 | Val Loss: 0.078953 | Val Corr: 0.7241
+  Epoch   60/500 | Train: 0.030638 | Val Loss: 0.103017 | Val Corr: 0.6896
+  Epoch   80/500 | Train: 0.024722 | Val Loss: 0.112983 | Val Corr: 0.6653
+  Epoch  100/500 | Train: 0.023635 | Val Loss: 0.132104 | Val Corr: 0.6575
+  Epoch  120/500 | Train: 0.023625 | Val Loss: 0.105923 | Val Corr: 0.6638
+  Epoch  140/500 | Train: 0.022017 | Val Loss: 0.128253 | Val Corr: 0.6042
+  Epoch  160/500 | Train: 0.019802 | Val Loss: 0.118674 | Val Corr: 0.6873
+  Early stopping at epoch 167
+    [lecun] s21: R²=0.1623, MAPE=20.31%
+  Epoch    1/500 | Train: 0.087427 | Val Loss: 0.094627 | Val Corr: 0.2764
+  Epoch   20/500 | Train: 0.045539 | Val Loss: 0.084507 | Val Corr: 0.5950
+  Epoch   40/500 | Train: 0.038744 | Val Loss: 0.075678 | Val Corr: 0.7351
+  Epoch   60/500 | Train: 0.032989 | Val Loss: 0.079799 | Val Corr: 0.6299
+  Epoch   80/500 | Train: 0.028178 | Val Loss: 0.083416 | Val Corr: 0.6867
+  Epoch  100/500 | Train: 0.029407 | Val Loss: 0.083004 | Val Corr: 0.6035
+  Epoch  120/500 | Train: 0.025214 | Val Loss: 0.065596 | Val Corr: 0.5970
+  Epoch  140/500 | Train: 0.022091 | Val Loss: 0.076405 | Val Corr: 0.5981
+  Epoch  160/500 | Train: 0.020669 | Val Loss: 0.090753 | Val Corr: 0.5110
+  Epoch  180/500 | Train: 0.021375 | Val Loss: 0.081896 | Val Corr: 0.6381
+  Epoch  200/500 | Train: 0.021333 | Val Loss: 0.085724 | Val Corr: 0.5795
+  Early stopping at epoch 202
+    [lecun] s22: R²=0.4207, MAPE=17.77%
+  Epoch    1/500 | Train: 0.069462 | Val Loss: 0.101578 | Val Corr: 0.1026
+  Epoch   20/500 | Train: 0.045044 | Val Loss: 0.091499 | Val Corr: 0.7190
+  Epoch   40/500 | Train: 0.039037 | Val Loss: 0.087870 | Val Corr: 0.5299
+  Epoch   60/500 | Train: 0.033901 | Val Loss: 0.070619 | Val Corr: 0.7123
+  Epoch   80/500 | Train: 0.026268 | Val Loss: 0.072705 | Val Corr: 0.5848
+  Epoch  100/500 | Train: 0.027981 | Val Loss: 0.093244 | Val Corr: 0.6799
+  Epoch  120/500 | Train: 0.023741 | Val Loss: 0.090483 | Val Corr: 0.7026
+  Epoch  140/500 | Train: 0.022219 | Val Loss: 0.123232 | Val Corr: 0.6374
+  Epoch  160/500 | Train: 0.021306 | Val Loss: 0.084451 | Val Corr: 0.6715
+  Early stopping at epoch 165
+    [lecun] s23: R²=0.3470, MAPE=17.02%
+  Epoch    1/500 | Train: 0.080152 | Val Loss: 0.110001 | Val Corr: -0.0988
+  Epoch   20/500 | Train: 0.045264 | Val Loss: 0.069981 | Val Corr: 0.7117
+  Epoch   40/500 | Train: 0.037106 | Val Loss: 0.084351 | Val Corr: 0.6513
+  Epoch   60/500 | Train: 0.030811 | Val Loss: 0.082545 | Val Corr: 0.7002
+  Epoch   80/500 | Train: 0.029081 | Val Loss: 0.069459 | Val Corr: 0.5652
+  Epoch  100/500 | Train: 0.022765 | Val Loss: 0.100886 | Val Corr: 0.6722
+  Epoch  120/500 | Train: 0.022575 | Val Loss: 0.084746 | Val Corr: 0.7304
+  Epoch  140/500 | Train: 0.020421 | Val Loss: 0.096655 | Val Corr: 0.7133
+  Epoch  160/500 | Train: 0.018273 | Val Loss: 0.092872 | Val Corr: 0.6939
+  Epoch  180/500 | Train: 0.020049 | Val Loss: 0.069724 | Val Corr: 0.6299
+  Epoch  200/500 | Train: 0.018838 | Val Loss: 0.130636 | Val Corr: 0.6203
+  Epoch  220/500 | Train: 0.016735 | Val Loss: 0.087872 | Val Corr: 0.7186
+  Epoch  240/500 | Train: 0.014752 | Val Loss: 0.129853 | Val Corr: 0.6543
+  Epoch  260/500 | Train: 0.016988 | Val Loss: 0.128361 | Val Corr: 0.6663
+  Epoch  280/500 | Train: 0.017118 | Val Loss: 0.119936 | Val Corr: 0.6900
+  Epoch  300/500 | Train: 0.017126 | Val Loss: 0.114204 | Val Corr: 0.6768
+  Early stopping at epoch 303
+    [lecun] s24: R²=0.2876, MAPE=19.42%
+  Epoch    1/500 | Train: 0.085031 | Val Loss: 0.100865 | Val Corr: 0.4768
+  Epoch   20/500 | Train: 0.045508 | Val Loss: 0.078169 | Val Corr: 0.7565
+  Epoch   40/500 | Train: 0.032722 | Val Loss: 0.104439 | Val Corr: 0.7223
+  Epoch   60/500 | Train: 0.033021 | Val Loss: 0.077450 | Val Corr: 0.6434
+  Epoch   80/500 | Train: 0.027384 | Val Loss: 0.070428 | Val Corr: 0.6054
+  Epoch  100/500 | Train: 0.025071 | Val Loss: 0.109647 | Val Corr: 0.6879
+  Epoch  120/500 | Train: 0.024005 | Val Loss: 0.079235 | Val Corr: 0.6979
+  Epoch  140/500 | Train: 0.021949 | Val Loss: 0.086311 | Val Corr: 0.7086
+  Epoch  160/500 | Train: 0.019428 | Val Loss: 0.076822 | Val Corr: 0.6685
+  Early stopping at epoch 164
+    [lecun] s25: R²=0.5567, MAPE=14.59%
+  Epoch    1/500 | Train: 0.091013 | Val Loss: 0.101037 | Val Corr: 0.6926
+  Epoch   20/500 | Train: 0.042103 | Val Loss: 0.084569 | Val Corr: 0.7567
+  Epoch   40/500 | Train: 0.041615 | Val Loss: 0.076805 | Val Corr: 0.7193
+  Epoch   60/500 | Train: 0.033699 | Val Loss: 0.082040 | Val Corr: 0.6373
+  Epoch   80/500 | Train: 0.030227 | Val Loss: 0.077008 | Val Corr: 0.7148
+  Epoch  100/500 | Train: 0.025591 | Val Loss: 0.118880 | Val Corr: 0.6617
+  Epoch  120/500 | Train: 0.023355 | Val Loss: 0.104089 | Val Corr: 0.7210
+  Epoch  140/500 | Train: 0.025493 | Val Loss: 0.088339 | Val Corr: 0.7042
+  Epoch  160/500 | Train: 0.020476 | Val Loss: 0.118625 | Val Corr: 0.6707
+  Epoch  180/500 | Train: 0.018220 | Val Loss: 0.107563 | Val Corr: 0.6932
+  Epoch  200/500 | Train: 0.021073 | Val Loss: 0.075138 | Val Corr: 0.7005
+  Epoch  220/500 | Train: 0.017951 | Val Loss: 0.079261 | Val Corr: 0.7241
+  Epoch  240/500 | Train: 0.018259 | Val Loss: 0.089769 | Val Corr: 0.6915
+  Epoch  260/500 | Train: 0.016514 | Val Loss: 0.093867 | Val Corr: 0.6968
+  Epoch  280/500 | Train: 0.016923 | Val Loss: 0.127211 | Val Corr: 0.6778
+  Early stopping at epoch 282
+    [lecun] s26: R²=0.3729, MAPE=20.49%
+  Epoch    1/500 | Train: 0.091005 | Val Loss: 0.101407 | Val Corr: -0.1131
+  Epoch   20/500 | Train: 0.039613 | Val Loss: 0.082783 | Val Corr: 0.7095
+  Epoch   40/500 | Train: 0.035065 | Val Loss: 0.084698 | Val Corr: 0.7262
+  Epoch   60/500 | Train: 0.034777 | Val Loss: 0.103170 | Val Corr: 0.6868
+  Epoch   80/500 | Train: 0.029517 | Val Loss: 0.114649 | Val Corr: 0.7084
+  Epoch  100/500 | Train: 0.025660 | Val Loss: 0.111734 | Val Corr: 0.6352
+  Epoch  120/500 | Train: 0.022378 | Val Loss: 0.105904 | Val Corr: 0.7015
+  Epoch  140/500 | Train: 0.021122 | Val Loss: 0.093990 | Val Corr: 0.7249
+  Epoch  160/500 | Train: 0.021857 | Val Loss: 0.138425 | Val Corr: 0.6728
+  Epoch  180/500 | Train: 0.018150 | Val Loss: 0.135530 | Val Corr: 0.6530
+  Early stopping at epoch 191
+    [lecun] s27: R²=0.2598, MAPE=20.47%
+  Epoch    1/500 | Train: 0.075976 | Val Loss: 0.111537 | Val Corr: 0.1358
+  Epoch   20/500 | Train: 0.045651 | Val Loss: 0.090177 | Val Corr: 0.6781
+  Epoch   40/500 | Train: 0.035926 | Val Loss: 0.090347 | Val Corr: 0.6919
+  Epoch   60/500 | Train: 0.029281 | Val Loss: 0.062475 | Val Corr: 0.6287
+  Epoch   80/500 | Train: 0.029233 | Val Loss: 0.074557 | Val Corr: 0.6507
+  Epoch  100/500 | Train: 0.024695 | Val Loss: 0.096242 | Val Corr: 0.7105
+  Epoch  120/500 | Train: 0.025524 | Val Loss: 0.083027 | Val Corr: 0.7553
+  Epoch  140/500 | Train: 0.023641 | Val Loss: 0.085572 | Val Corr: 0.6945
+  Epoch  160/500 | Train: 0.018649 | Val Loss: 0.076619 | Val Corr: 0.7205
+  Epoch  180/500 | Train: 0.021075 | Val Loss: 0.076526 | Val Corr: 0.6776
+  Epoch  200/500 | Train: 0.018454 | Val Loss: 0.075130 | Val Corr: 0.7022
+  Epoch  220/500 | Train: 0.018322 | Val Loss: 0.110969 | Val Corr: 0.7005
+  Epoch  240/500 | Train: 0.016837 | Val Loss: 0.094997 | Val Corr: 0.6991
+  Epoch  260/500 | Train: 0.016877 | Val Loss: 0.088845 | Val Corr: 0.7153
+  Epoch  280/500 | Train: 0.015036 | Val Loss: 0.099299 | Val Corr: 0.7205
+  Epoch  300/500 | Train: 0.016495 | Val Loss: 0.069547 | Val Corr: 0.7622
+  Early stopping at epoch 315
+    [lecun] s28: R²=0.4502, MAPE=18.06%
+  Epoch    1/500 | Train: 0.104121 | Val Loss: 0.115423 | Val Corr: 0.2948
+  Epoch   20/500 | Train: 0.045333 | Val Loss: 0.099227 | Val Corr: 0.6901
+  Epoch   40/500 | Train: 0.039818 | Val Loss: 0.066998 | Val Corr: 0.6915
+  Epoch   60/500 | Train: 0.033585 | Val Loss: 0.067848 | Val Corr: 0.6718
+  Epoch   80/500 | Train: 0.028973 | Val Loss: 0.082928 | Val Corr: 0.7121
+  Epoch  100/500 | Train: 0.029642 | Val Loss: 0.083116 | Val Corr: 0.6764
+  Epoch  120/500 | Train: 0.025104 | Val Loss: 0.089422 | Val Corr: 0.7132
+  Epoch  140/500 | Train: 0.022797 | Val Loss: 0.075111 | Val Corr: 0.6259
+  Epoch  160/500 | Train: 0.020639 | Val Loss: 0.088869 | Val Corr: 0.7440
+  Early stopping at epoch 172
+    [lecun] s29: R²=0.1866, MAPE=19.17%
+  Epoch    1/500 | Train: 0.071862 | Val Loss: 0.115087 | Val Corr: -0.0170
+  Epoch   20/500 | Train: 0.043048 | Val Loss: 0.103296 | Val Corr: 0.7148
+  Epoch   40/500 | Train: 0.031605 | Val Loss: 0.072633 | Val Corr: 0.6800
+  Epoch   60/500 | Train: 0.032601 | Val Loss: 0.112805 | Val Corr: 0.6700
+  Epoch   80/500 | Train: 0.025646 | Val Loss: 0.081792 | Val Corr: 0.6183
+  Epoch  100/500 | Train: 0.022498 | Val Loss: 0.085304 | Val Corr: 0.6772
+  Epoch  120/500 | Train: 0.023253 | Val Loss: 0.094917 | Val Corr: 0.6627
+  Epoch  140/500 | Train: 0.021750 | Val Loss: 0.099591 | Val Corr: 0.6447
+  Epoch  160/500 | Train: 0.020570 | Val Loss: 0.103907 | Val Corr: 0.6743
+  Early stopping at epoch 165
+    [lecun] s30: R²=0.3215, MAPE=18.25%
+  Epoch    1/500 | Train: 0.081900 | Val Loss: 0.085202 | Val Corr: 0.5143
+  Epoch   20/500 | Train: 0.044526 | Val Loss: 0.081507 | Val Corr: 0.6756
+  Epoch   40/500 | Train: 0.034535 | Val Loss: 0.066905 | Val Corr: 0.6934
+  Epoch   60/500 | Train: 0.035451 | Val Loss: 0.064670 | Val Corr: 0.6245
+  Epoch   80/500 | Train: 0.027637 | Val Loss: 0.108111 | Val Corr: 0.6597
+  Epoch  100/500 | Train: 0.026626 | Val Loss: 0.084417 | Val Corr: 0.6747
+  Epoch  120/500 | Train: 0.027440 | Val Loss: 0.082547 | Val Corr: 0.5985
+  Epoch  140/500 | Train: 0.024811 | Val Loss: 0.086718 | Val Corr: 0.6646
+  Epoch  160/500 | Train: 0.020754 | Val Loss: 0.076893 | Val Corr: 0.6216
+  Early stopping at epoch 161
+    [lecun] s31: R²=0.3419, MAPE=17.45%
+  Epoch    1/500 | Train: 0.088225 | Val Loss: 0.105349 | Val Corr: 0.2086
+  Epoch   20/500 | Train: 0.043101 | Val Loss: 0.082354 | Val Corr: 0.7266
+  Epoch   40/500 | Train: 0.038280 | Val Loss: 0.089721 | Val Corr: 0.7211
+  Epoch   60/500 | Train: 0.030871 | Val Loss: 0.082054 | Val Corr: 0.7158
+  Epoch   80/500 | Train: 0.028967 | Val Loss: 0.101798 | Val Corr: 0.7006
+  Epoch  100/500 | Train: 0.025655 | Val Loss: 0.067277 | Val Corr: 0.5851
+  Epoch  120/500 | Train: 0.025343 | Val Loss: 0.086576 | Val Corr: 0.7337
+  Epoch  140/500 | Train: 0.018177 | Val Loss: 0.104502 | Val Corr: 0.6946
+  Epoch  160/500 | Train: 0.019279 | Val Loss: 0.094678 | Val Corr: 0.6219
+  Early stopping at epoch 178
+    [lecun] s32: R²=0.3480, MAPE=19.08%
+  Epoch    1/500 | Train: 0.085276 | Val Loss: 0.102547 | Val Corr: 0.4530
+  Epoch   20/500 | Train: 0.049160 | Val Loss: 0.084539 | Val Corr: 0.7754
+  Epoch   40/500 | Train: 0.038623 | Val Loss: 0.080270 | Val Corr: 0.7444
+  Epoch   60/500 | Train: 0.030506 | Val Loss: 0.068198 | Val Corr: 0.6801
+  Epoch   80/500 | Train: 0.024224 | Val Loss: 0.107275 | Val Corr: 0.7200
+  Epoch  100/500 | Train: 0.024374 | Val Loss: 0.079634 | Val Corr: 0.7371
+  Epoch  120/500 | Train: 0.024549 | Val Loss: 0.078453 | Val Corr: 0.6951
+  Epoch  140/500 | Train: 0.023384 | Val Loss: 0.100363 | Val Corr: 0.6724
+  Epoch  160/500 | Train: 0.019933 | Val Loss: 0.099126 | Val Corr: 0.7011
+  Early stopping at epoch 166
+    [lecun] s33: R²=0.3508, MAPE=17.86%
+  Epoch    1/500 | Train: 0.110850 | Val Loss: 0.121102 | Val Corr: 0.1619
+  Epoch   20/500 | Train: 0.044441 | Val Loss: 0.095504 | Val Corr: 0.6763
+  Epoch   40/500 | Train: 0.038572 | Val Loss: 0.065902 | Val Corr: 0.6700
+  Epoch   60/500 | Train: 0.033721 | Val Loss: 0.077390 | Val Corr: 0.6427
+  Epoch   80/500 | Train: 0.026146 | Val Loss: 0.090995 | Val Corr: 0.6383
+  Epoch  100/500 | Train: 0.027913 | Val Loss: 0.086916 | Val Corr: 0.6781
+  Epoch  120/500 | Train: 0.023004 | Val Loss: 0.079190 | Val Corr: 0.6406
+  Epoch  140/500 | Train: 0.021904 | Val Loss: 0.081773 | Val Corr: 0.6324
+  Epoch  160/500 | Train: 0.022182 | Val Loss: 0.084706 | Val Corr: 0.5788
+  Early stopping at epoch 165
+    [lecun] s34: R²=0.3105, MAPE=19.76%
+  Epoch    1/500 | Train: 0.096322 | Val Loss: 0.110142 | Val Corr: 0.2882
+  Epoch   20/500 | Train: 0.045817 | Val Loss: 0.104877 | Val Corr: 0.6438
+  Epoch   40/500 | Train: 0.040143 | Val Loss: 0.102891 | Val Corr: 0.7307
+  Epoch   60/500 | Train: 0.032357 | Val Loss: 0.088425 | Val Corr: 0.6430
+  Epoch   80/500 | Train: 0.028223 | Val Loss: 0.117486 | Val Corr: 0.6414
+  Epoch  100/500 | Train: 0.029120 | Val Loss: 0.125181 | Val Corr: 0.6601
+  Epoch  120/500 | Train: 0.025497 | Val Loss: 0.114139 | Val Corr: 0.6695
+  Epoch  140/500 | Train: 0.021246 | Val Loss: 0.098549 | Val Corr: 0.6633
+  Epoch  160/500 | Train: 0.024636 | Val Loss: 0.126084 | Val Corr: 0.6690
+  Epoch  180/500 | Train: 0.023669 | Val Loss: 0.099603 | Val Corr: 0.6564
+  Early stopping at epoch 197
+    [lecun] s35: R²=0.3700, MAPE=18.36%
+  Epoch    1/500 | Train: 0.130752 | Val Loss: 0.130996 | Val Corr: 0.4343
+  Epoch   20/500 | Train: 0.048528 | Val Loss: 0.095000 | Val Corr: 0.6604
+  Epoch   40/500 | Train: 0.040648 | Val Loss: 0.074554 | Val Corr: 0.7084
+  Epoch   60/500 | Train: 0.035219 | Val Loss: 0.065022 | Val Corr: 0.6890
+  Epoch   80/500 | Train: 0.026962 | Val Loss: 0.084071 | Val Corr: 0.6708
+  Epoch  100/500 | Train: 0.025180 | Val Loss: 0.077224 | Val Corr: 0.6214
+  Epoch  120/500 | Train: 0.025251 | Val Loss: 0.076602 | Val Corr: 0.7382
+  Epoch  140/500 | Train: 0.019550 | Val Loss: 0.069143 | Val Corr: 0.6315
+  Epoch  160/500 | Train: 0.018267 | Val Loss: 0.098709 | Val Corr: 0.7005
+  Epoch  180/500 | Train: 0.019885 | Val Loss: 0.126524 | Val Corr: 0.6602
+  Epoch  200/500 | Train: 0.019529 | Val Loss: 0.110154 | Val Corr: 0.6618
+  Epoch  220/500 | Train: 0.018885 | Val Loss: 0.115102 | Val Corr: 0.6699
+  Epoch  240/500 | Train: 0.017218 | Val Loss: 0.140235 | Val Corr: 0.6476
+  Epoch  260/500 | Train: 0.017950 | Val Loss: 0.132758 | Val Corr: 0.6419
+  Early stopping at epoch 269
+    [lecun] s36: R²=0.2792, MAPE=20.68%
+  Epoch    1/500 | Train: 0.085012 | Val Loss: 0.109301 | Val Corr: 0.2145
+  Epoch   20/500 | Train: 0.044949 | Val Loss: 0.061194 | Val Corr: 0.7745
+  Epoch   40/500 | Train: 0.043606 | Val Loss: 0.090068 | Val Corr: 0.6955
+  Epoch   60/500 | Train: 0.035233 | Val Loss: 0.063169 | Val Corr: 0.7186
+  Epoch   80/500 | Train: 0.034614 | Val Loss: 0.065211 | Val Corr: 0.7217
+  Epoch  100/500 | Train: 0.027135 | Val Loss: 0.090293 | Val Corr: 0.7386
+  Epoch  120/500 | Train: 0.023039 | Val Loss: 0.082609 | Val Corr: 0.7097
+  Epoch  140/500 | Train: 0.023314 | Val Loss: 0.105519 | Val Corr: 0.7294
+  Epoch  160/500 | Train: 0.021165 | Val Loss: 0.064154 | Val Corr: 0.6421
+  Epoch  180/500 | Train: 0.020667 | Val Loss: 0.068380 | Val Corr: 0.6613
+  Epoch  200/500 | Train: 0.022409 | Val Loss: 0.094896 | Val Corr: 0.7079
+  Early stopping at epoch 206
+    [lecun] s37: R²=0.4034, MAPE=18.06%
+  Epoch    1/500 | Train: 0.110436 | Val Loss: 0.107366 | Val Corr: 0.1063
+  Epoch   20/500 | Train: 0.044135 | Val Loss: 0.093571 | Val Corr: 0.6936
+  Epoch   40/500 | Train: 0.034412 | Val Loss: 0.097652 | Val Corr: 0.6626
+  Epoch   60/500 | Train: 0.031918 | Val Loss: 0.071745 | Val Corr: 0.6887
+  Epoch   80/500 | Train: 0.026263 | Val Loss: 0.117406 | Val Corr: 0.6330
+  Epoch  100/500 | Train: 0.025601 | Val Loss: 0.071146 | Val Corr: 0.5517
+  Epoch  120/500 | Train: 0.021153 | Val Loss: 0.076789 | Val Corr: 0.5994
+  Epoch  140/500 | Train: 0.024578 | Val Loss: 0.065917 | Val Corr: 0.6331
+  Early stopping at epoch 157
+    [lecun] s38: R²=0.2535, MAPE=18.82%
+  Epoch    1/500 | Train: 0.076420 | Val Loss: 0.119346 | Val Corr: 0.0893
+  Epoch   20/500 | Train: 0.037785 | Val Loss: 0.076268 | Val Corr: 0.7333
+  Epoch   40/500 | Train: 0.031767 | Val Loss: 0.093343 | Val Corr: 0.7147
+  Epoch   60/500 | Train: 0.031676 | Val Loss: 0.091900 | Val Corr: 0.6608
+  Epoch   80/500 | Train: 0.027120 | Val Loss: 0.086805 | Val Corr: 0.6307
+  Epoch  100/500 | Train: 0.025215 | Val Loss: 0.071189 | Val Corr: 0.4758
+  Epoch  120/500 | Train: 0.024250 | Val Loss: 0.090916 | Val Corr: 0.5924
+  Epoch  140/500 | Train: 0.022711 | Val Loss: 0.106575 | Val Corr: 0.6370
+  Epoch  160/500 | Train: 0.018517 | Val Loss: 0.096431 | Val Corr: 0.6644
+  Early stopping at epoch 173
+    [lecun] s39: R²=0.4189, MAPE=17.69%
+  Epoch    1/500 | Train: 0.110127 | Val Loss: 0.115283 | Val Corr: 0.3336
+  Epoch   20/500 | Train: 0.045965 | Val Loss: 0.075462 | Val Corr: 0.7480
+  Epoch   40/500 | Train: 0.037978 | Val Loss: 0.072404 | Val Corr: 0.7224
+  Epoch   60/500 | Train: 0.035725 | Val Loss: 0.085885 | Val Corr: 0.6964
+  Epoch   80/500 | Train: 0.028192 | Val Loss: 0.109518 | Val Corr: 0.6308
+  Epoch  100/500 | Train: 0.023323 | Val Loss: 0.091282 | Val Corr: 0.6842
+  Epoch  120/500 | Train: 0.028360 | Val Loss: 0.126934 | Val Corr: 0.6615
+  Epoch  140/500 | Train: 0.020764 | Val Loss: 0.080948 | Val Corr: 0.6003
+  Epoch  160/500 | Train: 0.019390 | Val Loss: 0.099864 | Val Corr: 0.6867
+  Early stopping at epoch 170
+    [lecun] s40: R²=0.2989, MAPE=19.21%
+  Epoch    1/500 | Train: 0.098032 | Val Loss: 0.103561 | Val Corr: -0.5328
+  Epoch   20/500 | Train: 0.044670 | Val Loss: 0.089347 | Val Corr: 0.7052
+  Epoch   40/500 | Train: 0.038191 | Val Loss: 0.085864 | Val Corr: 0.7139
+  Epoch   60/500 | Train: 0.035250 | Val Loss: 0.091151 | Val Corr: 0.6886
+  Epoch   80/500 | Train: 0.031902 | Val Loss: 0.110487 | Val Corr: 0.6326
+  Epoch  100/500 | Train: 0.030269 | Val Loss: 0.108889 | Val Corr: 0.6559
+  Epoch  120/500 | Train: 0.023296 | Val Loss: 0.097924 | Val Corr: 0.6859
+  Epoch  140/500 | Train: 0.023079 | Val Loss: 0.098112 | Val Corr: 0.7543
+  Epoch  160/500 | Train: 0.018452 | Val Loss: 0.122113 | Val Corr: 0.6647
+  Early stopping at epoch 165
+    [lecun] s41: R²=0.2754, MAPE=19.41%
+  Epoch    1/500 | Train: 0.117639 | Val Loss: 0.104517 | Val Corr: 0.1866
+  Epoch   20/500 | Train: 0.045497 | Val Loss: 0.088668 | Val Corr: 0.7540
+  Epoch   40/500 | Train: 0.040137 | Val Loss: 0.103080 | Val Corr: 0.6657
+  Epoch   60/500 | Train: 0.033012 | Val Loss: 0.106569 | Val Corr: 0.7060
+  Epoch   80/500 | Train: 0.028405 | Val Loss: 0.121900 | Val Corr: 0.6496
+  Epoch  100/500 | Train: 0.029210 | Val Loss: 0.125438 | Val Corr: 0.6439
+  Epoch  120/500 | Train: 0.022014 | Val Loss: 0.114965 | Val Corr: 0.6508
+  Epoch  140/500 | Train: 0.023070 | Val Loss: 0.121948 | Val Corr: 0.6577
+  Epoch  160/500 | Train: 0.021512 | Val Loss: 0.122385 | Val Corr: 0.6739
+  Early stopping at epoch 174
+    [lecun] s100: R²=0.4305, MAPE=18.35%
+  Epoch    1/500 | Train: 0.083630 | Val Loss: 0.104217 | Val Corr: 0.4283
+  Epoch   20/500 | Train: 0.050522 | Val Loss: 0.090456 | Val Corr: 0.7201
+  Epoch   40/500 | Train: 0.038102 | Val Loss: 0.079000 | Val Corr: 0.6621
+  Epoch   60/500 | Train: 0.029634 | Val Loss: 0.108510 | Val Corr: 0.7156
+  Epoch   80/500 | Train: 0.029773 | Val Loss: 0.098707 | Val Corr: 0.6946
+  Epoch  100/500 | Train: 0.028855 | Val Loss: 0.082434 | Val Corr: 0.7231
+  Epoch  120/500 | Train: 0.022508 | Val Loss: 0.079418 | Val Corr: 0.7286
+  Epoch  140/500 | Train: 0.025593 | Val Loss: 0.108816 | Val Corr: 0.7165
+  Epoch  160/500 | Train: 0.022187 | Val Loss: 0.089894 | Val Corr: 0.7219
+  Early stopping at epoch 172
+    [lecun] s200: R²=0.4400, MAPE=17.98%
+  Epoch    1/500 | Train: 0.077373 | Val Loss: 0.115081 | Val Corr: 0.1947
+  Epoch   20/500 | Train: 0.044403 | Val Loss: 0.075771 | Val Corr: 0.7293
+  Epoch   40/500 | Train: 0.032570 | Val Loss: 0.074351 | Val Corr: 0.7063
+  Epoch   60/500 | Train: 0.031506 | Val Loss: 0.088329 | Val Corr: 0.7201
+  Epoch   80/500 | Train: 0.029063 | Val Loss: 0.083286 | Val Corr: 0.6862
+  Epoch  100/500 | Train: 0.026209 | Val Loss: 0.084943 | Val Corr: 0.6856
+  Epoch  120/500 | Train: 0.028121 | Val Loss: 0.117054 | Val Corr: 0.7135
+  Epoch  140/500 | Train: 0.020304 | Val Loss: 0.103097 | Val Corr: 0.7111
+  Epoch  160/500 | Train: 0.020641 | Val Loss: 0.091637 | Val Corr: 0.6998
+  Early stopping at epoch 169
+    [lecun] s500: R²=0.3052, MAPE=20.17%
+  Epoch    1/500 | Train: 0.082026 | Val Loss: 0.093605 | Val Corr: 0.1647
+  Epoch   20/500 | Train: 0.041535 | Val Loss: 0.089863 | Val Corr: 0.6912
+  Epoch   40/500 | Train: 0.036487 | Val Loss: 0.087479 | Val Corr: 0.7245
+  Epoch   60/500 | Train: 0.029879 | Val Loss: 0.101681 | Val Corr: 0.7261
+  Epoch   80/500 | Train: 0.028866 | Val Loss: 0.106139 | Val Corr: 0.7271
+  Epoch  100/500 | Train: 0.025681 | Val Loss: 0.118674 | Val Corr: 0.6679
+  Epoch  120/500 | Train: 0.023993 | Val Loss: 0.097545 | Val Corr: 0.6751
+  Epoch  140/500 | Train: 0.019868 | Val Loss: 0.119711 | Val Corr: 0.6618
+  Epoch  160/500 | Train: 0.020226 | Val Loss: 0.111036 | Val Corr: 0.6880
+  Epoch  180/500 | Train: 0.020864 | Val Loss: 0.093923 | Val Corr: 0.7103
+  Early stopping at epoch 189
+    [lecun] s1000: R²=0.3137, MAPE=19.40%
+  80% PI (q10–q90): coverage=0.641, avg_width=11982.7 kg
+
+  >>> Best: [lecun] seed=42  R²=0.6060 <<<
+  >>> Ensemble top-20: R²=0.5531, MAPE=15.73% <<<
+
+=======================================================
+  INVERNADERO 3 - MÉTRICAS (Test: T17, h=4 semanas)
+=======================================================
+  RMSE (kg)      :  5471.5942
+  R²             :     0.6060
+  NSE            :     0.6060
+  PBIAS (%)      :     4.1862
+  MAPE (%)       :    15.4699
+=======================================================
+  >>> MAPE:    15.4699% <<<
+=======================================================
+Saved: /Users/josuetapiahernandez/Documents/Huerta_Prediction/Models/results/quantile_inv3_results.png
+
+  Top-25 R²: mean=0.5012, std=0.0315
+
+Best model → results/best_cnn_rnn_inv3.pt
+Metrics    → results/cnn_rnn_inv3_metrics.csv
+Predictions → results/cnn_rnn_inv3_predictions.npz

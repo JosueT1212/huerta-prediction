@@ -350,7 +350,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
             # crad_season: cumulative radiation from first sensor week of season (resets per season)
             if 'rad_sum' in weekly_env.columns:
-                weekly_env['crad_season'] = weekly_env['rad_sum'].cumsum()
+                weekly_env['crad_season'] = weekly_env['rad_sum'].fillna(0.0).cumsum()
             else:
                 weekly_env['crad_season'] = 0.0
 
@@ -470,7 +470,7 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
             # crad_season: cumulative radiation from first sensor week of season (resets per season)
             if 'rad_sum' in weekly_env.columns:
-                weekly_env['crad_season'] = weekly_env['rad_sum'].cumsum()
+                weekly_env['crad_season'] = weekly_env['rad_sum'].fillna(0.0).cumsum()
             else:
                 weekly_env['crad_season'] = 0.0
 

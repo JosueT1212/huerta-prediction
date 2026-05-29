@@ -110,12 +110,16 @@ def main():
     best_result['ensemble_pred']    = ensemble_pred
     best_result['ensemble_metrics'] = ensemble_metrics
 
-    # CPTC Prediction Intervals (skip in quantile mode — q10/q90 bands serve as PI)
+    # Prediction Intervals: use q10/q90 directly in quantile mode, CPTC otherwise
     if HP.get('loss_type') == 'quantile':
-        n_te = len(best_result['y_true'])
-        lower = np.zeros(n_te)
-        upper = np.zeros(n_te)
-        val_cov, avg_w = float('nan'), float('nan')
+        q_preds_best = best_result.get('q_preds', {})
+        lower = q_preds_best.get(0.1, np.zeros(len(best_result['y_true'])))
+        upper = q_preds_best.get(0.9, np.zeros(len(best_result['y_true'])))
+        y_true_arr = best_result['y_true']
+        covered = np.mean((y_true_arr >= lower) & (y_true_arr <= upper))
+        avg_w = float(np.mean(upper - lower))
+        val_cov = float(covered)
+        print(f'  80% PI (q10–q90): coverage={val_cov:.3f}, avg_width={avg_w:.1f} kg')
     else:
         best_model = CNNRNN(
             n_sensor=n_sensor_pca, n_temporal=n_temporal,
@@ -170,7 +174,7 @@ def main():
         {'invernadero': INV_ID, 'model': f'ensemble_top{top_k}', **ensemble_metrics},
         {'invernadero': INV_ID, 'model': 'top25_mean', 'R²': top25_mean, 'R²_std': top25_std,
          'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
-        {'invernadero': INV_ID, 'model': 'cptc_pi', 'pi_coverage': val_cov, 'pi_avg_width': avg_w,
+        {'invernadero': INV_ID, 'model': 'quantile_pi' if HP.get('loss_type') == 'quantile' else 'cptc_pi', 'pi_coverage': val_cov, 'pi_avg_width': avg_w,
          'R²': None, 'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
     ]
     if 'ramp_up' in phase:

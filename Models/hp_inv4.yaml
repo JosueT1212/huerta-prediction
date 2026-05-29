@@ -1,5 +1,7 @@
 seq_len: 6
-skip_first_weeks: 3
+skip_first_weeks: 0
+ramp_weeks: 4
+ramp_weight: 0.5
 alignment: positional
 batch_size: 8
 lag_features: []

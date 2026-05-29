@@ -1262,6 +1262,45 @@ def evaluate_loader(model, loader, scaler_y, bc_lambda):
     return y_true, y_pred
 
 
+def evaluate_model_q(model, test_loader, scaler_y, bc_lambda, quantiles=(0.1, 0.5, 0.9)):
+    """Run quantile model inference. Returns q50 as point forecast for metrics.
+
+    Returns:
+        y_true: 1-D array (original kg scale)
+        q_preds: dict with keys matching quantiles, each a 1-D array
+        metrics: compute_metrics on (y_true, q50)
+    """
+    model.eval()
+    all_preds, all_targets = [], []
+
+    with torch.no_grad():
+        for Xs_batch, Xt_batch, y_batch, _ in test_loader:
+            pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
+            all_preds.append(pred.cpu().numpy())
+            all_targets.append(y_batch.numpy())
+
+    preds_norm = np.concatenate(all_preds)        # (N, n_q)
+    y_true_norm = np.concatenate(all_targets).flatten()
+
+    def _inverse(arr_norm):
+        arr = scaler_y.inverse_transform(arr_norm.reshape(-1, 1)).flatten()
+        if bc_lambda == 'log':
+            arr = np.expm1(arr)
+        elif bc_lambda is not None:
+            from scipy.special import inv_boxcox as _inv_boxcox
+            if bc_lambda > 0:
+                arr = np.clip(arr, -1.0 / bc_lambda + 1e-6, None)
+            arr = _inv_boxcox(arr, bc_lambda) - 1.0
+        return arr
+
+    y_true = _inverse(y_true_norm)
+    q_preds = {q: _inverse(preds_norm[:, i]) for i, q in enumerate(quantiles)}
+    q50_idx = list(quantiles).index(0.5)
+    y_pred_median = _inverse(preds_norm[:, q50_idx])
+    metrics = compute_metrics(y_true, y_pred_median)
+    return y_true, q_preds, metrics
+
+
 def compute_cptc_intervals(y_cal_true, y_cal_pred, y_te_pred,
                            alpha=0.10, gamma=0.005, K=3):
     """
@@ -1311,6 +1350,61 @@ def compute_cptc_intervals(y_cal_true, y_cal_pred, y_te_pred,
         S[k].append(float(cal_residuals[i]))
 
     return lower, upper, val_coverage, avg_width
+
+
+def plot_quantile_bands(y_true, q_preds, train_losses, val_losses,
+                        inv_id, metrics, horizon=6,
+                        quantiles=(0.1, 0.5, 0.9), wis=None, ramp_weeks=4):
+    """Plot loss curves + actual vs quantile bands for one greenhouse.
+
+    Saves: Models/results/quantile_inv{inv_id}_results.png
+    """
+    import matplotlib.patches as mpatches
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # --- Loss curves ---
+    ax_loss = axes[0]
+    ax_loss.plot(train_losses, label='Train loss')
+    ax_loss.plot(val_losses,   label='Val loss')
+    ax_loss.set_title(f'Inv{inv_id} — Quantile Training Loss')
+    ax_loss.set_xlabel('Epoch')
+    ax_loss.legend()
+
+    # --- Quantile bands ---
+    ax_q = axes[1]
+    t = np.arange(len(y_true))
+
+    # Shade ramp-up phase
+    if wis is not None:
+        mask_r = wis < ramp_weeks
+        ramp_idx = np.where(mask_r)[0]
+        if len(ramp_idx) > 0:
+            ax_q.axvspan(ramp_idx[0] - 0.5, ramp_idx[-1] + 0.5,
+                         alpha=0.10, color='orange', label='Ramp-up phase')
+
+    q10 = q_preds.get(0.1)
+    q50 = q_preds.get(0.5)
+    q90 = q_preds.get(0.9)
+
+    if q10 is not None and q90 is not None:
+        ax_q.fill_between(t, q10, q90, alpha=0.25, color='steelblue', label='80% PI (q10–q90)')
+    if q50 is not None:
+        ax_q.plot(t, q50, color='steelblue', linewidth=1.5, label='Median (q50)')
+    ax_q.plot(t, y_true, color='black', linewidth=1.2, linestyle='--', label='Actual')
+
+    r2   = metrics.get('R²',       float('nan'))
+    rmse = metrics.get('RMSE (kg)', float('nan'))
+    ax_q.set_title(f'Inv{inv_id} — Quantile Predictions | R²={r2:.3f} RMSE={rmse:.1f}kg')
+    ax_q.set_xlabel(f'Test week (h={horizon}w ahead)')
+    ax_q.set_ylabel('kg')
+    ax_q.legend(fontsize=8)
+
+    plt.tight_layout()
+    out_path = RESULTS_DIR / f'quantile_inv{inv_id}_results.png'
+    plt.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f'Saved: {out_path}')
 
 
 def plot_results_per_greenhouse(results, horizon=6, intervals=None):

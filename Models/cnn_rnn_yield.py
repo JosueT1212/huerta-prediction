@@ -913,10 +913,11 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         sensor_te_df = df_sensor_all[df_sensor_all['temporada'] == 'T17'].reset_index(drop=True)
         # Gap normalisation: trim sensor front so eff_horizon = gap - seq_len = HORIZON
         _seq = hp.get('seq_len', 6)
-        sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq)
-        sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq)
-        sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq)
-        print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}): sensor frames trimmed per season')
+        if hp.get('use_gap_norm', True):
+            sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq)
+            sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq)
+            sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq)
+            print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}): sensor frames trimmed per season')
         # Only keep columns present in both sensor frames and feature_cols
         avail_sensor  = [c for c in sensor_cols  if c in sensor_tr_df.columns]
         avail_temporal = [c for c in temporal_cols if c in sensor_tr_df.columns]

@@ -59,7 +59,7 @@ class InferenceEngine:
         t0 = time.time()
         hp = _load_hp(inv_id)
         (train_loader, val_loader, test_loader, scaler_y, bc_lambda,
-         n_sensor, n_temporal, var_y_train, week_keys) = prepare_data(
+         n_sensor, n_temporal, var_y_train, week_keys, _wis_test) = prepare_data(
             inv_id, hp, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON,
             skip_first_weeks=hp.get('skip_first_weeks', 0))
 

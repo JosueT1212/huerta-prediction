@@ -706,11 +706,11 @@ class CNNRNN(nn.Module):
     lag features) bypass the CNN and are concatenated at the LSTM input.
 
       x_sensor  → CNN → (batch, seq_len, cnn_filters)  ─┐
-                                                          cat → LSTM → FC → (batch, 1)
+                                                          cat → LSTM → FC → (batch, n_out)
       x_temporal (clean) ──────────────────────────────  ─┘
     """
     def __init__(self, n_sensor, n_temporal, cnn_filters, cnn_kernel_size, cnn_padding,
-                 num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden):
+                 num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden, n_out=1):
         super().__init__()
 
         cnn_blocks = []
@@ -733,7 +733,7 @@ class CNNRNN(nn.Module):
             nn.Linear(lstm_hidden, fc_hidden),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(fc_hidden, 1)
+            nn.Linear(fc_hidden, n_out)
         )
 
     def forward(self, x_sensor, x_temporal):

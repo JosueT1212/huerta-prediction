@@ -348,6 +348,11 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
             # data for the first production weeks.
             weekly_env = daily.groupby('week_key').agg(agg_dict).reset_index()
             weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
+            # crad_season: cumulative radiation from first sensor week of season (resets per season)
+            if 'rad_sum' in weekly_env.columns:
+                weekly_env['crad_season'] = weekly_env['rad_sum'].cumsum()
+            else:
+                weekly_env['crad_season'] = 0.0
 
             # Build full sensor frame (all sensor rows including pre-production weeks)
             _sf = weekly_env.copy()
@@ -462,6 +467,12 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
         else:
             # ── ISO calendar alignment (default) ─────────────────────────────
             weekly_env = daily.groupby('week_key').agg(agg_dict).reset_index()
+            weekly_env = weekly_env.sort_values('week_key').reset_index(drop=True)
+            # crad_season: cumulative radiation from first sensor week of season (resets per season)
+            if 'rad_sum' in weekly_env.columns:
+                weekly_env['crad_season'] = weekly_env['rad_sum'].cumsum()
+            else:
+                weekly_env['crad_season'] = 0.0
 
             # Build week_key for the production rows.
             # The semana column is ISO calendar week; the season may span two calendar years
@@ -683,7 +694,7 @@ class CNNBlock(nn.Module):
 
 # Features that bypass the CNN and go straight to the LSTM (clean temporal signal)
 TEMPORAL_FEATURE_PREFIXES = ('kg_lag_', 'kg_roll_')
-TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season'}
+TEMPORAL_FEATURE_NAMES    = {'dias_desde_transplante', 'week_in_season', 'crad_season'}
 
 
 def split_features(feature_cols):
@@ -1138,7 +1149,12 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         )).item()
 
         # Early stopping score: loss - corr_weight * correlation
-        val_score = avg_val_loss - hp.get('corr_weight', 0.0) * val_corr
+        # Fix 1: quantile mode uses q50-MAE (not avg pinball) so corr_weight is on same scale
+        if hp.get('loss_type') == 'quantile':
+            q50_mae = torch.mean(torch.abs(val_preds_cat - val_targets_cat)).item()
+            val_score = q50_mae - hp.get('corr_weight', 0.0) * val_corr
+        else:
+            val_score = avg_val_loss - hp.get('corr_weight', 0.0) * val_corr
 
         if val_score < best_val_loss:
             best_val_loss = val_score

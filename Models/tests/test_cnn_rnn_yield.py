@@ -90,3 +90,29 @@ def test_4tensor_dataset_unpacks_correctly():
         Xs_b, Xt_b, y_b, w_b = batch
         assert w_b.shape == (4, 1)
         break
+
+
+# ── crad_season feature tests ─────────────────────────────────────────────────
+
+def test_crad_season_in_temporal_feature_names():
+    """crad_season must be routed to LSTM (temporal path), not PCA."""
+    from cnn_rnn_yield import TEMPORAL_FEATURE_NAMES
+    assert 'crad_season' in TEMPORAL_FEATURE_NAMES
+
+
+def test_crad_season_split_routes_to_temporal():
+    """split_features must return crad_season in temporal list."""
+    from cnn_rnn_yield import split_features
+    sensor, pheno, temporal = split_features(['temp_prom_int', 'crad_season', 'week_in_season'])
+    assert 'crad_season' in temporal
+    assert 'crad_season' not in sensor
+    assert 'crad_season' not in pheno
+
+
+def test_crad_season_monotone_within_season():
+    """crad_season should be non-decreasing within each season (cumsum of non-negative values)."""
+    import numpy as np
+    rad = np.array([100.0, 200.0, 50.0, 300.0, 0.0, 150.0])
+    crad = np.cumsum(rad)
+    diffs = np.diff(crad)
+    assert (diffs >= 0).all(), "crad_season must be non-decreasing within a season"

@@ -177,38 +177,52 @@ def test_compute_spline_yield_no_leakage():
 
 def test_nse_early_stopping_selects_best_r2():
     """
-    NSE-based stopping must select the checkpoint with lowest MSE/var(target),
-    not lowest MAE - corr*r. Verify that a biased-but-well-shaped prediction
-    (high r, high bias) scores worse than an unbiased prediction under NSE.
+    NSE-based stopping must select the checkpoint with lowest MSE/var(target).
+    Demonstrate that the old scheme (MAE - corr_weight * r) can incorrectly prefer
+    a 2x-scaled prediction (r=1, R²=-4.5) over a constant mean prediction (r=0, R²=0).
+    NSE correctly prefers the better-R² prediction.
     """
     import numpy as np
 
-    targets = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float32)
-    # pred_a: unbiased, slightly noisy — good R²
-    pred_a = np.array([1.1, 2.0, 3.1, 3.9, 5.0], dtype=np.float32)
-    # pred_b: 2x scale — perfect Pearson r=1.0 but terrible R²
-    pred_b = np.array([2.0, 4.0, 6.0, 8.0, 10.0], dtype=np.float32)
+    targets = np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64)
+    # pred_a: constant at mean — r=0, R²=0 (useless but not destructive)
+    pred_a = np.full(5, targets.mean(), dtype=np.float64)
+    # pred_b: 2x scaled — r=1.0, R²=-4.5 (high correlation, terrible accuracy)
+    pred_b = (2.0 * targets).astype(np.float64)
+
+    def pearson_r(p, t):
+        p_ = p - p.mean(); t_ = t - t.mean()
+        return float(np.sum(p_ * t_) / (np.sqrt(np.sum(p_**2) + 1e-8) * np.sqrt(np.sum(t_**2) + 1e-8)))
+
+    def old_score(pred, target, corr_w=3.0):
+        mae = float(np.mean(np.abs(pred - target)))
+        r   = pearson_r(pred, target)
+        return mae - corr_w * r
 
     def nse_score(pred, target):
-        mse = np.mean((pred - target) ** 2)
-        var_t = np.var(target) + 1e-8
-        return -(1.0 - mse / var_t)  # lower is better (we minimize)
+        mse   = float(np.mean((pred - target) ** 2))
+        var_t = float(np.var(target)) + 1e-8
+        nse   = 1.0 - mse / var_t
+        return -nse  # lower is better
 
-    def pearson_r(pred, target):
-        p = pred - pred.mean(); t = target - target.mean()
-        return float(np.sum(p * t) / (np.sqrt(np.sum(p**2) + 1e-8) * np.sqrt(np.sum(t**2) + 1e-8)))
-
-    # pred_b has perfect Pearson but terrible NSE
-    r_a = pearson_r(pred_a, targets)
     r_b = pearson_r(pred_b, targets)
-    assert r_b > 0.999, "pred_b should have r≈1"
-    # Pearson r is scale-invariant: both predictions have nearly identical r
-    assert abs(r_a - r_b) < 0.01, "Pearson r fails to penalize 2x scale"
+    assert r_b > 0.999, f"pred_b should have r≈1, got {r_b}"
 
-    # NSE scheme correctly prefers pred_a (lower score = better)
-    nse_a = nse_score(pred_a, targets)
-    nse_b = nse_score(pred_b, targets)
-    assert nse_a < nse_b, "NSE score must prefer unbiased pred_a over scaled pred_b"
+    # Old scheme (corr_weight=3) prefers pred_b — wrong!
+    score_a_old = old_score(pred_a, targets, corr_w=3.0)
+    score_b_old = old_score(pred_b, targets, corr_w=3.0)
+    assert score_b_old < score_a_old, (
+        f"Old scheme should prefer scaled pred_b (score={score_b_old:.3f}) "
+        f"over mean pred_a (score={score_a_old:.3f})"
+    )
+
+    # NSE scheme correctly prefers pred_a (R²=0 > R²=-4.5)
+    score_a_nse = nse_score(pred_a, targets)
+    score_b_nse = nse_score(pred_b, targets)
+    assert score_a_nse < score_b_nse, (
+        f"NSE must prefer pred_a (score={score_a_nse:.3f}) "
+        f"over scaled pred_b (score={score_b_nse:.3f})"
+    )
 
 
 def test_train_model_uses_nse_stopping(tmp_path):

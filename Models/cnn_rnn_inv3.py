@@ -84,6 +84,7 @@ def main():
                     'y_true': y_true, 'y_pred': y_pred, 'metrics': metrics,
                     'train_losses': train_losses, 'val_losses': val_losses,
                     'seed': seed, 'init_method': init_method,
+                    'wis_test': wis_test,
                 }
                 torch.save(model.state_dict(), model_path)
 

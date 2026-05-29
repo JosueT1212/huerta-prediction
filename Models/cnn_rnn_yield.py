@@ -1309,6 +1309,13 @@ def plot_results_per_greenhouse(results, horizon=6, intervals=None):
         if 'ensemble_pred' in res:
             axes[i, 1].plot(weeks, res['ensemble_pred'], '^:', color='green',
                              label='Ensemble top-20', markersize=5)
+        wis = res.get('wis_test', None)
+        if wis is not None:
+            mask_r = wis < 4
+            ramp_indices = np.where(mask_r)[0]
+            if len(ramp_indices) > 0:
+                axes[i, 1].axvspan(ramp_indices[0] - 0.5, ramp_indices[-1] + 0.5,
+                              alpha=0.12, color='orange', label='Ramp-up phase')
         axes[i, 1].set_title(f'Invernadero {inv_id} - Predicción a {horizon} semanas (T17)')
         axes[i, 1].set_xlabel('Semana de test (T17)')
         axes[i, 1].set_ylabel('Producción (kg)')

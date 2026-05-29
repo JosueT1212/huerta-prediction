@@ -1052,12 +1052,12 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         epoch_loss = 0.0
         n_batches = 0
 
-        for Xs_batch, Xt_batch, y_batch in train_loader:
+        for Xs_batch, Xt_batch, y_batch, w_batch in train_loader:
             Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
 
             optimizer.zero_grad()
             pred = model(Xs_batch, Xt_batch)
-            loss = criterion(pred, y_batch)
+            loss = criterion(pred, y_batch, sample_weights=w_batch)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -1075,7 +1075,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         all_val_preds = []
         all_val_targets = []
         with torch.no_grad():
-            for Xs_batch, Xt_batch, y_batch in val_loader:
+            for Xs_batch, Xt_batch, y_batch, _ in val_loader:
                 Xs_batch, Xt_batch, y_batch = Xs_batch.to(DEVICE), Xt_batch.to(DEVICE), y_batch.to(DEVICE)
                 pred = model(Xs_batch, Xt_batch)
                 loss = criterion(pred, y_batch)
@@ -1175,7 +1175,7 @@ def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     all_preds, all_targets = [], []
 
     with torch.no_grad():
-        for Xs_batch, Xt_batch, y_batch in test_loader:
+        for Xs_batch, Xt_batch, y_batch, _ in test_loader:
             pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
             all_preds.append(pred.cpu().numpy())
             all_targets.append(y_batch.numpy())
@@ -1211,7 +1211,7 @@ def evaluate_loader(model, loader, scaler_y, bc_lambda):
     model.eval()
     all_preds, all_targets = [], []
     with torch.no_grad():
-        for Xs_batch, Xt_batch, y_batch in loader:
+        for Xs_batch, Xt_batch, y_batch, _ in loader:
             pred = model(Xs_batch.to(DEVICE), Xt_batch.to(DEVICE))
             all_preds.append(pred.cpu().numpy())
             all_targets.append(y_batch.numpy())

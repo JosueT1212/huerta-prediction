@@ -784,7 +784,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0, return_arrays=False):
+def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0, ramp_weeks=None, ramp_weight=None, return_arrays=False):
     """Load data, normalize, split into train/val/test, create DataLoaders."""
     train_df, val_df, test_df, feature_cols, df_sensor_all = build_dataset_for_greenhouse(
         invernadero_id, horizon=0,

@@ -19,8 +19,8 @@ from pathlib import Path
 from cnn_rnn_yield import (
     DEVICE, RESULTS_DIR, HORIZON,
     prepare_data, set_seed, init_weights,
-    CNNRNN, train_model, evaluate_model, compute_metrics, print_metrics,
-    plot_results_per_greenhouse, compute_cptc_intervals,
+    CNNRNN, train_model, evaluate_model, compute_metrics, compute_phase_metrics,
+    print_metrics, plot_results_per_greenhouse, compute_cptc_intervals,
 )
 
 INV_ID = 4
@@ -40,9 +40,11 @@ def main():
     print(f'  HORIZON={HORIZON} (doc) | seq_len={HP["seq_len"]} | eff_horizon = gap - seq_len (per temporada)')
     print('=' * 60)
 
-    train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys = \
+    train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys, wis_test = \
         prepare_data(INV_ID, HP, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON,
-                     skip_first_weeks=HP.get('skip_first_weeks', 0))
+                     skip_first_weeks=HP.get('skip_first_weeks', 0),
+                     ramp_weeks=HP.get('ramp_weeks', 4),
+                     ramp_weight=HP.get('ramp_weight', 1.0))
 
     n_runs = len(HP['seeds']) * len(HP['init_methods'])
     print(f'\n  {n_runs} runs ({len(HP["seeds"])} seeds × {len(HP["init_methods"])} inits)')
@@ -125,6 +127,10 @@ def main():
     top25_std  = float(np.std(top25_r2s))
     print(f'\n  Top-25 R²: mean={top25_mean:.4f}, std={top25_std:.4f}')
 
+    phase = compute_phase_metrics(
+        best_result['y_true'], best_result['y_pred'], wis_test,
+        ramp_weeks=HP.get('ramp_weeks', 4))
+
     metrics_rows = [
         {'invernadero': INV_ID, 'model': 'best',              **best_result['metrics']},
         {'invernadero': INV_ID, 'model': f'ensemble_top{top_k}', **ensemble_metrics},
@@ -133,6 +139,10 @@ def main():
         {'invernadero': INV_ID, 'model': 'cptc_pi', 'pi_coverage': val_cov, 'pi_avg_width': avg_w,
          'R²': None, 'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
     ]
+    if 'ramp_up' in phase:
+        metrics_rows.append({'invernadero': INV_ID, 'model': 'best_ramp_up', **phase['ramp_up']})
+    if 'peak' in phase:
+        metrics_rows.append({'invernadero': INV_ID, 'model': 'best_peak',    **phase['peak']})
     pd.DataFrame(metrics_rows).to_csv(RESULTS_DIR / 'cnn_rnn_inv4_metrics.csv', index=False)
 
     np.savez_compressed(

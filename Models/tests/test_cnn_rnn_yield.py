@@ -159,7 +159,7 @@ def test_compute_spline_yield_no_leakage():
         'kg_reales': np.zeros(15),
     })
 
-    tr_out, va_out, te_out = compute_spline_yield_feature(train_df.copy(), val_df.copy(), test_df.copy())
+    tr_out, va_out, te_out, *_ = compute_spline_yield_feature(train_df.copy(), val_df.copy(), test_df.copy())
 
     # spline_yield column must exist in all splits
     assert 'spline_yield' in tr_out.columns
@@ -263,3 +263,40 @@ def test_train_model_uses_nse_stopping(tmp_path):
     assert len(train_l) == 2
     assert len(val_l) == 2
     assert all(np.isfinite(v) for v in val_l)
+
+
+def test_spline_yield_in_sensor_frame_after_prepare_data():
+    """
+    spline_yield must appear in the pheno path's actual CNN input (sensor_tr_df),
+    not just in train_df. This catches the bug where spline_yield was only added
+    to train_df but the pheno selector preferred sensor_tr_df.
+    We test this by checking that spline_yield reaches the pheno columns list
+    via split_features + avail_pheno logic.
+
+    Proxy test: after prepare_data with use_spline_feature=True, the CNN input
+    should have MORE channels than without it (spline adds 1 pheno channel).
+    """
+    import sys, yaml
+    sys.path.insert(0, 'Models')
+    import warnings
+    warnings.filterwarnings('ignore')
+    from cnn_rnn_yield import prepare_data
+
+    with open('Models/hp_inv3.yaml') as f:
+        HP = yaml.safe_load(f)
+
+    HP_without = dict(HP); HP_without['use_spline_feature'] = False
+    HP_with    = dict(HP); HP_with['use_spline_feature']    = True
+
+    r_without = prepare_data(3, HP_without, train_seasons=['T13','T14','T15'], val_season='T16',
+                             ramp_weeks=4, ramp_weight=0.5, return_arrays=True)
+    r_with    = prepare_data(3, HP_with,    train_seasons=['T13','T14','T15'], val_season='T16',
+                             ramp_weeks=4, ramp_weight=0.5, return_arrays=True)
+
+    n_sensor_without = r_without[0].shape[2]  # Xs_tr.shape = (N, seq_len, n_channels)
+    n_sensor_with    = r_with[0].shape[2]
+
+    assert n_sensor_with == n_sensor_without + 1, (
+        f"spline_yield should add 1 CNN channel: without={n_sensor_without}, with={n_sensor_with}. "
+        f"If equal, spline_yield is being dropped from the pheno path."
+    )

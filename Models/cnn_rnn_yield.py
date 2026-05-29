@@ -723,7 +723,9 @@ def compute_spline_yield_feature(train_df, val_df, test_df):
         val_df, test_df: Same schema — 'week_in_season' must be present.
 
     Returns:
-        (train_df, val_df, test_df) with 'spline_yield' column added (copies).
+        (train_df, val_df, test_df, spline, w_min, w_max) — DataFrames with
+        'spline_yield' added, plus the fitted spline and its [w_min, w_max] domain
+        for applying to sensor frames.
     """
     from scipy.interpolate import UnivariateSpline
 
@@ -748,7 +750,7 @@ def compute_spline_yield_feature(train_df, val_df, test_df):
         w_clipped = np.clip(df['week_in_season'].values.astype(float), w_min, w_max)
         df['spline_yield'] = spline(w_clipped)
 
-    return train_df, val_df, test_df
+    return train_df, val_df, test_df, spline, w_min, w_max
 
 
 class CNNRNN(nn.Module):
@@ -857,8 +859,11 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
 
     # Phenological spline: fit on training mean yield curve, add to all splits
     # Must be called AFTER build_dataset (needs kg_reales) but BEFORE split_features
+    _spline_fn = None
+    _spline_w_min = _spline_w_max = None
     if hp.get('use_spline_feature', True):
-        train_df, val_df, test_df = compute_spline_yield_feature(train_df, val_df, test_df)
+        train_df, val_df, test_df, _spline_fn, _spline_w_min, _spline_w_max = \
+            compute_spline_yield_feature(train_df, val_df, test_df)
         if 'spline_yield' not in feature_cols:
             feature_cols = list(feature_cols) + ['spline_yield']
 
@@ -918,6 +923,15 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     else:
         sensor_tr_df, sensor_va_df, sensor_te_df = train_df, val_df, test_df
         avail_sensor, avail_temporal = sensor_cols, temporal_cols
+
+    # Apply spline_yield to sensor frames so pheno path picks it up.
+    # spline_yield was only added to train_df/val_df/test_df above; sensor frames
+    # come from df_sensor_all which never got the column — silently dropping it.
+    if _spline_fn is not None and 'week_in_season' in sensor_tr_df.columns:
+        for _sdf in [sensor_tr_df, sensor_va_df, sensor_te_df]:
+            w_clipped = np.clip(_sdf['week_in_season'].values.astype(float),
+                                _spline_w_min, _spline_w_max)
+            _sdf['spline_yield'] = _spline_fn(w_clipped)
 
     # ── Sensor features: scale + PCA ──
     Xs_tr = sensor_tr_df[avail_sensor].values.astype(np.float32)

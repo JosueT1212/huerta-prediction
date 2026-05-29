@@ -922,7 +922,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         Xs_tr, Xt_tr, y_train, temps_sensor_tr, temps_prod_tr, seq_len, stride)
     Xs_va_seq, Xt_va_seq, y_va, pos_va = make_sequences_per_season(
         Xs_va, Xt_va, y_val,   temps_sensor_va, temps_prod_va, seq_len, stride)
-    Xs_te_seq, Xt_te_seq, y_te, _      = make_sequences_per_season(
+    Xs_te_seq, Xt_te_seq, y_te, pos_te = make_sequences_per_season(
         Xs_te, Xt_te, y_test,  temps_sensor_te, temps_prod_te, seq_len, stride)
     print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
           + (f' (stride={stride})' if stride > 1 else ''))
@@ -935,21 +935,29 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
                 Xs_te_seq, Xt_te_seq, y_te,
                 scaler_y, bc_lambda, _week_keys)
 
-    def to_ds(Xs, Xt, y):
+    def to_ds(Xs, Xt, y, w):
         return TensorDataset(torch.FloatTensor(Xs), torch.FloatTensor(Xt),
-                             torch.FloatTensor(y).unsqueeze(1))
+                             torch.FloatTensor(y).unsqueeze(1),
+                             torch.FloatTensor(w).reshape(-1, 1))
+
+    ramp_weeks  = hp.get('ramp_weeks', 4)
+    ramp_weight = hp.get('ramp_weight', 1.0)
+    w_train = np.where(pos_tr < ramp_weeks, ramp_weight, 1.0).astype(np.float32)
+    w_ones_va = np.ones(len(y_va), dtype=np.float32)
+    w_ones_te = np.ones(len(y_te), dtype=np.float32)
 
     bs = hp['batch_size']
-    train_loader = DataLoader(to_ds(Xs_tr_seq, Xt_tr_seq, y_tr), batch_size=bs, shuffle=True, drop_last=True)
-    val_loader   = DataLoader(to_ds(Xs_va_seq, Xt_va_seq, y_va), batch_size=bs, shuffle=False)
-    test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te), batch_size=bs, shuffle=False)
+    train_loader = DataLoader(to_ds(Xs_tr_seq, Xt_tr_seq, y_tr, w_train), batch_size=bs, shuffle=True, drop_last=True)
+    val_loader   = DataLoader(to_ds(Xs_va_seq, Xt_va_seq, y_va, w_ones_va), batch_size=bs, shuffle=False)
+    test_loader  = DataLoader(to_ds(Xs_te_seq, Xt_te_seq, y_te, w_ones_te), batch_size=bs, shuffle=False)
 
     var_y_train = float(np.var(y_tr)) if len(y_tr) > 1 else 1.0
     print(f'  Train y variance (scaled {transform}): {var_y_train:.6f}')
 
     _has_wk = 'prod_week_key' in test_df.columns
     test_week_keys = test_df['prod_week_key'].values if _has_wk else np.arange(len(y_te))
-    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys
+    wis_test = pos_te  # week_in_season of each test sequence target (== pos within season)
+    return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys, wis_test
 
 
 class NSECorrLoss(nn.Module):

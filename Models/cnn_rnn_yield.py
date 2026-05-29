@@ -1139,6 +1139,28 @@ def compute_metrics(y_true, y_pred):
     }
 
 
+def compute_phase_metrics(y_true, y_pred, wis_test, ramp_weeks=4):
+    """Compute metrics split by season phase (ramp-up vs peak).
+
+    Args:
+        y_true: 1-D array of true kg values (original scale).
+        y_pred: 1-D array of predicted kg values (original scale).
+        wis_test: 1-D int array of week_in_season per test sample.
+        ramp_weeks: number of weeks considered ramp-up (week_in_season < ramp_weeks).
+
+    Returns:
+        dict with keys 'all', 'ramp_up' (if >=2 ramp samples), 'peak' (if >=2 peak samples).
+        Each value is the output of compute_metrics().
+    """
+    mask_ramp = wis_test < ramp_weeks
+    result = {'all': compute_metrics(y_true, y_pred)}
+    if mask_ramp.sum() >= 2:
+        result['ramp_up'] = compute_metrics(y_true[mask_ramp], y_pred[mask_ramp])
+    if (~mask_ramp).sum() >= 2:
+        result['peak'] = compute_metrics(y_true[~mask_ramp], y_pred[~mask_ramp])
+    return result
+
+
 def evaluate_model(model, test_loader, scaler_y, bc_lambda, hist_te=None):
     """Run inference on test set, inverse-transform predictions, compute metrics."""
     model.eval()

@@ -1061,6 +1061,8 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
     elif loss_type == 'nse_corr':
         criterion = NSECorrLoss(corr_weight=hp.get('corr_weight', 0.8),
                                 var_y_train=var_y_train)
+    elif loss_type == 'quantile':
+        criterion = PinballLoss(quantiles=hp.get('quantiles', [0.1, 0.5, 0.9]))
     else:
         criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
                                   power=hp.get('wmae_power', 1),

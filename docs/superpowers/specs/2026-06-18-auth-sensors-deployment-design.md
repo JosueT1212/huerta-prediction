@@ -212,10 +212,43 @@ Add to `backend/requirements.txt`.
 
 ---
 
+## Section 4: User Management UI (Admin only)
+
+Admin needs a UI inside the dashboard to manage operator accounts without touching the Supabase console.
+
+### Routes (admin-only, return 403 for operators)
+
+```
+GET  /admin/users              → list all users (profiles + greenhouse_access)
+POST /admin/users              → create user (calls Supabase Admin API + inserts profile row)
+PATCH /admin/users/{user_id}   → update role or full_name
+DELETE /admin/users/{user_id}  → deactivate (sets disabled flag, does not hard-delete)
+POST /admin/users/{user_id}/greenhouses/{inv}   → grant greenhouse access
+DELETE /admin/users/{user_id}/greenhouses/{inv} → revoke greenhouse access
+```
+
+### Supabase schema addition
+
+```sql
+-- add disabled flag to profiles for soft-delete
+alter table profiles add column disabled boolean not null default false;
+```
+
+### Frontend (HTML panel inside existing demo dashboard)
+
+Admin sees an "Usuarios" panel (hidden from operators via role check on page load):
+
+- Table of all users: name, role, assigned greenhouses, active/disabled status
+- "Nuevo usuario" button → modal form: email, full name, role, greenhouse checkboxes → POST /admin/users
+- Per-row actions: edit role, toggle greenhouses, disable account
+
+FastAPI calls Supabase Admin API (`SUPABASE_SERVICE_KEY`) to create auth.users entry, then inserts `profiles` row. Password is auto-generated and emailed by Supabase (invite flow).
+
+---
+
 ## What is NOT in scope
 
 - Grafana (deferred — no live sensor dashboard until sensors exist)
-- User management UI in dashboard (admin creates users directly in Supabase dashboard for now)
 - Sensor data feeding into CNN-RNN inference (model still runs on historical T17 data; live inference is a separate future task)
 - Multi-greenhouse expansion beyond inv3/inv4
 

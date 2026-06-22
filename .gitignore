@@ -23,3 +23,7 @@ __pycache__/
 
 # Config local del agente
 .claude/
+
+# Environment variables — never commit
+.env
+.env.local

@@ -1185,6 +1185,7 @@
   <div class="sb-section">General</div>
   <div class="sb-group">
     <button class="sb-link" data-view="menu"><span class="dot"></span>Vista general</button>
+    <button class="sb-link" data-view="insert"><span class="dot"></span>Insertar datos</button>
   </div>
 
   <div class="sb-section">Invernadero 3</div>
@@ -1268,6 +1269,51 @@
     </div>
   </section>
 
+  <!-- ============ INSERTAR DATOS VIEW ============ -->
+  <section class="view" id="view-insert">
+    <div class="detail-header">
+      <div>
+        <div class="breadcrumb">Menú · <span>Insertar datos</span></div>
+        <h1 class="page-title">Captura de <em>fenología</em></h1>
+        <div class="ornament">Medición manual en campo · una fila por planta · el sistema promedia</div>
+      </div>
+      <div class="page-subtitle">Variables que entrena el modelo</div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="panel insert-panel">
+      <div class="insert-toolbar">
+        <label class="insert-field">
+          <span>Invernadero</span>
+          <select id="ins-inv">
+            <option value="3">Invernadero 3</option>
+            <option value="4">Invernadero 4</option>
+          </select>
+        </label>
+        <label class="insert-field">
+          <span>Semana del año</span>
+          <input id="ins-week" type="number" min="1" max="53" step="1" placeholder="ej. 35" />
+        </label>
+        <div class="insert-spacer"></div>
+        <button class="btn-ghost" id="ins-add">+ Agregar planta</button>
+      </div>
+
+      <div class="insert-table-wrap">
+        <table class="insert-table" id="ins-table">
+          <thead id="ins-thead"></thead>
+          <tbody id="ins-tbody"></tbody>
+          <tfoot id="ins-tfoot"></tfoot>
+        </table>
+      </div>
+
+      <div class="insert-actions">
+        <div class="insert-hint" id="ins-hint">Agrega plantas y captura sus mediciones. El promedio se calcula automáticamente.</div>
+        <button class="btn-primary" id="ins-submit">Enviar captura</button>
+      </div>
+      <div class="insert-result" id="ins-result"></div>
+    </div>
+  </section>
+
   <!-- ============ INV3 DETAIL VIEW ============ -->
   <section class="view" id="view-inv3">
     <div class="detail-header">
@@ -1308,6 +1354,18 @@
             <div class="kpi-label">Pico de cosecha</div>
             <div class="kpi-value" id="inv3-peak">—</div>
             <div class="kpi-unit" id="inv3-peak-unit">kg</div>
+          </div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-label">Rendimiento · 6 semanas</div>
+            <div class="kpi-value" id="inv3-kgm2-win">—</div>
+            <div class="kpi-unit">kg/m²</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Rendimiento acumulado T17</div>
+            <div class="kpi-value" id="inv3-kgm2-acc">—</div>
+            <div class="kpi-unit">kg/m² · temporada</div>
           </div>
         </div>
         <div class="chart-container"><canvas id="chart-inv3"></canvas></div>
@@ -1390,6 +1448,18 @@
             <div class="kpi-unit" id="inv4-peak-unit">kg</div>
           </div>
         </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-label">Rendimiento · 6 semanas</div>
+            <div class="kpi-value" id="inv4-kgm2-win">—</div>
+            <div class="kpi-unit">kg/m²</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Rendimiento acumulado T17</div>
+            <div class="kpi-value" id="inv4-kgm2-acc">—</div>
+            <div class="kpi-unit">kg/m² · temporada</div>
+          </div>
+        </div>
         <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-muted); margin-top:20px; margin-bottom:6px;">Semana pasada</div>
         <div class="chart-container"><canvas id="chart-inv4"></canvas></div>
         <div class="vs-real">
@@ -1440,12 +1510,26 @@
     </div>
     <div class="divider"></div>
 
+    <div class="panel yield-hero">
+      <div class="yield-head">
+        <div>
+          <div class="panel-title">Rendimiento kg/m² · meta vs producción proyectada</div>
+          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T17</div>
+        </div>
+        <label class="yield-meta">
+          <span>Meta kg/m² · semana</span>
+          <input id="meta-input-3" type="number" min="0" step="0.1" value="1.7">
+        </label>
+      </div>
+      <div class="yield-chart"><canvas id="chart-yield-3"></canvas></div>
+    </div>
+
     <div class="kpi-stat-grid">
       <div class="kpi-stat">
-        <div class="kpi-stat-label">Rendimiento</div>
-        <div class="kpi-stat-value">5.42</div>
-        <div class="kpi-stat-unit">kg / planta · acumulado</div>
-        <div class="kpi-stat-trend trend-up">▲ 8.2% vs T16</div>
+        <div class="kpi-stat-label">Rendimiento · prom. ambos inv</div>
+        <div class="kpi-stat-value" id="kpi-yield-avg-3">—</div>
+        <div class="kpi-stat-unit">kg/m² acumulado T17</div>
+        <div class="kpi-stat-trend trend-flat" id="kpi-yield-trend-3">— real vs proyectado</div>
       </div>
       <div class="kpi-stat">
         <div class="kpi-stat-label">Eficiencia hídrica</div>
@@ -1492,6 +1576,12 @@
         <div class="chart-sm"><canvas id="chart-kpi3-res"></canvas></div>
       </div>
     </div>
+
+    <div class="panel pheno-panel">
+      <div class="panel-title">Fenología · variables del modelo</div>
+      <div class="chart-sub">Captura manual semanal que alimenta el reentrenamiento · último valor por temporada</div>
+      <div class="pheno-grid" id="pheno-grid-3"></div>
+    </div>
   </section>
 
   <!-- ============ KPI INV4 VIEW ============ -->
@@ -1506,12 +1596,26 @@
     </div>
     <div class="divider"></div>
 
+    <div class="panel yield-hero">
+      <div class="yield-head">
+        <div>
+          <div class="panel-title">Rendimiento kg/m² · meta vs producción proyectada</div>
+          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T17</div>
+        </div>
+        <label class="yield-meta">
+          <span>Meta kg/m² · semana</span>
+          <input id="meta-input-4" type="number" min="0" step="0.1" value="1.7">
+        </label>
+      </div>
+      <div class="yield-chart"><canvas id="chart-yield-4"></canvas></div>
+    </div>
+
     <div class="kpi-stat-grid">
       <div class="kpi-stat">
-        <div class="kpi-stat-label">Rendimiento</div>
-        <div class="kpi-stat-value">5.18</div>
-        <div class="kpi-stat-unit">kg / planta · acumulado</div>
-        <div class="kpi-stat-trend trend-up">▲ 4.5% vs T16</div>
+        <div class="kpi-stat-label">Rendimiento · prom. ambos inv</div>
+        <div class="kpi-stat-value" id="kpi-yield-avg-4">—</div>
+        <div class="kpi-stat-unit">kg/m² acumulado T17</div>
+        <div class="kpi-stat-trend trend-flat" id="kpi-yield-trend-4">— real vs proyectado</div>
       </div>
       <div class="kpi-stat">
         <div class="kpi-stat-label">Eficiencia hídrica</div>
@@ -1557,6 +1661,12 @@
         <div class="chart-sub">Agua y fertilizante, normalizado</div>
         <div class="chart-sm"><canvas id="chart-kpi4-res"></canvas></div>
       </div>
+    </div>
+
+    <div class="panel pheno-panel">
+      <div class="panel-title">Fenología · variables del modelo</div>
+      <div class="chart-sub">Captura manual semanal que alimenta el reentrenamiento · último valor por temporada</div>
+      <div class="pheno-grid" id="pheno-grid-4"></div>
     </div>
   </section>
 
@@ -1699,6 +1809,83 @@
   </section>
 
 </div>
+
+<!-- ============ MODAL HISTÓRICO SENSOR ============ -->
+<div class="hist-modal" id="hist-modal" hidden>
+  <div class="hist-backdrop" data-close></div>
+  <div class="hist-dialog">
+    <div class="hist-head">
+      <div>
+        <div class="hist-title" id="hist-modal-title">Histórico</div>
+        <div class="hist-sub" id="hist-modal-sub">Promedio mensual por temporada</div>
+      </div>
+      <button class="hist-close" data-close>✕</button>
+    </div>
+    <div class="hist-body"><canvas id="hist-canvas"></canvas></div>
+  </div>
+</div>
+
+<style>
+/* ===== Features añadidas (fenología KPI · formulario · modal histórico) ===== */
+.pheno-panel { margin-top: 18px; }
+.pheno-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+.pheno-card { background: rgba(30,42,58,.04); border: 1px solid rgba(30,42,58,.10); border-radius: 10px; padding: 12px 14px; }
+.pheno-card .pc-label { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--inkMuted, #6b6256); }
+.pheno-card .pc-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: #1a1a1a; margin-top: 4px; }
+.pheno-card .pc-value small { font-size: 12px; color: #6b6256; margin-left: 3px; }
+.pheno-card .pc-spark { margin-top: 6px; height: 26px; width: 100%; }
+.pheno-card .pc-foot { font-size: 10px; color: #8a8175; margin-top: 4px; letter-spacing: .03em; }
+@media (max-width: 1100px) { .pheno-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Formulario insertar datos */
+.insert-panel { margin-top: 4px; }
+.insert-toolbar { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.insert-field { display: flex; flex-direction: column; gap: 5px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #6b6256; }
+.insert-field select, .insert-field input { font-family: 'JetBrains Mono', monospace; font-size: 14px; padding: 8px 10px; border: 1px solid rgba(30,42,58,.18); border-radius: 8px; background: #fff; color: #1a1a1a; }
+.insert-spacer { flex: 1; }
+.btn-ghost { font-family: 'Inter', sans-serif; font-size: 13px; padding: 9px 16px; border: 1px solid var(--accent, #65a30d); color: var(--accent, #65a30d); background: transparent; border-radius: 8px; cursor: pointer; }
+.btn-ghost:hover { background: rgba(101,163,13,.08); }
+.btn-primary { font-family: 'Inter', sans-serif; font-size: 14px; padding: 10px 22px; border: none; background: var(--accent, #65a30d); color: #fff; border-radius: 8px; cursor: pointer; }
+.btn-primary:hover { filter: brightness(1.05); }
+.insert-table-wrap { overflow-x: auto; border: 1px solid rgba(30,42,58,.10); border-radius: 10px; }
+.insert-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.insert-table th, .insert-table td { padding: 8px 9px; text-align: center; border-bottom: 1px solid rgba(30,42,58,.07); white-space: nowrap; }
+.insert-table thead th { font-size: 10px; letter-spacing: .03em; text-transform: uppercase; color: #6b6256; background: rgba(30,42,58,.04); position: sticky; top: 0; }
+.insert-table thead th .th-unit { display: block; font-size: 9px; color: #9a9183; font-weight: 400; }
+.insert-table td input { width: 64px; font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 6px; border: 1px solid rgba(30,42,58,.15); border-radius: 6px; text-align: center; }
+.insert-table td input.err { border-color: #c0392b; background: #fdecea; }
+.insert-table tfoot td { font-family: 'JetBrains Mono', monospace; color: var(--accent, #65a30d); font-weight: 600; background: rgba(101,163,13,.05); }
+.insert-table .row-del { cursor: pointer; color: #c0392b; font-weight: 700; }
+.insert-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.insert-hint { font-size: 12px; color: #6b6256; }
+.insert-result { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; padding: 0; }
+.insert-result.ok { padding: 12px 14px; border-radius: 8px; background: rgba(101,163,13,.08); border: 1px solid rgba(101,163,13,.3); color: #3d5e08; }
+.insert-result.bad { padding: 12px 14px; border-radius: 8px; background: #fdecea; border: 1px solid rgba(192,57,43,.3); color: #922; }
+
+/* Botón ver histórico en sensor card */
+.sensor-hist-btn { margin-top: 8px; width: 100%; font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: .03em; padding: 6px; border: 1px solid rgba(30,42,58,.18); background: transparent; color: #4a5568; border-radius: 6px; cursor: pointer; }
+.sensor-hist-btn:hover { border-color: var(--accent, #65a30d); color: var(--accent, #65a30d); }
+
+/* Modal histórico */
+.hist-modal { position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center; justify-content: center; }
+.hist-modal[hidden] { display: none; }
+.hist-backdrop { position: absolute; inset: 0; background: rgba(15,20,28,.55); }
+.hist-dialog { position: relative; width: min(820px, 92vw); background: #fbf8f1; border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.35); padding: 20px 22px; }
+.hist-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.hist-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: #1e2a3a; }
+.hist-sub { font-size: 12px; color: #6b6256; }
+.hist-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b6256; }
+.hist-body { height: 360px; }
+
+/* Panel HERO rendimiento kg/m² meta vs producción (combo barras + líneas) */
+.yield-hero { margin-bottom: 20px; background: linear-gradient(135deg, #1e2a3a 0%, #243446 100%); border: 1px solid rgba(101,163,13,.25); box-shadow: 0 10px 30px rgba(30,42,58,.18); }
+.yield-hero .panel-title { color: #f4ede0; }
+.yield-hero .chart-sub { color: #9fb0c0; }
+.yield-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.yield-meta { display: flex; flex-direction: column; gap: 5px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #c7d2dc; }
+.yield-meta input { font-family: 'JetBrains Mono', monospace; font-size: 16px; padding: 9px 12px; width: 130px; border: 1px solid rgba(101,163,13,.5); border-radius: 8px; background: rgba(255,255,255,.95); color: #1a1a1a; }
+.yield-chart { margin-top: 16px; height: 340px; }
+</style>
 
 <script>
 /* Guarda de sesión: si no hay login, regresa a la pantalla de acceso */
@@ -2322,9 +2509,13 @@ function renderSensors(num) {
           <span>${s.range_label}</span>
           <span>Δ <b>${(s.value - s.base >= 0 ? '+' : '')}${(s.value - s.base).toFixed(s.id==='co2'||s.id==='light'?0:1)}</b></span>
         </div>
+        ${SENSOR_HIST_MAP[s.id] ? `<button class="sensor-hist-btn" data-hist-var="${SENSOR_HIST_MAP[s.id]}" data-hist-inv="${num}" data-hist-name="${s.name}">📈 ver histórico</button>` : ''}
       </div>`;
   }).join('');
 }
+
+/* Mapa id-de-sensor → variable del backend (suelo no tiene histórico) */
+const SENSOR_HIST_MAP = { temp: 'temp', hum: 'hr', co2: 'co2', light: 'par', ec: 'ce' };
 
 function renderStatus(num) {
   const list = document.getElementById(`status-list-${num}`);
@@ -2430,6 +2621,14 @@ function fillKPIs(inv, series) {
   setText(`inv${inv}-peak`,  fmtKg(peak.pred));
   setText(`inv${inv}-peak-unit`, `kg · ${peak.horizon}`);
 
+  // Rendimiento kg/m² (superficie de cultivo)
+  const area = AREA_M2[inv];
+  if (area) {
+    setText(`inv${inv}-kgm2-win`, (total / area).toFixed(2));
+    const seasonReal = (rawInv[inv]?.y_true || []).reduce((a, v) => a + (v || 0), 0);
+    setText(`inv${inv}-kgm2-acc`, (seasonReal / area).toFixed(2));
+  }
+
   // Semana pasada: última observada
   const last = past[past.length - 1];
   if (last && last.real != null) {
@@ -2490,13 +2689,270 @@ function wireSimControls(inv) {
   document.getElementById(`next${inv}`)?.addEventListener('click', () => stepInv(inv, +1));
 }
 
+/* =========================================================
+   FENOLOGÍA (KPIs) + FORMULARIO + HISTÓRICO DE SENSORES
+========================================================= */
+const rawPheno = { 3: null, 4: null };
+let phenoFields = [];
+const SEASON_COLORS = ['#94a3b8', '#a78bfa', '#38bdf8', '#fb923c', '#65a30d'];
+
+/* Sparkline SVG simple a partir de una serie de valores */
+function sparklineSVG(values) {
+  const v = values.filter(x => x !== null && !isNaN(x));
+  if (v.length < 2) return '';
+  const w = 120, h = 26, min = Math.min(...v), max = Math.max(...v), rng = (max - min) || 1;
+  const pts = v.map((y, i) => {
+    const x = (i / (v.length - 1)) * w;
+    const yy = h - ((y - min) / rng) * (h - 4) - 2;
+    return `${x.toFixed(1)},${yy.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="pc-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${palette.accent}" stroke-width="1.6"/></svg>`;
+}
+
+function renderPhenology(inv) {
+  const data = rawPheno[inv];
+  const grid = document.getElementById(`pheno-grid-${inv}`);
+  if (!data || !grid) return;
+  const lastSeason = data.seasons[data.seasons.length - 1];
+  grid.innerHTML = data.fields.map(f => {
+    const val = data.latest[f.key];
+    const series = lastSeason ? lastSeason.values[f.key] : [];
+    return `
+      <div class="pheno-card">
+        <div class="pc-label">${f.label}</div>
+        <div class="pc-value">${val === null || val === undefined ? '—' : val}<small>${f.unit}</small></div>
+        ${sparklineSVG(series || [])}
+        <div class="pc-foot">${data.latest_season || ''} · promedio semanal</div>
+      </div>`;
+  }).join('');
+}
+
+/* ── Modal histórico de sensores ── */
+let histChart = null;
+async function openHistModal(inv, varKey, name) {
+  const modal = document.getElementById('hist-modal');
+  document.getElementById('hist-modal-title').textContent = `${name} · Invernadero ${inv}`;
+  document.getElementById('hist-modal-sub').textContent = 'Promedio mensual por temporada (T13–T17)';
+  modal.hidden = false;
+  let data;
+  try {
+    data = await fetchJSON(`/sensor-history/${inv}?var=${varKey}`);
+  } catch (e) { console.error(e); return; }
+  const ctx = document.getElementById('hist-canvas').getContext('2d');
+  if (histChart) histChart.destroy();
+  histChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.months,
+      datasets: data.series.map((s, i) => ({
+        label: s.season,
+        data: s.points,
+        borderColor: SEASON_COLORS[i % SEASON_COLORS.length],
+        backgroundColor: 'transparent',
+        borderWidth: 2, tension: 0.3, pointRadius: 2, spanGaps: true,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'JetBrains Mono' }, color: '#1e2a3a' } },
+        tooltip: { titleColor: '#fff', bodyColor: '#fff' },
+      },
+      scales: {
+        y: {
+          title: { display: true, text: data.meta.unit, color: '#1e2a3a', font: { weight: 600 } },
+          ticks: { color: '#1e2a3a' },
+          grid: { color: 'rgba(30,42,58,.12)' },
+        },
+        x: {
+          ticks: { color: '#1e2a3a' },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+}
+function closeHistModal() {
+  document.getElementById('hist-modal').hidden = true;
+  if (histChart) { histChart.destroy(); histChart = null; }
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.sensor-hist-btn');
+  if (btn) { openHistModal(+btn.dataset.histInv, btn.dataset.histVar, btn.dataset.histName); return; }
+  if (e.target.closest('[data-close]')) closeHistModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHistModal(); });
+
+/* ── Formulario "Insertar datos" (fila por planta) ── */
+function insBuildHeader() {
+  const thead = document.getElementById('ins-thead');
+  thead.innerHTML = '<tr><th>Planta</th>' +
+    phenoFields.map(f => `<th>${f.label}<span class="th-unit">${f.unit}</span></th>`).join('') +
+    '<th></th></tr>';
+}
+let insRowSeq = 0;
+function insAddRow() {
+  const tbody = document.getElementById('ins-tbody');
+  const id = ++insRowSeq;
+  const tr = document.createElement('tr');
+  tr.dataset.row = id;
+  tr.innerHTML = `<td>#${tbody.children.length + 1}</td>` +
+    phenoFields.map(f => `<td><input type="number" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" placeholder="—"></td>`).join('') +
+    `<td><span class="row-del" title="Quitar">✕</span></td>`;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', insRecompute));
+  tr.querySelector('.row-del').addEventListener('click', () => { tr.remove(); insRenumber(); insRecompute(); });
+  insRenumber();
+  insRecompute();
+}
+function insRenumber() {
+  document.querySelectorAll('#ins-tbody tr').forEach((tr, i) => { tr.firstElementChild.textContent = `#${i + 1}`; });
+}
+function insRecompute() {
+  const sums = {}, counts = {};
+  phenoFields.forEach(f => { sums[f.key] = 0; counts[f.key] = 0; });
+  document.querySelectorAll('#ins-tbody tr').forEach(tr => {
+    tr.querySelectorAll('input').forEach(inp => {
+      const f = phenoFields.find(x => x.key === inp.dataset.key);
+      inp.classList.remove('err');
+      if (inp.value === '') return;
+      const v = parseFloat(inp.value);
+      if (isNaN(v) || v < f.min || v > f.max) { inp.classList.add('err'); return; }
+      sums[f.key] += v; counts[f.key]++;
+    });
+  });
+  const tfoot = document.getElementById('ins-tfoot');
+  tfoot.innerHTML = '<tr><td>Promedio</td>' +
+    phenoFields.map(f => `<td>${counts[f.key] ? (sums[f.key] / counts[f.key]).toFixed(2) : '—'}</td>`).join('') +
+    '<td></td></tr>';
+}
+async function insSubmit() {
+  const inv = +document.getElementById('ins-inv').value;
+  const week = document.getElementById('ins-week').value;
+  const result = document.getElementById('ins-result');
+  const rows = [];
+  document.querySelectorAll('#ins-tbody tr').forEach(tr => {
+    const row = {};
+    tr.querySelectorAll('input').forEach(inp => { if (inp.value !== '') row[inp.dataset.key] = parseFloat(inp.value); });
+    if (Object.keys(row).length) rows.push(row);
+  });
+  if (!rows.length) { result.className = 'insert-result bad'; result.textContent = 'Captura al menos una planta con datos.'; return; }
+  try {
+    const r = await fetch(`${API_BASE}/phenology/${inv}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week: week ? +week : null, rows }),
+    });
+    const j = await r.json();
+    if (!r.ok) { result.className = 'insert-result bad'; result.textContent = '⚠ ' + (j.detail || 'Error de validación'); return; }
+    const avgTxt = phenoFields.map(f => `${f.label}: ${j.averages[f.key] ?? '—'}`).join(' · ');
+    result.className = 'insert-result ok';
+    result.innerHTML = `✓ Captura validada · ${j.n_plants} planta(s)${week ? ' · semana ' + week : ''}<br>Promedios → ${avgTxt}<br><em>${j.note}</em>`;
+  } catch (e) {
+    result.className = 'insert-result bad'; result.textContent = 'No se pudo enviar: ' + e.message;
+  }
+}
+function buildInsertForm() {
+  if (!phenoFields.length) return;
+  insBuildHeader();
+  document.getElementById('ins-tbody').innerHTML = '';
+  document.getElementById('ins-add').addEventListener('click', insAddRow);
+  document.getElementById('ins-submit').addEventListener('click', insSubmit);
+  insAddRow(); insAddRow();   // arranca con 2 filas
+}
+
+/* ── Rendimiento kg/m² (superficie de cultivo, m²) ── */
+const AREA_M2 = { 3: 172.8 * 115, 4: 172.8 * 135 };   // Inv3 19,872 · Inv4 23,328
+
+function getMeta(num) {
+  const el = document.getElementById(`meta-input-${num}`);
+  const v = el ? parseFloat(el.value) : NaN;
+  return isNaN(v) ? 1.7 : v;
+}
+
+/* Card "Rendimiento prom. ambos inv" + chart meta vs proyectado (acumulado por semana) */
+function renderYieldGoal(num) {
+  if (!rawInv[3] || !rawInv[4]) return;
+  const a3 = AREA_M2[3], a4 = AREA_M2[4];
+  const p3 = rawInv[3].y_pred, p4 = rawInv[4].y_pred;
+  const t3 = rawInv[3].y_true, t4 = rawInv[4].y_true;
+  const weeks = rawInv[3].weeks;
+  const n = Math.min(p3.length, p4.length);
+
+  const meta = getMeta(num);
+  let cum = 0, cumReal = 0;
+  const projWeek = [], projCum = [], metaWeek = [], metaCum = [];
+  for (let i = 0; i < n; i++) {
+    const w = ((p3[i] / a3) + (p4[i] / a4)) / 2;   // producción proyectada de la semana i (prom. ambos)
+    cum     += w;
+    cumReal += (((t3[i] || 0) / a3) + ((t4[i] || 0) / a4)) / 2;
+    projWeek.push(+w.toFixed(3));
+    projCum.push(+cum.toFixed(3));
+    metaWeek.push(+meta.toFixed(3));
+    metaCum.push(+(meta * (i + 1)).toFixed(3));
+  }
+  const labels = weeks.slice(0, n).map(w => `S${w.iso_week}`);
+  const LIGHT = '#dbe3ea', GRID = 'rgba(244,237,224,.10)';
+
+  const id = `chart-yield-${num}`;
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (ctx) {
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { type: 'bar', label: 'Producción semanal', data: projWeek, yAxisID: 'yb', order: 3,
+            backgroundColor: 'rgba(101,163,13,.55)', borderColor: '#65a30d', borderWidth: 1, borderRadius: 3, categoryPercentage: 0.7, barPercentage: 0.9 },
+          { type: 'bar', label: 'Meta semanal', data: metaWeek, yAxisID: 'yb', order: 4,
+            backgroundColor: 'rgba(230,126,34,.40)', borderColor: '#e67e22', borderWidth: 1, borderRadius: 3, categoryPercentage: 0.7, barPercentage: 0.9 },
+          { type: 'line', label: 'Producción acumulada', data: projCum, yAxisID: 'yc', order: 1,
+            borderColor: '#a3e635', backgroundColor: 'rgba(163,230,53,.12)', borderWidth: 3, tension: 0.3, pointRadius: 0, fill: true },
+          { type: 'line', label: 'Meta acumulada', data: metaCum, yAxisID: 'yc', order: 2,
+            borderColor: '#f59e0b', borderDash: [6, 4], backgroundColor: 'transparent', borderWidth: 2.4, tension: 0, pointRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { color: LIGHT, font: { family: 'JetBrains Mono', size: 11 }, boxWidth: 14 } } },
+        scales: {
+          yb: { position: 'left', beginAtZero: true, title: { display: true, text: 'kg/m² · semana', color: LIGHT, font: { weight: 600 } }, ticks: { color: LIGHT }, grid: { color: GRID } },
+          yc: { position: 'right', beginAtZero: true, title: { display: true, text: 'kg/m² · acumulado', color: LIGHT, font: { weight: 600 } }, ticks: { color: LIGHT }, grid: { display: false } },
+          x: { ticks: { color: LIGHT, maxTicksLimit: 12, font: { size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+  }
+  // Stat card: rendimiento real acumulado promedio de ambos invernaderos
+  setText(`kpi-yield-avg-${num}`, cumReal.toFixed(1));
+  setText(`kpi-yield-trend-${num}`,
+    `proyectado ${(projCum[n - 1] || 0).toFixed(1)} · meta ${(metaCum[n - 1] || 0).toFixed(1)} kg/m²`);
+}
+
+function wireMeta(num) {
+  const el = document.getElementById(`meta-input-${num}`);
+  if (!el) return;
+  const saved = localStorage.getItem('jata_meta_kgm2');
+  if (saved) el.value = saved;
+  el.addEventListener('input', () => {
+    localStorage.setItem('jata_meta_kgm2', el.value);
+    const other = document.getElementById(`meta-input-${num === 3 ? 4 : 3}`);
+    if (other) other.value = el.value;
+    renderYieldGoal(3); renderYieldGoal(4);
+  });
+}
+
 async function init() {
   try {
-    const [preds3, preds4, metrics3, metrics4] = await Promise.all([
+    const [preds3, preds4, metrics3, metrics4, ph3, ph4] = await Promise.all([
       fetchJSON('/inference/3'),
       fetchJSON('/inference/4'),
       fetchJSON('/metrics/3'),
       fetchJSON('/metrics/4'),
+      fetchJSON('/phenology/3'),
+      fetchJSON('/phenology/4'),
     ]);
 
     rawInv[3] = preds3;
@@ -2507,6 +2963,14 @@ async function init() {
 
     renderInv(3, null);     // cursor inicial = mitad de T17
     renderInv(4, null);
+
+    rawPheno[3] = ph3; rawPheno[4] = ph4;
+    phenoFields = ph3.fields || [];
+    renderPhenology(3); renderPhenology(4);
+    buildInsertForm();
+
+    wireMeta(3); wireMeta(4);
+    renderYieldGoal(3); renderYieldGoal(4);
 
     console.log('[Huerta] backend OK',
       { inv3_R2: metrics3?.best?.['R²'], inv4_R2: metrics4?.best?.['R²'] });

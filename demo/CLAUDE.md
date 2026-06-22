@@ -29,15 +29,17 @@ El demo debe:
 ```
 demo/
 ├── CLAUDE.md            # este archivo
-└── Demo Dashboard.html  # SPA single-file (HTML+CSS+JS, ~2300 líneas)
+├── login.html          # pantalla de acceso (gate cosmético, ver §3)
+└── Demo Dashboard.html  # SPA single-file (HTML+CSS+JS, ~2990 líneas)
 ```
 
 El backend que alimenta este HTML vive en `../backend/`:
 
 ```
 backend/
-├── main.py            # FastAPI app: endpoints REST + sirve el HTML + warm al arrancar
-├── engine.py          # InferenceEngine: carga best_cnn_rnn_inv{3,4}.pt 1 vez, corre T17, cachea
+├── main.py            # FastAPI app: endpoints REST + sirve login/HTML + warm al arrancar
+├── engine.py          # InferenceEngine: carga predicciones T17 (.npz + métricas .csv), cachea
+├── data_api.py        # Lectura cruda de Data/: fenología (8 vars) + histórico mensual de sensores
 └── requirements.txt   # fastapi, uvicorn, numpy, pandas, openpyxl, torch, scipy, scikit-learn, pyyaml, matplotlib
 ```
 
@@ -79,8 +81,13 @@ uvicorn backend.main:app --port 8000 --reload
 http://localhost:8000/
 ```
 
+> **Login**: `GET /` sirve `login.html`. Es un **gate cosmético** (no valida
+> credenciales): al enviar, setea `sessionStorage.jata_auth='1'` + `jata_user`
+> y redirige a `/app`. El dashboard (`/app`) tiene una guarda client-side que
+> rebota a `/` si no existe `jata_auth`. Cualquier usuario/contraseña entra.
+
 > **Importante**: No abras el HTML con doble clic (`file://`).
-> El backend lo sirve desde `GET /` y `API_BASE` se auto-detecta a same-origin.
+> El backend lo sirve desde `GET /app` y `API_BASE` se auto-detecta a same-origin.
 
 ### Para detener
 `Ctrl+C` en la terminal del uvicorn.
@@ -97,13 +104,17 @@ Base URL: `http://localhost:8000`
 
 | Método | Path | Descripción |
 |---|---|---|
-| GET | `/` | Sirve `Demo Dashboard.html` desde mismo origen |
+| GET | `/` | Sirve `login.html` (gate cosmético) |
+| GET | `/app` | Sirve `Demo Dashboard.html` desde mismo origen |
 | GET | `/health` | `{status, model_version, sync_date, horizon_weeks, greenhouses_loaded}` |
 | GET | `/greenhouses` | `[{id, name}]` |
-| GET | `/inference/{inv}` | Arrays completos T17 (36 semanas) calculados desde el `.pt` (cacheado) |
+| GET | `/inference/{inv}` | Arrays completos T17 (36 semanas) desde `.npz` cacheado |
 | GET | `/inference/{inv}/window?cursor=N&horizon=6&past=5` | Recorte alrededor de la semana elegida (history + predictions) |
-| GET | `/metrics/{inv}` | `{source: live_inference, best, cptc_pi}` de la inferencia real |
+| GET | `/metrics/{inv}` | `{source: npz_cache, best, cptc_pi}` (best + intervalos CPTC desde `*_metrics.csv`) |
 | GET | `/predictions/{inv}` | Alias compat de `/inference/{inv}` |
+| **GET** | **`/phenology/{inv}`** | **Serie semanal (promedio sobre plantas) de las 8 vars de fenología + `fields` (metadatos) + `latest`** |
+| **POST** | **`/phenology/{inv}`** | **Valida filas-por-planta y devuelve el promedio (stub demo: NO persiste, ver §13)** |
+| **GET** | **`/sensor-history/{inv}?var=temp\|hr\|co2\|ce\|par`** | **Promedio mensual por temporada (una serie por T13–T17) para el modal "ver histórico"** |
 | GET | `/demo/...` | Archivos estáticos del directorio `demo/` |
 
 ### Formato de `/inference/{inv}` (alias: `/predictions/{inv}`)
@@ -146,44 +157,79 @@ revelado porque es test set). Si `cursor` se omite → mitad de T17.
 
 ### Formato de `/metrics/{inv}`
 
-`source: live_inference` → recalculado desde el `.pt` (no del `.npz`), por eso el
-R² difiere levemente del `*_metrics.csv` cacheado (re-ajuste de PCA/scalers).
+`source: npz_cache` → `best` + `cptc_pi` se leen de `cnn_rnn_inv{inv}_metrics.csv`
+(no se re-ejecuta el `.pt`). Son las métricas oficiales reportadas en §6.
 
 ```json
 {
   "inv_id": 3,
-  "source": "live_inference",
-  "best":    {"RMSE (kg)": 4623.2, "R²": 0.6856, "NSE": 0.6856, "PBIAS (%)": 2.99, "MAPE (%)": 11.03},
-  "cptc_pi": {"pi_coverage": 0.842, "pi_avg_width": 25769.1}
+  "source": "npz_cache",
+  "best":    {"R²": 0.7118, "RMSE (kg)": 4426.4, "MAPE (%)": 11.61, "NSE": 0.7118, "PBIAS (%)": 2.74},
+  "cptc_pi": {"pi_coverage": 0.842, "pi_avg_width": 26002.7}
 }
 ```
+
+### Formato de `/phenology/{inv}` (KPIs fenología + formulario)
+
+```json
+{
+  "inv_id": 3,
+  "fields": [{"col": "RACIMOS PUESTOS", "key": "racimos_puestos",
+              "label": "Racimos puestos", "unit": "conteo",
+              "min": 0, "max": 40, "step": 1}, ...],   // 8 campos (ver §6)
+  "seasons": [{"season": "T17", "weeks": [2,3,...],
+               "values": {"racimos_puestos": [1.0, 1.2, ...], ...}}, ...],
+  "latest": {"racimos_puestos": 22.8, "cantidad_tomates": 29.0, ...},
+  "latest_season": "T17"
+}
+```
+
+**POST `/phenology/{inv}`** → body `{"week": 35, "rows": [{key: valor, ...}, ...]}`
+(una fila por planta). Respuesta: `{n_plants, averages: {key: promedio}, persisted: false, note}`.
+Valida rango por campo → `422` con mensaje si algo cae fuera de `[min, max]`.
+
+### Formato de `/sensor-history/{inv}?var=temp` (modal "ver histórico")
+
+```json
+{
+  "inv_id": 3, "var": "temp",
+  "meta": {"source": "internas", "col": "Temperatura promedio", "label": "Temperatura", "unit": "°C"},
+  "months": ["Ene","Feb",...,"Dic"],
+  "series": [{"season": "T13", "points": [18.3, 19.7, ..., 17.6]}, ...]  // null donde el mes no existe
+}
+```
+Mapeo `var` → fuente: `temp/hr/co2` (internas), `ce` (riego), `par`
+(radiación exterior, proxy). `suelo` **no tiene datos** → sin "ver histórico".
 
 ---
 
 ## 5. Frontend — dashboard
 
 ### Tecnología
-- HTML+CSS+JS vanilla, single-file (~2300 líneas)
+- HTML+CSS+JS vanilla, single-file (~2990 líneas)
 - **Chart.js 4.4** vía CDN
 - Fuentes Google: Cormorant Garamond, JetBrains Mono, Inter
 - Sin framework, sin build step
 
 ### Layout
 ```
-<aside.sidebar>          → navegación lateral fija (JATA + 9 enlaces)
+<aside.sidebar>           → navegación lateral fija (JATA + enlaces)
 <div.app>
-  ├── 9× <section.view>  → vistas alternables (solo una .active)
-<script>                 → datos + Chart.js + router + init() async
+  ├── 10× <section.view>  → vistas alternables (solo una .active)
+<div.hist-modal>          → modal "ver histórico" de sensores (oculto por default)
+<style>                   → CSS de features (fenología, formulario, modal, yield-hero)
+<script>                  → datos + Chart.js + router + init() async
 ```
 
-### 9 vistas (`id="view-<name>"`)
+### 10 vistas (`id="view-<name>"`)
 
 | View | Sidebar | Contenido | Estado |
 |---|---|---|---|
 | `view-menu` | "Vista general" | Saludo + 2 cards (inv3, inv4) con KPIs + chart resumen | **Conectado** |
-| `view-inv3` / `view-inv4` | "Predicción" | **Slider manual de semana** (`‹ ›`) + KPIs (volumen, pico, semana pasada) + chart detalle + tabla 6 sem | **Conectado** |
-| `view-kpi3` / `view-kpi4` | "KPIs & gráficas" | Producción 12 sem, calibres (dona), error 8 sem, recursos (agua/fert) | **Mock** |
-| `view-live3` / `view-live4` | "Tiempo real" | 6 sensores (temp, HR, CO₂, suelo, PAR, CE) + 6 sistemas + chart 24h | **Mock** |
+| `view-insert` | "Insertar datos" | **Formulario fila-por-planta** de fenología (8 vars) + promedio auto + envío (stub) | **Conectado** |
+| `view-inv3` / `view-inv4` | "Predicción" | Slider manual (`‹ ›`) + KPIs (volumen, pico, **kg/m² 6 sem + acumulado T17**, semana pasada) + chart detalle + tabla 6 sem | **Conectado** |
+| `view-kpi3` / `view-kpi4` | "KPIs & gráficas" | **Hero kg/m² combo (meta vs producción)** arriba + card rendimiento prom. ambos + **panel fenología (8 vars)** + (mock: calibres, error, recursos) | **Parcial** |
+| `view-live3` / `view-live4` | "Tiempo real" | 6 sensores (temp, HR, CO₂, suelo, PAR, CE) con botón **"ver histórico"** (excepto suelo) + sistemas + chart 24h | **Mock + histórico real** |
 | `view-hist3` / `view-hist4` | "Histórico" | Tabla completa observado + predicho con % error | **Conectado** |
 
 ### Router (JS)
@@ -193,11 +239,14 @@ R² difiere levemente del `*_metrics.csv` cacheado (re-ajuste de PCA/scalers).
 
 ### Carga de datos (`init()`)
 ```
-1. Promise.all → /inference/{3,4} + /metrics/{3,4}
-2. Guarda payloads completos en rawInv[3], rawInv[4]
+1. Promise.all → /inference/{3,4} + /metrics/{3,4} + /phenology/{3,4}
+2. Guarda payloads en rawInv[3,4] y rawPheno[3,4]; phenoFields = ph3.fields
 3. wireSimControls(inv): listeners del slider (input) y flechas prev/next
 4. renderInv(inv, cursor=null): cursor inicial = mitad de T17 (índice 18)
-6. Si falla → banner rojo "Backend no disponible"
+5. renderPhenology(3,4): cards de las 8 vars con sparkline SVG
+6. buildInsertForm(): construye el formulario (header dinámico desde phenoFields + 2 filas)
+7. wireMeta(3,4) + renderYieldGoal(3,4): combo kg/m² meta vs producción (ver §13)
+8. Si falla → banner rojo "Backend no disponible"
 ```
 
 ### Slider manual — `renderInv(inv, cursor)`
@@ -224,6 +273,9 @@ const API_BASE = window.API_BASE
 - `tbody-inv3`, `tbody-inv4`, `tbody-hist3`, `tbody-hist4`
 - `chart-menu-3/4`, `chart-inv3/4`, `chart-kpi{3,4}-{prod,cat,err,res}`, `chart-live3/4`
 - KPI cards: `menu{3,4}-total/peak/peak-unit`, `inv{3,4}-total/peak/peak-unit`, `inv{3,4}-vs-{pred,real,err}`
+- **kg/m²**: `inv{3,4}-kgm2-win` (6 sem), `inv{3,4}-kgm2-acc` (T17), `kpi-yield-avg-{3,4}`, `kpi-yield-trend-{3,4}`, `chart-yield-{3,4}` (combo), `meta-input-{3,4}`
+- **Fenología**: `pheno-grid-{3,4}` (KPIs); formulario: `ins-inv`, `ins-week`, `ins-add`, `ins-thead/tbody/tfoot`, `ins-submit`, `ins-result`
+- **Histórico sensor**: `hist-modal`, `hist-canvas`, `hist-modal-title/sub`; botón `.sensor-hist-btn[data-hist-var][data-hist-inv]`
 - Slider de semana: `slider{3,4}` (range), `prev{3,4}` / `next{3,4}` (flechas), `simweek{3,4}` (rango fecha), `simcur{3,4}` ("19 / 36")
 - `sensor-grid-{3,4}`, `status-list-{3,4}`, `live{3,4}-ts`
 
@@ -313,13 +365,23 @@ x_temporal (B, 6, n_temporal) ────────────────�
   `rad_sum`, `rad_max`, `dh_ext`, `humedad_abs_ext`
 - Riego: `riego_total` (sum), `ph_promedio` (mean), `ce_promedio` (mean)
 
-**Fenología → MinMax(-1,1) concat post-PCA (sin PCA propio)** (5 cols crudas
-desde `BD TOMATE`):
-- `CANTIDAD DE TOMATES`
-- `RACIMOS PUESTOS`
-- `Nº DE RACIMO EN COSECHA`
-- `TOMATES MADUROS (COLOR 2)`
-- `CRECIMIENTO PLANTA (cm)`
+**Fenología → MinMax(-1,1) concat post-PCA (sin PCA propio)** — **8 cols** crudas
+desde `BD TOMATE` (`cnn_rnn_yield.PHENO_FEATURE_COLS`, autoritativo; capturadas
+por planta y promediadas por `SEMANA DEL AÑO`):
+
+| Columna `BD TOMATE` | `key` (API/form) | Unidad | Rango T17 |
+|---|---|---|---|
+| `RACIMOS PUESTOS` | racimos_puestos | conteo | 1–33 |
+| `FLORES EN RACIMO ABIERTAS` | flores_abiertas | conteo | 1–6 |
+| `CANTIDAD DE RACIMOS EN PLANTA` | racimos_planta | conteo | 1–10 |
+| `CANTIDAD DE TOMATES` | cantidad_tomates | conteo | 0–39 |
+| `Nº DE RACIMO EN COSECHA` | racimo_cosecha | índice | 0–32 |
+| `TOMATES MADUROS (COLOR 2)` | tomates_maduros | conteo | 0–3 |
+| `DIAMETRO DEL FRUTO cm` | diametro_fruto | cm ⚠️ ¿mm? | 0–53 |
+| `CRECIMIENTO PLANTA (cm)` | crecimiento_planta | cm/sem | 11–33 |
+
+> ⚠️ `DIAMETRO DEL FRUTO` llega a ~53 con header "cm" → casi seguro **mm**.
+> Confirmar con el cliente (afecta unidad mostrada y validación en el formulario).
 
 **Temporal → bypass CNN, concat al LSTM input**:
 - `dias_desde_transplante`, `week_in_season`
@@ -426,16 +488,25 @@ Todos los datos viven en `/Data/` (mayúscula). Archivos clave:
 - Verificado en navegador (Playwright): slider, flechas, clamp en extremos, charts y totales actualizan OK
 - `requirements.txt` completo (faltaban torch/scipy/scikit-learn/pyyaml/matplotlib → causa del fallo previo)
 - `Fechas de Transplante.xlsx` regenerado desde PDF
+- **Login** `login.html` (gate cosmético, `sessionStorage.jata_auth`)
+- **`backend/data_api.py`** + endpoints `/phenology/{inv}` (GET/POST), `/sensor-history/{inv}`
+- **Fenología en KPIs**: panel con las 8 vars (valor + sparkline) desde `/phenology`
+- **"Insertar datos"**: formulario fila-por-planta, promedio automático, validación de rango (stub sin persistencia)
+- **"Ver histórico"** de sensores: modal con line-chart de promedio mensual, una línea por temporada T13–T17
+- **Rendimiento kg/m²** (ver §13): KPIs de predicción + card prom. ambos + hero combo meta vs producción
+- Verificado en navegador (Playwright): paneles, formulario (envío OK + 422), modal, combo y cambio de meta
 
 ### 🚧 En desarrollo
 - (Opcional) Endpoint SSE `/inference/{inv}/stream?delay_ms=N` para animar server-side
-- Banner "MOCK / Demo" sobre vistas KPIs & Live (mientras no haya sensores live ni Vision Computer)
+- Banner "MOCK / Demo" sobre las gráficas mock restantes de KPIs & Live
+- **Persistencia de fenología** (POST hoy es stub) → migrar a **Supabase** en deployment
 
-### 📋 Vistas que siguen mock (por diseño)
-| Vista | Por qué | Cuándo conectar |
+### 📋 Lo que sigue mock (por diseño)
+| Elemento | Por qué | Cuándo conectar |
 |---|---|---|
-| KPIs (prod/calibres/error/recursos) | Calibres requiere Vision Computer (YOLO) que aún no produce features | Tras integración YOLOv11-seg |
-| Tiempo real (sensores + sistemas) | No hay sensores live aún, solo Excel diario | Tras stack InfluxDB+Telegraf+Grafana |
+| KPIs: calibres (dona), error 8 sem, recursos | Calibres requiere Vision Computer (YOLO) que aún no produce features | Tras integración YOLOv11-seg |
+| Tiempo real: valores de sensores + sistemas | No hay sensores live aún, solo Excel diario (el **histórico** sí es real) | Tras stack InfluxDB+Telegraf+Grafana |
+| KPIs: eficiencia hídrica, precisión, mortalidad | Cards estáticas de ejemplo | Cuando haya datos de riego/mortalidad por ciclo |
 
 ---
 
@@ -508,3 +579,63 @@ Todos los datos viven en `/Data/` (mayúscula). Archivos clave:
 - **Cliente**: exportador de jitomate a EE.UU./Canadá
 - **Empresa**: JATA (AgTech consultoría de IA)
 - **Métricas de éxito**: utilidad operativa, no solo R²/RMSE
+
+---
+
+## 13. Rendimiento kg/m² (display, sin reentrenar)
+
+El modelo predice **kg absolutos**; kg/m² es un **reescalado lineal** para
+mostrar al cliente (no afecta el entrenamiento). Vive en el frontend.
+
+### Superficie de cultivo (constante por invernadero)
+```
+A = largo × ancho
+A₃ = 172.8 × 115 = 19,872 m²     (Inv3)
+A₄ = 172.8 × 135 = 23,328 m²     (Inv4)
+```
+Definida en JS: `const AREA_M2 = { 3: 172.8*115, 4: 172.8*135 }`.
+> Dato dado por el cliente como **superficie de cultivo** (no construida).
+
+### Fórmulas
+```
+# kg/m² semanal por invernadero
+r_inv[i] = kg_inv[i] / A_inv
+
+# Producción semanal promedio de ambos (barras verdes del hero)
+prodSemana[i] = ( pred₃[i]/A₃ + pred₄[i]/A₄ ) / 2
+
+# Producción acumulada (línea verde, eje derecho)
+prodAcum[k]   = Σ_{i=0..k} prodSemana[i]
+
+# Meta del cliente: un valor M (kg/m² por semana, input editable, default 1.7)
+metaSemana[i] = M                 # barras naranjas (constante)
+metaAcum[k]   = M × (k + 1)       # recta ámbar punteada
+
+# Card "Rendimiento prom. ambos inv" (real acumulado de toda la temporada)
+rendReal = Σ_i ( real₃[i]/A₃ + real₄[i]/A₄ ) / 2     # ≈ 60.7 kg/m² (T17)
+
+# KPIs del Resumen de Predicción (por invernadero)
+inv{inv}-kgm2-win = (suma de las 6 predicciones de la ventana) / A_inv
+inv{inv}-kgm2-acc = (suma de todo el kg real de la temporada) / A_inv
+```
+
+Ambos invernaderos comparten exactamente las **mismas 36 semanas** T17
+(week_keys 202535→202618) → se alinean por índice directo.
+
+### Hero combo (`renderYieldGoal(num)` → `chart-yield-{num}`)
+Va **arriba de los KPIs**, sobre panel oscuro (`.yield-hero`, gradiente navy):
+- **Barras** `yAxisID: 'yb'` (izq, kg/m² · semana): producción semanal (verde) + meta semanal (naranja).
+- **Líneas** `yAxisID: 'yc'` (der, kg/m² · acumulado): producción acumulada (verde, área) + meta acumulada (ámbar punteada).
+- Input `meta-input-{num}` → `localStorage.jata_meta_kgm2`; **una sola meta global**, sincroniza ambas vistas y repinta `renderYieldGoal(3,4)`.
+- Lectura de negocio: línea verde sobre la ámbar = vamos adelantados a la meta; por debajo = vamos cortos.
+
+### Números de referencia (T17)
+| | kg/m² acumulado (real) | kg/m²·sem (prom) |
+|---|---|---|
+| Inv3 | 59.8 | 1.66 |
+| Inv4 | 61.6 | 1.71 |
+| **Prom. ambos** | **60.7** | **~1.69** |
+
+### Pendiente
+- ¿Meta **independiente por invernadero** vs global (hoy)?
+- ¿Barras de **real** además de proyectado en el hero?

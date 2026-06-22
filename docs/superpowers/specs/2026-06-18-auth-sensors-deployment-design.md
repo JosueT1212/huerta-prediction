@@ -159,12 +159,9 @@ CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 | Modify `demo/login.html` | Real Supabase auth (replace fake sessionStorage) |
 | Modify `demo/Demo Dashboard.html` | JWT headers on fetch, live sensor polling, user management panel |
 
-### Deployment stages
+### Deployment
 
-| Stage | Platform | Cost |
-|---|---|---|
-| Demo | Railway Hobby | ~$5/mo (covered by credit) |
-| Production | Hetzner CX22 VPS | ~$4.50/mo — same Dockerfile, add nginx + SSL |
+Railway Hobby plan (~$5/mo, covered by included credit) for both demo and production. No migration needed — 2 greenhouses never exceed Railway's resource limits.
 
 ---
 
@@ -197,14 +194,3 @@ FastAPI calls Supabase Admin API (`SUPABASE_SERVICE_KEY`) to create `auth.users`
 - Sensor data feeding into live CNN-RNN inference (model still runs on historical T17; live inference is a future task)
 - Multi-greenhouse expansion beyond inv3/inv4
 
----
-
-## Migration Path (Demo → Production)
-
-1. Provision Hetzner CX22 ($4.50/mo)
-2. Install Docker + nginx on the server
-3. `docker pull` or `git clone` + `docker build` — same Dockerfile
-4. Set same 4 env vars
-5. Add nginx reverse proxy + Let's Encrypt SSL (free)
-6. Point domain DNS to Hetzner IP
-7. Total cost: ~$4.50/mo + Supabase free tier

@@ -1421,7 +1421,7 @@ docker run -p 8000:8000 \
 
 Expected: container starts, `http://localhost:8000/health` returns `{"status":"ok",...}`.
 
-- [ ] **Step 5: Deploy to Railway (demo)**
+- [ ] **Step 5: Deploy to Railway**
 
 1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
 2. Select `JosueT1212/Huerta_Prediction`

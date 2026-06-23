@@ -838,7 +838,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0, ramp_weeks=None, ramp_weight=None, return_arrays=False):
+def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transform='boxcox', skip_first_weeks=0, ramp_weeks=None, ramp_weight=None, return_arrays=False, pipeline_path=None):
     """Load data, normalize, split into train/val/test, create DataLoaders."""
     train_df, val_df, test_df, feature_cols, df_sensor_all = build_dataset_for_greenhouse(
         invernadero_id, horizon=0,
@@ -1033,6 +1033,42 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     _has_wk = 'prod_week_key' in test_df.columns
     test_week_keys = test_df['prod_week_key'].values if _has_wk else np.arange(len(y_te))
     wis_test = pos_te  # week_in_season of each test sequence target (== pos within season)
+
+    if pipeline_path is not None:
+        import joblib
+        # Resolve pheno scaler and cols (only defined if pheno_cols is non-empty and _pheno_cols exists)
+        _pipeline_pheno_cols = []
+        _pipeline_scaler_Xp = None
+        if pheno_cols:
+            avail_pheno_s = [c for c in pheno_cols if c in sensor_tr_df.columns]
+            avail_pheno_p = [c for c in pheno_cols if c in train_df.columns]
+            _pipeline_pheno_cols = avail_pheno_s if avail_pheno_s else avail_pheno_p
+            if _pipeline_pheno_cols:
+                _pipeline_scaler_Xp = MinMaxScaler(feature_range=(-1, 1))
+                _pheno_src = sensor_tr_df if avail_pheno_s else train_df
+                _pipeline_scaler_Xp.fit(_pheno_src[_pipeline_pheno_cols].values.astype('float32'))
+        _pheno_means = {}
+        for col in _pipeline_pheno_cols:
+            _src_df = train_df if col in train_df.columns else None
+            if _src_df is not None and 'week_in_season' in _src_df.columns:
+                _pheno_means[col] = _src_df.groupby('week_in_season')[col].mean().to_dict()
+        pipeline = {
+            'scaler_Xs':     scaler_Xs,
+            'pca':           pca,
+            'scaler_Xp':     _pipeline_scaler_Xp,
+            'scaler_Xt':     scaler_Xt,
+            'scaler_y':      scaler_y,
+            'bc_lambda':     bc_lambda,
+            'sensor_cols':   list(avail_sensor),
+            'pheno_cols':    _pipeline_pheno_cols,
+            'temporal_cols': list(avail_temporal),
+            'pheno_means':   _pheno_means,
+            'seq_len':       hp['seq_len'],
+            'transform':     transform,
+        }
+        joblib.dump(pipeline, pipeline_path)
+        print(f'  Pipeline saved → {pipeline_path}')
+
     return train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys, wis_test
 
 

@@ -5,3 +5,4 @@ pandas>=2.0
 supabase>=2.3
 pytest>=8.0
 httpx>=0.27
+joblib>=1.3

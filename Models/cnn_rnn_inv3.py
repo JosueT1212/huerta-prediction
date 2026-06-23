@@ -47,7 +47,8 @@ def main():
         prepare_data(INV_ID, HP, train_seasons=TRAIN_SEASONS, val_season=VAL_SEASON,
                      skip_first_weeks=HP.get('skip_first_weeks', 0),
                      ramp_weeks=HP.get('ramp_weeks', 4),
-                     ramp_weight=HP.get('ramp_weight', 1.0))
+                     ramp_weight=HP.get('ramp_weight', 1.0),
+                     pipeline_path=RESULTS_DIR / 'pipeline_inv3.pkl')
 
     n_runs = len(HP['seeds']) * len(HP['init_methods'])
     print(f'\n  {n_runs} runs ({len(HP["seeds"])} seeds × {len(HP["init_methods"])} inits)')

@@ -32,6 +32,7 @@ from backend.auth import get_current_user  # noqa: E402
 from backend.routers import ingest as ingest_router  # noqa: E402
 from backend.routers import sensors as sensors_router  # noqa: E402
 from backend.routers import admin as admin_router  # noqa: E402
+from backend.routers import predictions as predictions_router  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 DEMO_DIR = ROOT / 'demo'
@@ -64,6 +65,7 @@ app.add_middleware(
 app.include_router(ingest_router.router)
 app.include_router(sensors_router.router)
 app.include_router(admin_router.router)
+app.include_router(predictions_router.router)
 
 
 def _check_inv(inv: int):

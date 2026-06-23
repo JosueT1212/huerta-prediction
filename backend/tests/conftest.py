@@ -55,6 +55,7 @@ def mock_supa(monkeypatch):
     monkeypatch.setattr("backend.routers.ingest.service_client", mock)
     monkeypatch.setattr("backend.routers.sensors.service_client", mock)
     monkeypatch.setattr("backend.routers.admin.service_client", mock)
+    monkeypatch.setattr("backend.routers.predictions.service_client", mock)
     return mock
 
 

@@ -188,11 +188,27 @@ os.environ.setdefault("INGEST_TOKEN", "test-ingest-token")
 
 @pytest.fixture(autouse=True)
 def mock_engine(monkeypatch):
+    # engine.py now loads from .npz (not .pt) — warm() reads files; mock it out
     mock = MagicMock()
     mock.warm.return_value = None
     mock.loaded.return_value = [3, 4]
+    mock.payload.return_value = {"inv_id": 3, "weeks": [], "y_true": [], "y_pred": []}
+    mock.metrics.return_value = {"inv_id": 3, "source": "npz_cache", "best": {}, "cptc_pi": {}}
+    mock.window.return_value = {"inv_id": 3, "cursor": 0, "history": [], "predictions": []}
     monkeypatch.setattr("backend.main.ENGINE", mock)
     return mock
+
+
+@pytest.fixture(autouse=True)
+def mock_data_api(monkeypatch):
+    # data_api reads Excel files from Data/ — mock all three functions
+    mock_pheno = {"inv_id": 3, "fields": [], "seasons": [], "latest": {}, "latest_season": "T17"}
+    mock_hist = {"inv_id": 3, "var": "temp", "meta": {}, "months": [], "series": []}
+    mock_avg = {"n_plants": 1, "averages": {}}
+    monkeypatch.setattr("backend.main.data_api.phenology_weekly", lambda inv: mock_pheno)
+    monkeypatch.setattr("backend.main.data_api.sensor_history", lambda inv, var: mock_hist)
+    monkeypatch.setattr("backend.main.data_api.validate_and_average", lambda rows: mock_avg)
+    return mock_pheno
 
 
 @pytest.fixture
@@ -362,15 +378,39 @@ git commit -m "feat(auth): JWT get_current_user dep, /me + /config endpoints"
 - Modify: `backend/main.py`
 - Modify: `backend/tests/test_auth.py`
 
-- [ ] **Step 1: Run the two new tests added in Task 4 to confirm they fail**
+- [ ] **Step 1: Add new failing tests to `backend/tests/test_auth.py`**
 
-```bash
-python -m pytest backend/tests/test_auth.py::test_inference_requires_auth backend/tests/test_auth.py::test_metrics_requires_auth -v
+```python
+def test_inference_requires_auth(api_client):
+    r = api_client.get("/inference/3")
+    assert r.status_code == 401
+
+def test_metrics_requires_auth(api_client):
+    r = api_client.get("/metrics/3")
+    assert r.status_code == 401
+
+def test_phenology_get_requires_auth(api_client):
+    r = api_client.get("/phenology/3")
+    assert r.status_code == 401
+
+def test_phenology_post_requires_auth(api_client):
+    r = api_client.post("/phenology/3", json={"rows": []})
+    assert r.status_code == 401
+
+def test_sensor_history_requires_auth(api_client):
+    r = api_client.get("/sensor-history/3?var=temp")
+    assert r.status_code == 401
 ```
 
-Expected: FAIL — routes currently return 200 without auth.
+- [ ] **Step 2: Run to confirm failures**
 
-- [ ] **Step 2: Add JWT dep to inference/metrics/predictions routes in `backend/main.py`**
+```bash
+python -m pytest backend/tests/test_auth.py::test_inference_requires_auth backend/tests/test_auth.py::test_phenology_get_requires_auth -v
+```
+
+Expected: FAIL — routes return 200 without auth.
+
+- [ ] **Step 3: Add JWT dep to all data routes in `backend/main.py`**
 
 Find and update `inference`:
 ```python
@@ -388,7 +428,7 @@ Find and update `inference_window`:
 @app.get('/inference/{inv}/window')
 def inference_window(
     inv: int,
-    cursor: int | None = Query(None),
+    cursor: int | None = Query(None, description='Índice de semana T17 (0..n-1)'),
     horizon: int = Query(6, ge=1, le=12),
     past: int = Query(5, ge=0, le=20),
     _user: Annotated[dict, Depends(get_current_user)] = None,
@@ -417,6 +457,54 @@ def predictions(
 ):
     _check_inv(inv)
     return ENGINE.payload(inv)
+```
+
+Find and update `phenology` GET:
+```python
+@app.get('/phenology/{inv}')
+def phenology(
+    inv: int,
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    _check_inv(inv)
+    return data_api.phenology_weekly(inv)
+```
+
+Find and update `submit_phenology` POST:
+```python
+@app.post('/phenology/{inv}')
+def submit_phenology(
+    inv: int,
+    payload: PhenologySubmission,
+    _user: Annotated[dict, Depends(get_current_user)],
+):
+    _check_inv(inv)
+    try:
+        result = data_api.validate_and_average(payload.rows)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {
+        'inv_id': inv,
+        'week': payload.week,
+        'persisted': False,
+        'note': 'Demo sin persistencia — los datos se guardarán en Supabase tras el deployment.',
+        **result,
+    }
+```
+
+Find and update `sensor_hist`:
+```python
+@app.get('/sensor-history/{inv}')
+def sensor_hist(
+    inv: int,
+    var: str = Query(..., description='temp|hr|co2|ce|par'),
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    _check_inv(inv)
+    try:
+        return data_api.sensor_history(inv, var)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
 ```
 
 - [ ] **Step 3: Run all auth tests**
@@ -918,7 +1006,7 @@ Three changes: (1) JWT headers on all API calls, (2) live sensor polling on "Tie
 
 - [ ] **Step 1: Replace session guard and update `fetchJSON`**
 
-Find (lines ~1705–1707):
+Find (line ~1892):
 ```javascript
 if (!sessionStorage.getItem('jata_auth')) {
   window.location.replace('/');
@@ -930,7 +1018,7 @@ Replace with:
 if (!localStorage.getItem('sb_token')) { window.location.replace('/'); }
 ```
 
-Find `fetchJSON` function (lines ~1751–1753):
+Find `fetchJSON` function (line ~1938):
 ```javascript
 async function fetchJSON(path) {
   const r = await fetch(`${API_BASE}${path}`);
@@ -949,6 +1037,23 @@ async function fetchJSON(path) {
     window.location.replace('/');
     return null;
   }
+```
+
+Also find the direct `fetch()` for phenology POST (line ~2842) — this bypasses `fetchJSON` so needs JWT added manually:
+
+```javascript
+    const r = await fetch(`${API_BASE}/phenology/${inv}`, {
+```
+
+Replace with:
+```javascript
+    const token = localStorage.getItem('sb_token');
+    const r = await fetch(`${API_BASE}/phenology/${inv}`, {
+```
+
+And in the same `fetch()` options object, add the Authorization header. Find the `headers:` inside that fetch and add `'Authorization': \`Bearer ${token}\`` to it. If no `headers` key exists, add:
+```javascript
+      headers: { 'Authorization': `Bearer ${token}` },
 ```
 
 - [ ] **Step 2: Add live sensor polling for "Tiempo real" views**

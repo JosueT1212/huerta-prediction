@@ -214,6 +214,50 @@ Opens modal → user selects week from dropdown (past predictions with null `kg_
 
 ---
 
+**Wide sensor table (Excel-mirroring schema):**
+
+Add a `sensor_readings_wide` table whose columns match the Excel training schema exactly — one row per day per greenhouse, one column per sensor. When `POST /ingest/sensors` receives a reading, it writes to `sensor_readings` (narrow, current) AND upserts the value into the corresponding column of `sensor_readings_wide` (wide, training-compatible).
+
+Proposed schema:
+```sql
+create table if not exists sensor_readings_wide (
+  id              bigserial   primary key,
+  greenhouse_id   int         not null,
+  fecha           date        not null,        -- maps to "Fecha" column in Excel
+  -- Internal sensors (Variables internas)
+  temp_prom_int   float8,
+  temp_min_int    float8,
+  temp_max_int    float8,
+  hr_prom_int     float8,
+  co2_ppm         float8,
+  riego_total     float8,
+  ph_promedio     float8,
+  ce_promedio     float8,
+  -- External sensors (Variables exteriores)
+  temp_prom_ext   float8,
+  temp_max_ext    float8,
+  temp_min_ext    float8,
+  rad_sum         float8
+);
+
+create unique index if not exists sensor_wide_gh_date
+  on sensor_readings_wide (greenhouse_id, fecha);
+```
+
+Ingest router change — after writing to `sensor_readings`, also upsert into `sensor_readings_wide`:
+```python
+# map sensor_name → column in wide table (same names, so trivial)
+service_client.table("sensor_readings_wide").upsert({
+    "greenhouse_id": reading.greenhouse_id,
+    "fecha": reading.recorded_at.date().isoformat(),
+    reading.sensor_name: reading.value,   # only the one column being updated
+}, on_conflict="greenhouse_id,fecha").execute()
+```
+
+This dual-write keeps both representations in sync. The wide table can be exported directly as CSV matching the Excel format expected by the training pipeline — enabling retraining on live data in the future.
+
+---
+
 ## Section 7: Phenology Input (user-entered, stored in Supabase)
 
 Phenology features require manual field observation — they cannot come from sensors. Users enter them weekly via the dashboard.

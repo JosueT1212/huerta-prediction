@@ -12,11 +12,13 @@ Abrir:
 """
 from __future__ import annotations
 
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from engine import ENGINE  # noqa: E402
 import data_api  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
+from backend.auth import get_current_user  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 DEMO_DIR = ROOT / 'demo'
@@ -88,6 +91,19 @@ def health():
     }
 
 
+@app.get('/config')
+def config():
+    return {
+        'supabase_url': os.environ['SUPABASE_URL'],
+        'supabase_anon_key': os.environ['SUPABASE_ANON_KEY'],
+    }
+
+
+@app.get('/me')
+def me(current_user: Annotated[dict, Depends(get_current_user)]):
+    return current_user
+
+
 @app.get('/greenhouses')
 def greenhouses():
     return [{'id': i, 'name': f'Invernadero {i}'} for i in INV_IDS]
@@ -95,7 +111,7 @@ def greenhouses():
 
 # ── Inferencia (modelos cargados en backend) ───────────────────────────────
 @app.get('/inference/{inv}')
-def inference(inv: int):
+def inference(inv: int, current_user: Annotated[dict, Depends(get_current_user)]):
     """Arrays completos T17 calculados desde best_cnn_rnn_inv{inv}.pt."""
     _check_inv(inv)
     return ENGINE.payload(inv)
@@ -114,7 +130,7 @@ def inference_window(
 
 
 @app.get('/metrics/{inv}')
-def metrics(inv: int):
+def metrics(inv: int, current_user: Annotated[dict, Depends(get_current_user)]):
     """Métricas de la inferencia real (best + intervalos CPTC)."""
     _check_inv(inv)
     return ENGINE.metrics(inv)
@@ -129,7 +145,7 @@ def predictions(inv: int):
 
 # ── Fenología (KPIs + formulario "Insertar datos") ────────────────────────
 @app.get('/phenology/{inv}')
-def phenology(inv: int):
+def phenology(inv: int, current_user: Annotated[dict, Depends(get_current_user)]):
     """Serie semanal (promedio) de las 8 variables de fenología que entrena el modelo."""
     _check_inv(inv)
     return data_api.phenology_weekly(inv)
@@ -141,7 +157,7 @@ class PhenologySubmission(BaseModel):
 
 
 @app.post('/phenology/{inv}')
-def submit_phenology(inv: int, payload: PhenologySubmission):
+def submit_phenology(inv: int, payload: PhenologySubmission, current_user: Annotated[dict, Depends(get_current_user)]):
     """Demo: valida filas-por-planta y devuelve el promedio calculado (NO persiste)."""
     _check_inv(inv)
     try:
@@ -159,7 +175,7 @@ def submit_phenology(inv: int, payload: PhenologySubmission):
 
 # ── Histórico de sensores (vista "Tiempo real" → "ver histórico") ──────────
 @app.get('/sensor-history/{inv}')
-def sensor_hist(inv: int, var: str = Query(..., description='temp|hr|co2|ce|par')):
+def sensor_hist(inv: int, current_user: Annotated[dict, Depends(get_current_user)], var: str = Query(..., description='temp|hr|co2|ce|par')):
     """Promedio mensual por temporada (una serie por temporada T13–T17)."""
     _check_inv(inv)
     try:

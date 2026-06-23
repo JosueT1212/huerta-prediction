@@ -36,6 +36,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
 from scipy.stats import boxcox
 from scipy.special import inv_boxcox
+import joblib
 
 import torch
 import torch.nn as nn
@@ -1035,7 +1036,6 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     wis_test = pos_te  # week_in_season of each test sequence target (== pos within season)
 
     if pipeline_path is not None:
-        import joblib
         # Resolve pheno scaler and cols (only defined if pheno_cols is non-empty and _pheno_cols exists)
         _pipeline_pheno_cols = []
         _pipeline_scaler_Xp = None
@@ -1049,7 +1049,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
                 _pipeline_scaler_Xp.fit(_pheno_src[_pipeline_pheno_cols].values.astype('float32'))
         _pheno_means = {}
         for col in _pipeline_pheno_cols:
-            _src_df = train_df if col in train_df.columns else None
+            _src_df = train_df if col in train_df.columns else (sensor_tr_df if col in sensor_tr_df.columns else None)
             if _src_df is not None and 'week_in_season' in _src_df.columns:
                 _pheno_means[col] = _src_df.groupby('week_in_season')[col].mean().to_dict()
         pipeline = {

@@ -64,3 +64,20 @@ def test_sensors_returns_list(api_client, mock_supa):
     r = api_client.get("/sensors/3", headers={"Authorization": "Bearer valid-token"})
     assert r.status_code == 200
     assert isinstance(r.json(), list)
+
+
+def test_ingest_also_writes_wide_table(api_client, mock_supa):
+    mock_supa.table.return_value.insert.return_value.execute.return_value = MagicMock()
+    mock_supa.table.return_value.upsert.return_value.execute.return_value = MagicMock()
+    api_client.post(
+        "/ingest/sensors",
+        json={
+            "greenhouse_id": 3,
+            "sensor_name": "temp_prom_int",
+            "value": 24.5,
+            "recorded_at": "2026-06-23T10:00:00Z",
+        },
+        headers={"Authorization": "Bearer test-ingest-token"},
+    )
+    calls = [str(c) for c in mock_supa.table.call_args_list]
+    assert any("sensor_readings_wide" in c for c in calls)

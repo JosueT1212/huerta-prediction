@@ -1204,6 +1204,11 @@
     <button class="sb-link sb-sub" data-view="hist4"><span class="ico">≡</span>Histórico</button>
   </div>
 
+  <div class="sb-section">Administración</div>
+  <div class="sb-group">
+    <button class="sb-link" data-goto="usuarios"><span class="dot"></span>Usuarios</button>
+  </div>
+
 </aside>
 
 <div class="app">
@@ -1808,6 +1813,46 @@
     </div>
   </section>
 
+  <!-- ============ USUARIOS VIEW ============ -->
+  <section class="view" id="view-usuarios">
+    <div style="padding:32px;max-width:860px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2 style="font-size:1.4rem;font-weight:600">Gestión de Usuarios</h2>
+        <button onclick="openNewUserModal()" style="background:#65a30d;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:0.9rem">+ Nuevo usuario</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.9rem" id="users-table">
+        <thead>
+          <tr style="border-bottom:2px solid #e2e5e9">
+            <th style="text-align:left;padding:10px 8px">Nombre</th>
+            <th style="text-align:left;padding:10px 8px">Estado</th>
+            <th style="text-align:left;padding:10px 8px">Creado</th>
+            <th style="padding:10px 8px"></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="new-user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:10px;padding:32px;width:400px;max-width:95vw">
+        <h3 style="margin-bottom:20px;font-size:1.1rem">Nuevo usuario</h3>
+        <label style="display:block;margin-bottom:12px;font-size:0.9rem">
+          Correo electrónico<br>
+          <input id="nu-email" type="email" style="width:100%;margin-top:4px;padding:8px;border:1px solid #d2d6db;border-radius:6px">
+        </label>
+        <label style="display:block;margin-bottom:20px;font-size:0.9rem">
+          Nombre completo<br>
+          <input id="nu-name" type="text" style="width:100%;margin-top:4px;padding:8px;border:1px solid #d2d6db;border-radius:6px">
+        </label>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="closeNewUserModal()" style="padding:8px 18px;border:1px solid #d2d6db;background:#fff;border-radius:6px;cursor:pointer">Cancelar</button>
+          <button onclick="submitNewUser()" style="padding:8px 18px;background:#65a30d;color:#fff;border:none;border-radius:6px;cursor:pointer">Invitar</button>
+        </div>
+        <p id="nu-error" style="color:red;margin-top:10px;font-size:0.85rem;display:none"></p>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <!-- ============ MODAL HISTÓRICO SENSOR ============ -->
@@ -1889,9 +1934,7 @@
 
 <script>
 /* Guarda de sesión: si no hay login, regresa a la pantalla de acceso */
-if (!sessionStorage.getItem('jata_auth')) {
-  window.location.replace('/');
-}
+if (!localStorage.getItem('sb_token')) { window.location.replace('/'); }
 
 /* =========================================================
    DATA (demo)
@@ -1936,7 +1979,16 @@ function fmtWeekLabel(year, week) {
 }
 
 async function fetchJSON(path) {
-  const r = await fetch(`${API_BASE}${path}`);
+  const token = localStorage.getItem('sb_token');
+  if (!token) { window.location.replace('/'); return null; }
+  const r = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (r.status === 401) {
+    localStorage.removeItem('sb_token');
+    window.location.replace('/');
+    return null;
+  }
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
@@ -2034,6 +2086,12 @@ function showView(viewId) {
   if (sbBtn) sbBtn.classList.add('active');
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // start/stop sensor polling when entering/leaving live views
+  if (viewId === 'live3') startSensorPolling(3);
+  else stopSensorPolling(3);
+  if (viewId === 'live4') startSensorPolling(4);
+  else stopSensorPolling(4);
 }
 
 document.querySelectorAll('[data-goto]').forEach(el => {
@@ -2839,8 +2897,9 @@ async function insSubmit() {
   });
   if (!rows.length) { result.className = 'insert-result bad'; result.textContent = 'Captura al menos una planta con datos.'; return; }
   try {
+    const token = localStorage.getItem('sb_token');
     const r = await fetch(`${API_BASE}/phenology/${inv}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ week: week ? +week : null, rows }),
     });
     const j = await r.json();
@@ -2985,6 +3044,119 @@ async function init() {
 }
 
 init();
+
+// ── Live sensor polling ────────────────────────────────────────────────────
+const SENSOR_LABELS = {
+  temp_prom_int: 'Temp interior (°C)',
+  hr_prom_int:   'Humedad interior (%)',
+  co2_ppm:       'CO₂ (ppm)',
+  temp_prom_ext: 'Temp exterior (°C)',
+  rad_sum:       'Radiación (W/m²)',
+  riego_total:   'Riego total (L)',
+};
+
+const _sensorIntervals = {};
+
+async function startSensorPolling(inv) {
+  if (_sensorIntervals[inv]) clearInterval(_sensorIntervals[inv]);
+  await refreshSensors(inv);
+  _sensorIntervals[inv] = setInterval(() => refreshSensors(inv), 30000);
+}
+
+function stopSensorPolling(inv) {
+  if (_sensorIntervals[inv]) {
+    clearInterval(_sensorIntervals[inv]);
+    delete _sensorIntervals[inv];
+  }
+}
+
+async function refreshSensors(inv) {
+  const data = await fetchJSON(`/sensors/${inv}?limit=200`);
+  if (!data) return;
+
+  const grid = document.getElementById(`sensor-grid-${inv}`);
+  if (!grid) return;
+
+  const latest = {};
+  data.forEach(r => { if (!latest[r.sensor_name]) latest[r.sensor_name] = r; });
+
+  grid.innerHTML = Object.entries(latest).map(([name, r]) => `
+    <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:140px">
+      <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">${SENSOR_LABELS[name] || name}</div>
+      <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${r.value.toFixed(1)}</div>
+      <div style="font-size:0.7rem;color:#9aa0a8;margin-top:4px">${new Date(r.recorded_at).toLocaleTimeString('es-MX')}</div>
+    </div>
+  `).join('') || '<p style="color:#9aa0a8">Sin lecturas recientes.</p>';
+}
+
+// ── Usuarios management ───────────────────────────────────────────────────
+async function loadUsers() {
+  const users = await fetchJSON('/admin/users');
+  if (!users) return;
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.map(u => `
+    <tr style="border-bottom:1px solid #e2e5e9">
+      <td style="padding:10px 8px">${u.full_name || '—'}</td>
+      <td style="padding:10px 8px">
+        <span style="color:${u.disabled ? '#dc2626' : '#16a34a'}">${u.disabled ? 'Desactivado' : 'Activo'}</span>
+      </td>
+      <td style="padding:10px 8px;color:#9aa0a8">${new Date(u.created_at).toLocaleDateString('es-MX')}</td>
+      <td style="padding:10px 8px">
+        <button onclick="toggleUser('${u.id}', ${u.disabled})"
+          style="font-size:0.8rem;padding:4px 10px;border:1px solid #d2d6db;background:#fff;border-radius:4px;cursor:pointer">
+          ${u.disabled ? 'Activar' : 'Desactivar'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function toggleUser(userId, currentlyDisabled) {
+  const token = localStorage.getItem('sb_token');
+  await fetch(`${API_BASE}/admin/users/${userId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ disabled: !currentlyDisabled }),
+  });
+  loadUsers();
+}
+
+function openNewUserModal() {
+  document.getElementById('new-user-modal').style.display = 'flex';
+}
+
+function closeNewUserModal() {
+  document.getElementById('new-user-modal').style.display = 'none';
+  document.getElementById('nu-error').style.display = 'none';
+}
+
+async function submitNewUser() {
+  const email = document.getElementById('nu-email').value.trim();
+  const name  = document.getElementById('nu-name').value.trim();
+  if (!email || !name) {
+    const err = document.getElementById('nu-error');
+    err.textContent = 'Correo y nombre son requeridos.';
+    err.style.display = 'block';
+    return;
+  }
+  const token = localStorage.getItem('sb_token');
+  const r = await fetch(`${API_BASE}/admin/users`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, full_name: name }),
+  });
+  if (!r.ok) {
+    const err = document.getElementById('nu-error');
+    err.textContent = 'Error al crear usuario.';
+    err.style.display = 'block';
+    return;
+  }
+  closeNewUserModal();
+  loadUsers();
+}
+
+document.querySelector('[data-goto="usuarios"]')
+  ?.addEventListener('click', loadUsers);
 </script>
 </body>
 </html>

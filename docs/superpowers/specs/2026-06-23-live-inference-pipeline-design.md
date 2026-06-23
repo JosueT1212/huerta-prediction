@@ -7,7 +7,9 @@
 
 ## Overview
 
-Automated weekly inference pipeline that pulls live sensor data from Supabase, runs feature engineering, and feeds the CNN-RNN model to produce a 4-week-ahead kg prediction for each greenhouse (inv3, inv4). Predictions are stored in Supabase and displayed in the dashboard alongside a forecast history chart.
+Automated weekly inference pipeline that pulls live sensor data from Supabase, runs feature engineering, and feeds the CNN-RNN model to produce a 4-week-ahead kg prediction for **Invernadero 3 only**. Invernadero 4 is excluded — its sensor→production gap varies 0–5 weeks across seasons, making a reliable fixed horizon impossible without per-season calibration.
+
+**Horizon:** `predicted_for = inference_date + 5 weeks`. Derived from Inv3's fixed framework: `gap(10–11) - seq_len(6) = eff_horizon(4–5)`. Upper end used (5 weeks).
 
 No roles — any authenticated user can view predictions and enter actual production values.
 
@@ -123,7 +125,7 @@ For each greenhouse in [3, 4]:
   1. Call live_features.build_input_tensor(inv)
   2. Load model weights from Models/results/best_cnn_rnn_inv{inv}.pt
   3. model.eval() → forward pass → scalar kg prediction
-  4. predicted_for = today + 4 weeks (Monday of that week)
+  4. predicted_for = today + 5 weeks (Monday of that week)
   5. Upsert into predictions table (on conflict greenhouse_id+predicted_for: update kg_predicted)
   6. Log result
 ```
@@ -203,6 +205,12 @@ Opens modal → user selects week from dropdown (past predictions with null `kg_
 - Retraining model on live data (model weights stay fixed at T13–T17 training)
 - Email/push notifications when prediction is ready
 - Confidence intervals (dashboard shows point estimate only)
+
+---
+
+## Next Steps (future work)
+
+**Inv4 horizon calibration:** Inv4's sensor→production gap varies 0–5 weeks across seasons (vs stable 10–11 for Inv3). Before live inference can be enabled for Inv4, the training framework needs revision — either a per-season variable `seq_len`, or a fixed gap alignment strategy that doesn't collapse to near-zero effective horizon in seasons like T16 (gap=6, seq_len=6 → eff_horizon=0). Once fixed and retrained, Inv4 can be added to `live_inference.py` with its own `predicted_for` offset.
 
 ---
 

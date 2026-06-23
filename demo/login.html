@@ -191,24 +191,49 @@
     <div class="hint" id="hint">Ingresa usuario y contraseña.</div>
   </form>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
   const form = document.getElementById('login-form');
   const hint = document.getElementById('hint');
+  const btn  = form.querySelector('.btn');
+  let sb;
 
-  form.addEventListener('submit', (e) => {
+  async function initSupabase() {
+    const cfg = await fetch('/config').then(r => r.json());
+    const { createClient } = supabase;
+    sb = createClient(cfg.supabase_url, cfg.supabase_anon_key);
+  }
+
+  initSupabase().catch(() => {
+    hint.textContent = 'Error de configuración. Contacta al administrador.';
+    hint.classList.add('show');
+  });
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value;
+    const email = document.getElementById('username').value.trim();
+    const pass  = document.getElementById('password').value;
 
-    // Demo: cualquier usuario/contraseña no vacíos permiten entrar.
-    if (!user || !pass) {
+    if (!email || !pass) {
+      hint.textContent = 'Ingresa tu correo y contraseña.';
       hint.classList.add('show');
       return;
     }
     hint.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
 
-    sessionStorage.setItem('jata_auth', '1');
-    sessionStorage.setItem('jata_user', user);
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      hint.textContent = 'Credenciales inválidas.';
+      hint.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+
+    localStorage.setItem('sb_token', data.session.access_token);
     window.location.href = '/app';
   });
 </script>

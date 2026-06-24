@@ -20,7 +20,7 @@ async def get_current_user(
         service_client.table("profiles")
         .select("full_name, disabled")
         .eq("id", str(user.id))
-        .single()
+        .maybe_single()
         .execute()
     )
     if not profile_resp.data:

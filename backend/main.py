@@ -117,7 +117,7 @@ def me(current_user: Annotated[dict, Depends(get_current_user)]):
         service_client.table("profiles")
         .select("full_name, disabled, must_change_password")
         .eq("id", current_user["user_id"])
-        .single()
+        .maybe_single()
         .execute()
     )
     return {**current_user, **(profile.data or {})}

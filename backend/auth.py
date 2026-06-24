@@ -23,12 +23,13 @@ async def get_current_user(
         .maybe_single()
         .execute()
     )
-    if not profile_resp.data:
+    profile = profile_resp.data if profile_resp is not None else None
+    if not profile:
         # Auto-create profile on first login
         service_client.table("profiles").upsert(
             {"id": str(user.id), "full_name": getattr(user, "email", ""), "disabled": False}
         ).execute()
         return {"user_id": str(user.id), "full_name": getattr(user, "email", "")}
-    if profile_resp.data["disabled"]:
+    if profile["disabled"]:
         raise HTTPException(403, "Account disabled")
-    return {"user_id": str(user.id), "full_name": profile_resp.data["full_name"]}
+    return {"user_id": str(user.id), "full_name": profile["full_name"]}

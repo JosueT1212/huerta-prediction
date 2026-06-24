@@ -44,7 +44,6 @@ def create_user(
     service_client.table("profiles").upsert({
         "id": user_id,
         "full_name": body.full_name,
-        "must_change_password": True,
     }).execute()
     return {"ok": True, "user_id": user_id}
 

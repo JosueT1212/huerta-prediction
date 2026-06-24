@@ -113,35 +113,7 @@ def config():
 
 @app.get('/me')
 def me(current_user: Annotated[dict, Depends(get_current_user)]):
-    profile = (
-        service_client.table("profiles")
-        .select("full_name, disabled, must_change_password")
-        .eq("id", current_user["user_id"])
-        .maybe_single()
-        .execute()
-    )
-    return {**current_user, **(profile.data or {})}
-
-
-class ChangePasswordRequest(BaseModel):
-    new_password: str
-
-
-@app.post('/auth/change-password')
-def change_password(
-    body: ChangePasswordRequest,
-    current_user: Annotated[dict, Depends(get_current_user)],
-):
-    if len(body.new_password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters")
-    service_client.auth.admin.update_user_by_id(
-        current_user["user_id"],
-        {"password": body.new_password},
-    )
-    service_client.table("profiles").update(
-        {"must_change_password": False}
-    ).eq("id", current_user["user_id"]).execute()
-    return {"ok": True}
+    return current_user
 
 
 @app.get('/greenhouses')

@@ -24,7 +24,11 @@ async def get_current_user(
         .execute()
     )
     if not profile_resp.data:
-        raise HTTPException(403, "User profile not found")
+        # Auto-create profile on first login
+        service_client.table("profiles").upsert(
+            {"id": str(user.id), "full_name": getattr(user, "email", ""), "disabled": False}
+        ).execute()
+        return {"user_id": str(user.id), "full_name": getattr(user, "email", "")}
     if profile_resp.data["disabled"]:
         raise HTTPException(403, "Account disabled")
     return {"user_id": str(user.id), "full_name": profile_resp.data["full_name"]}

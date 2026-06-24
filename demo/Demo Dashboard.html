@@ -1217,7 +1217,7 @@
   <section class="view active" id="view-menu">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Buenas tardes, <em>Eliseo</em></h1>
+        <h1 class="page-title" id="greeting-title"></h1>
         <div class="ornament">Monitoreo predictivo de cosecha para las próximas 6 semanas</div>
       </div>
     </div>
@@ -2037,6 +2037,15 @@
 <script>
 /* Guarda de sesión: si no hay login, regresa a la pantalla de acceso */
 if (!localStorage.getItem('sb_token')) { window.location.replace('/'); }
+
+(function setGreeting() {
+  const h = document.getElementById('greeting-title');
+  if (!h) return;
+  const hour = new Date().getHours();
+  const saludo = hour < 12 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
+  const name = localStorage.getItem('sb_user_name') || '';
+  h.innerHTML = name ? `${saludo}, <em>${name}</em>` : saludo;
+})();
 
 /* =========================================================
    DATA (demo)

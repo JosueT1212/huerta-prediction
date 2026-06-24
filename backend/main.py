@@ -116,6 +116,21 @@ def me(current_user: Annotated[dict, Depends(get_current_user)]):
     return current_user
 
 
+class UpdateMeRequest(BaseModel):
+    full_name: str
+
+
+@app.patch('/me')
+def update_me(
+    body: UpdateMeRequest,
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
+    service_client.table("profiles").update(
+        {"full_name": body.full_name}
+    ).eq("id", current_user["user_id"]).execute()
+    return {"ok": True}
+
+
 @app.get('/greenhouses')
 def greenhouses():
     return [{'id': i, 'name': f'Invernadero {i}'} for i in INV_IDS]

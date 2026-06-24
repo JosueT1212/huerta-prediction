@@ -178,8 +178,13 @@
     <h1 class="title">Iniciar sesión</h1>
 
     <div class="field">
-      <label for="username">Usuario</label>
-      <input type="text" id="username" name="username" placeholder="usuario" autofocus />
+      <label for="user-name">Nombre</label>
+      <input type="text" id="user-name" name="user-name" placeholder="Tu nombre" autofocus autocomplete="name" />
+    </div>
+
+    <div class="field">
+      <label for="username">Correo</label>
+      <input type="text" id="username" name="username" placeholder="correo@empresa.com" autocomplete="email" />
     </div>
 
     <div class="field">
@@ -235,6 +240,24 @@
 
     const token = data.session.access_token;
     localStorage.setItem('sb_token', token);
+
+    // Resolve name: form input → DB fallback
+    const formName = document.getElementById('user-name').value.trim();
+    try {
+      const me = await fetch('/me', { headers: { 'Authorization': `Bearer ${token}` } });
+      const profile = await me.json();
+      let finalName = formName || (profile.full_name && profile.full_name !== email ? profile.full_name : '');
+      if (formName && formName !== profile.full_name) {
+        await fetch('/me', {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name: formName }),
+        });
+      }
+      if (finalName) localStorage.setItem('sb_user_name', finalName);
+    } catch (_) {
+      if (formName) localStorage.setItem('sb_user_name', formName);
+    }
     window.location.href = '/app';
   });
 </script>

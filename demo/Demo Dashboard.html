@@ -1170,6 +1170,50 @@
     border: 3px solid var(--accent); cursor: grab; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   .sim-slider::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
+
+  /* ── Insertar datos tabs ── */
+  .ins-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 -1px 0;
+    padding: 0 var(--pad, 24px);
+  }
+  .ins-tab {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ins-tab.active {
+    background: var(--surface, #fff);
+    color: var(--ink, #1e2a3a);
+    border-color: var(--border, #d2d6db);
+  }
+  .ins-tab:not(.active):hover { background: rgba(0,0,0,.04); }
+  .ins-panel { border-top-left-radius: 0; }
+  .ins-confirm-panel {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface-alt, #f7f5f0);
+    border: 1px solid var(--border, #d2d6db);
+    border-radius: 8px;
+  }
+  .ins-confirm-summary {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    margin: 0 0 12px 0;
+    color: var(--ink, #1e2a3a);
+  }
+  .ins-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
 </head>
 <body>
@@ -1279,25 +1323,32 @@
     <div class="detail-header">
       <div>
         <div class="breadcrumb">Menú · <span>Insertar datos</span></div>
-        <h1 class="page-title">Captura de <em>fenología</em></h1>
-        <div class="ornament">Medición manual en campo · una fila por planta · el sistema promedia</div>
+        <h1 class="page-title">Insertar <em>datos</em></h1>
+        <div class="ornament">Fenología por planta · Producción real semanal</div>
       </div>
-      <div class="page-subtitle">Variables que entrena el modelo</div>
-    </div>
-    <div class="divider"></div>
-
-    <div class="panel insert-panel">
-      <div class="insert-toolbar">
-        <label class="insert-field">
+      <div class="page-subtitle">
+        <label class="insert-field" style="flex-direction:row;align-items:center;gap:8px">
           <span>Invernadero</span>
           <select id="ins-inv">
             <option value="3">Invernadero 3</option>
             <option value="4">Invernadero 4</option>
           </select>
         </label>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <div class="ins-tabs">
+      <button class="ins-tab active" data-tab="pheno">Fenología</button>
+      <button class="ins-tab" data-tab="prod">Producción real</button>
+    </div>
+
+    <!-- ── Fenología panel ── -->
+    <div class="panel insert-panel ins-panel" id="ins-panel-pheno">
+      <div class="insert-toolbar">
         <label class="insert-field">
-          <span>Semana del año</span>
-          <input id="ins-week" type="number" min="1" max="53" step="1" placeholder="ej. 35" />
+          <span>Fecha de observación</span>
+          <input id="ins-date" type="date" />
         </label>
         <div class="insert-spacer"></div>
         <button class="btn-ghost" id="ins-add">+ Agregar planta</button>
@@ -1315,7 +1366,42 @@
         <div class="insert-hint" id="ins-hint">Agrega plantas y captura sus mediciones. El promedio se calcula automáticamente.</div>
         <button class="btn-primary" id="ins-submit">Enviar captura</button>
       </div>
+
+      <div class="ins-confirm-panel" id="ins-confirm" hidden>
+        <pre class="ins-confirm-summary" id="ins-confirm-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="ins-cancel">Cancelar</button>
+          <button class="btn-primary" id="ins-confirm-btn">Confirmar envío</button>
+        </div>
+      </div>
       <div class="insert-result" id="ins-result"></div>
+    </div>
+
+    <!-- ── Producción real panel ── -->
+    <div class="panel insert-panel ins-panel" id="ins-panel-prod" hidden>
+      <div class="insert-toolbar" style="flex-wrap:wrap;gap:16px">
+        <label class="insert-field">
+          <span>Semana (predicción)</span>
+          <select id="prod-week-select" style="min-width:280px">
+            <option disabled selected>Cargando…</option>
+          </select>
+        </label>
+        <label class="insert-field">
+          <span>kg reales</span>
+          <input id="prod-kg" type="number" min="0" step="1" placeholder="ej. 38000" style="width:140px" />
+        </label>
+        <div class="insert-spacer"></div>
+        <button class="btn-primary" id="prod-submit-btn">Registrar</button>
+      </div>
+
+      <div class="ins-confirm-panel" id="prod-confirm" hidden>
+        <pre class="ins-confirm-summary" id="prod-confirm-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="prod-cancel">Cancelar</button>
+          <button class="btn-primary" id="prod-confirm-btn">Confirmar</button>
+        </div>
+      </div>
+      <div class="insert-result" id="prod-result"></div>
     </div>
   </section>
 

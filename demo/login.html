@@ -233,9 +233,61 @@
       return;
     }
 
-    localStorage.setItem('sb_token', data.session.access_token);
-    window.location.href = '/app';
+    const token = data.session.access_token;
+    localStorage.setItem('sb_token', token);
+
+    // Check if first login → must change password
+    const me = await fetch('/me', { headers: { 'Authorization': `Bearer ${token}` } });
+    const profile = await me.json();
+    if (profile.must_change_password) {
+      showChangePasswordForm(token);
+    } else {
+      window.location.href = '/app';
+    }
   });
+
+  function showChangePasswordForm(token) {
+    document.querySelector('form').style.display = 'none';
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <h2 style="margin-bottom:8px;font-size:1.1rem">Cambia tu contraseña</h2>
+      <p style="font-size:0.85rem;color:#9aa0a8;margin-bottom:20px">Debes establecer una nueva contraseña antes de continuar.</p>
+      <input id="np1" type="password" placeholder="Nueva contraseña" autocomplete="new-password"
+        style="width:100%;padding:10px;border:1px solid #d2d6db;border-radius:6px;font-size:0.9rem;margin-bottom:10px">
+      <input id="np2" type="password" placeholder="Confirmar contraseña" autocomplete="new-password"
+        style="width:100%;padding:10px;border:1px solid #d2d6db;border-radius:6px;font-size:0.9rem;margin-bottom:16px">
+      <p id="cp-hint" style="color:#a04040;font-size:0.85rem;margin-bottom:10px;display:none"></p>
+      <button id="cp-btn"
+        style="width:100%;padding:12px;background:#65a30d;color:#fff;border:none;border-radius:6px;font-size:0.95rem;cursor:pointer">
+        Guardar y continuar
+      </button>`;
+    document.querySelector('.card, .login-card, main, body > div').appendChild(div);
+
+    document.getElementById('cp-btn').addEventListener('click', async () => {
+      const p1 = document.getElementById('np1').value;
+      const p2 = document.getElementById('np2').value;
+      const hint = document.getElementById('cp-hint');
+      if (p1.length < 8) { hint.textContent = 'Mínimo 8 caracteres.'; hint.style.display='block'; return; }
+      if (p1 !== p2)     { hint.textContent = 'Las contraseñas no coinciden.'; hint.style.display='block'; return; }
+      hint.style.display = 'none';
+      document.getElementById('cp-btn').disabled = true;
+      document.getElementById('cp-btn').textContent = 'Guardando…';
+      const r = await fetch('/auth/change-password', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: p1 }),
+      });
+      if (r.ok) {
+        window.location.href = '/app';
+      } else {
+        const err = await r.json();
+        hint.textContent = err.detail || 'Error al cambiar contraseña.';
+        hint.style.display = 'block';
+        document.getElementById('cp-btn').disabled = false;
+        document.getElementById('cp-btn').textContent = 'Guardar y continuar';
+      }
+    });
+  }
 </script>
 </body>
 </html>

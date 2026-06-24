@@ -10,6 +10,7 @@ router = APIRouter(prefix="/admin")
 class CreateUserRequest(BaseModel):
     email: str
     full_name: str
+    password: str
 
 
 class UpdateUserRequest(BaseModel):
@@ -34,11 +35,16 @@ def create_user(
     body: CreateUserRequest,
     _user: Annotated[dict, Depends(get_current_user)],
 ):
-    invite_resp = service_client.auth.admin.invite_user_by_email(body.email)
-    user_id = str(invite_resp.user.id)
-    service_client.table("profiles").insert({
+    create_resp = service_client.auth.admin.create_user({
+        "email": body.email,
+        "password": body.password,
+        "email_confirm": True,
+    })
+    user_id = str(create_resp.user.id)
+    service_client.table("profiles").upsert({
         "id": user_id,
         "full_name": body.full_name,
+        "must_change_password": True,
     }).execute()
     return {"ok": True, "user_id": user_id}
 

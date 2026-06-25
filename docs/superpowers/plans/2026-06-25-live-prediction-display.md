@@ -437,7 +437,32 @@ Replace with:
     console.log('[Huerta] backend OK',
 ```
 
-- [ ] **Step 6: Verify in browser**
+- [ ] **Step 6: Update prodConfirm to call refreshLiveData after success**
+
+`prodConfirm()` (~line 3277) currently calls `loadProdPredictions(inv)` on success. The window of upcoming predictions does NOT update unless `refreshLiveData()` is also called — so forecast cards, menu badge, and slider remain stale until next navigation.
+
+Find the success block inside `prodConfirm`:
+
+```js
+    result.className = 'insert-result ok';
+    result.textContent = `✓ kg reales registrados · ${Math.round(kg).toLocaleString('es-MX')} kg`;
+    document.getElementById('prod-kg').value = '';
+    await loadProdPredictions(inv);
+```
+
+Replace with:
+
+```js
+    result.className = 'insert-result ok';
+    result.textContent = `✓ kg reales registrados · ${Math.round(kg).toLocaleString('es-MX')} kg`;
+    document.getElementById('prod-kg').value = '';
+    await loadProdPredictions(inv);
+    refreshLiveData();
+```
+
+This triggers the weekly-window shift: forecast cards exclude the now-real week, menu badge advances to next prediction without kg_actual, slider y_true is populated for that position.
+
+- [ ] **Step 7: Verify in browser**
 
 Open `demo/Demo Dashboard.html` via the backend (`http://localhost:8000`). In browser console:
 ```js
@@ -460,7 +485,7 @@ document.querySelector('[onclick="openActualModal(3)"]') // null
 document.getElementById('pheno-week-3')     // null
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add "demo/Demo Dashboard.html"
@@ -596,6 +621,7 @@ git commit -m "feat: extend T17 slider with live prediction weeks via extendSlid
 | Remove `loadForecast` | Task 1 Step 5 |
 | `extendSliderWithLive(inv, data)` | Task 3 Step 1 |
 | Called from `refreshLiveData` | Task 3 Step 2 |
+| `prodConfirm` calls `refreshLiveData()` — window shifts right after kg_actual submitted | Task 2 Step 6 |
 | `y_true = kg_actual ?? null` for live weeks | Task 3 Step 1 |
 | `pi_lower/pi_upper = null` for live weeks | Task 3 Step 1 |
 | Slider `max` extended | Task 3 Step 1 |

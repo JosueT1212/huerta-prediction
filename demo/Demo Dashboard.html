@@ -1286,6 +1286,7 @@
           </div>
         </div>
         <div class="gh-chart"><canvas id="chart-menu-3"></canvas></div>
+        <div id="menu-live-badge-3" hidden style="padding:8px 0 4px;display:flex;align-items:center;gap:6px;border-top:1px solid rgba(0,0,0,0.08);margin-top:8px"></div>
       </div>
 
       <!-- INV4 CARD -->
@@ -1310,6 +1311,7 @@
           </div>
         </div>
         <div class="gh-chart"><canvas id="chart-menu-4"></canvas></div>
+        <div id="menu-live-badge-4" hidden style="padding:8px 0 4px;display:flex;align-items:center;gap:6px;border-top:1px solid rgba(0,0,0,0.08);margin-top:8px"></div>
       </div>
     </div>
   </section>
@@ -2202,8 +2204,7 @@ function showView(viewId) {
   if (viewId === 'live4') startSensorPolling(4);
   else stopSensorPolling(4);
 
-  // load live forecast when entering invernadero prediction views
-  // (removed: loadForecast calls → will be replaced by refreshLiveData in Task 2)
+  refreshLiveData();
 }
 
 document.querySelectorAll('[data-goto]').forEach(el => {
@@ -3214,6 +3215,7 @@ async function prodConfirm() {
     result.textContent = `✓ kg reales registrados · ${Math.round(kg).toLocaleString('es-MX')} kg`;
     document.getElementById('prod-kg').value = '';
     await loadProdPredictions(inv);
+    refreshLiveData();
   } catch (e) {
     result.className = 'insert-result bad';
     result.textContent = '⚠ ' + e.message;
@@ -3337,6 +3339,8 @@ async function init() {
 
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);
+
+    refreshLiveData();
 
     console.log('[Huerta] backend OK',
       { inv3_R2: metrics3?.best?.['R²'], inv4_R2: metrics4?.best?.['R²'] });
@@ -3475,6 +3479,70 @@ document.querySelector('[data-goto="usuarios"]')
 // PHENO_FIELDS + loadPhenoCounter + submitPhenology removed (Task 1)
 // Inline pheno forms on inv3/inv4 views were replaced by "Insertar datos" tab in init()
 // This JS was dead code — no callsites on the page after deletion of inline forms
+
+// ── Live Prediction Display ───────────────────────────────────────────────
+const _forecastCharts = {};
+
+function renderForecastSection(inv, data) {
+  const upcoming = data.filter(d => !d.kg_actual).slice(0, 4);
+  const cards = document.getElementById(`forecast-cards-${inv}`);
+  if (cards) {
+    cards.innerHTML = upcoming.length
+      ? upcoming.map(d => `
+          <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:130px;text-align:center">
+            <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">
+              ${new Date(d.predicted_for + 'T12:00:00').toLocaleDateString('es-MX',{month:'short',day:'numeric'})}
+            </div>
+            <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${Math.round(d.kg_predicted).toLocaleString('es-MX')} kg</div>
+          </div>`).join('')
+      : '<p style="color:#9aa0a8">Sin predicciones próximas.</p>';
+  }
+
+  const ctx = document.getElementById(`forecast-chart-${inv}`);
+  if (!ctx) return;
+  const sorted = [...data].sort((a, b) => a.predicted_for > b.predicted_for ? 1 : -1);
+  if (_forecastCharts[inv]) _forecastCharts[inv].destroy();
+  _forecastCharts[inv] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(d => d.predicted_for),
+      datasets: [
+        { label: 'Predicción (kg)', data: sorted.map(d => d.kg_predicted),
+          borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.3 },
+        { label: 'Real (kg)', data: sorted.map(d => d.kg_actual ?? null),
+          borderColor: '#16a34a', backgroundColor: '#16a34a',
+          pointStyle: 'circle', pointRadius: 5, showLine: false },
+      ],
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } },
+               scales: { y: { beginAtZero: false } } },
+  });
+}
+
+function renderMenuBadge(inv, data) {
+  const el = document.getElementById(`menu-live-badge-${inv}`);
+  if (!el) return;
+  const next = data.find(d => d.kg_actual == null);
+  if (!next) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML =
+    `<span style="color:#3b82f6;font-size:0.75rem;font-weight:600">◉ Próxima</span>` +
+    `<span style="font-size:0.85rem;color:#f4ede0;margin-left:8px">` +
+    `${next.predicted_for} · ${Math.round(next.kg_predicted).toLocaleString('es-MX')} kg</span>`;
+}
+
+async function refreshLiveData() {
+  for (const inv of [3, 4]) {
+    const data = await fetchJSON(`/live-predictions/${inv}?limit=20`);
+    if (!data) continue;
+    renderForecastSection(inv, data);
+    renderMenuBadge(inv, data);
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshLiveData();
+});
 </script>
 
 </body>

@@ -3046,7 +3046,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHistMod
 /* ── Formulario "Insertar datos" (fila por planta) ── */
 function insBuildHeader() {
   const thead = document.getElementById('ins-thead');
-  thead.innerHTML = '<tr><th>Planta</th>' +
+  thead.innerHTML = '<tr><th>#</th><th>Zona</th><th>Planta</th>' +
     phenoFields.map(f => `<th>${f.label}<span class="th-unit">${f.unit}</span></th>`).join('') +
     '<th></th></tr>';
 }
@@ -3056,8 +3056,15 @@ function insAddRow() {
   const id = ++insRowSeq;
   const tr = document.createElement('tr');
   tr.dataset.row = id;
-  tr.innerHTML = `<td>#${tbody.children.length + 1}</td>` +
-    phenoFields.map(f => `<td><input type="number" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" placeholder="—"></td>`).join('') +
+  const zonaOpts  = [1,2,3,4].map(n => `<option value="${n}">${n}</option>`).join('');
+  const plantaOpts = [1,2,3,4].map(n => `<option value="${n}">${n}</option>`).join('');
+  tr.innerHTML =
+    `<td>#${tbody.children.length + 1}</td>` +
+    `<td><select data-key="zona" style="width:52px">${zonaOpts}</select></td>` +
+    `<td><select data-key="planta" style="width:52px">${plantaOpts}</select></td>` +
+    phenoFields.map(f =>
+      `<td><input type="number" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" placeholder="—"></td>`
+    ).join('') +
     `<td><span class="row-del" title="Quitar">✕</span></td>`;
   tbody.appendChild(tr);
   tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', insRecompute));
@@ -3086,39 +3093,130 @@ function insRecompute() {
     phenoFields.map(f => `<td>${counts[f.key] ? (sums[f.key] / counts[f.key]).toFixed(2) : '—'}</td>`).join('') +
     '<td></td></tr>';
 }
-async function insSubmit() {
-  const inv = +document.getElementById('ins-inv').value;
-  const week = document.getElementById('ins-week').value;
-  const result = document.getElementById('ins-result');
+function insSubmit() {
+  const inv     = +document.getElementById('ins-inv').value;
+  const dateVal = document.getElementById('ins-date').value;
+  const result  = document.getElementById('ins-result');
+  result.className = 'insert-result'; result.textContent = '';
+
+  if (!dateVal) {
+    result.className = 'insert-result bad';
+    result.textContent = 'Selecciona una fecha de observación.';
+    return;
+  }
+
   const rows = [];
   document.querySelectorAll('#ins-tbody tr').forEach(tr => {
-    const row = {};
-    tr.querySelectorAll('input').forEach(inp => { if (inp.value !== '') row[inp.dataset.key] = parseFloat(inp.value); });
-    if (Object.keys(row).length) rows.push(row);
-  });
-  if (!rows.length) { result.className = 'insert-result bad'; result.textContent = 'Captura al menos una planta con datos.'; return; }
-  try {
-    const token = localStorage.getItem('sb_token');
-    const r = await fetch(`${API_BASE}/phenology/${inv}`, {
-      method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ week: week ? +week : null, rows }),
+    const zona   = +tr.querySelector('[data-key="zona"]').value;
+    const planta = +tr.querySelector('[data-key="planta"]').value;
+    const pheno  = {};
+    let hasData  = false;
+    tr.querySelectorAll('input[data-key]').forEach(inp => {
+      if (inp.value !== '') { pheno[inp.dataset.key] = parseFloat(inp.value); hasData = true; }
     });
-    const j = await r.json();
-    if (!r.ok) { result.className = 'insert-result bad'; result.textContent = '⚠ ' + (j.detail || 'Error de validación'); return; }
-    const avgTxt = phenoFields.map(f => `${f.label}: ${j.averages[f.key] ?? '—'}`).join(' · ');
+    if (hasData) rows.push({ zona, planta, ...pheno });
+  });
+
+  if (!rows.length) {
+    result.className = 'insert-result bad';
+    result.textContent = 'Captura al menos una planta con datos.';
+    return;
+  }
+
+  const summary = `Invernadero ${inv} · ${dateVal}\nPlantas: ${rows.length}\n\n` +
+    rows.map(r =>
+      `  Z${r.zona}·P${r.planta}: ` +
+      phenoFields.filter(f => r[f.key] != null).map(f => `${f.label.split(' ')[0]}=${r[f.key]}`).join(', ')
+    ).join('\n');
+
+  document.getElementById('ins-confirm-summary').textContent = summary;
+  document.getElementById('ins-confirm').hidden = false;
+  document.getElementById('ins-submit').disabled = true;
+
+  const confirmEl = document.getElementById('ins-confirm');
+  confirmEl.dataset.inv   = inv;
+  confirmEl.dataset.date  = dateVal;
+  confirmEl.dataset.rows  = JSON.stringify(rows);
+}
+
+const PHENO_KEY_TO_LIVE = {
+  flores_abiertas:     'flores_racimo_abiertas',
+  racimos_planta:      'racimos_en_planta',
+  racimo_cosecha:      'racimo_en_cosecha',
+  diametro_fruto:      'diametro_fruto_cm',
+  crecimiento_planta:  'crecimiento_planta_cm',
+};
+
+async function insConfirm() {
+  const confirmEl = document.getElementById('ins-confirm');
+  const inv       = +confirmEl.dataset.inv;
+  const weekDate  = confirmEl.dataset.date;
+  const rows      = JSON.parse(confirmEl.dataset.rows);
+  const result    = document.getElementById('ins-result');
+  const token     = localStorage.getItem('sb_token');
+
+  confirmEl.hidden = true;
+  document.getElementById('ins-submit').disabled = false;
+
+  try {
+    for (const row of rows) {
+      const body = { week_date: weekDate, zona: row.zona, planta: row.planta };
+      phenoFields.forEach(f => {
+        if (row[f.key] != null) {
+          const liveKey = PHENO_KEY_TO_LIVE[f.key] ?? f.key;
+          body[liveKey] = row[f.key];
+        }
+      });
+      const r = await fetch(`${API_BASE}/phenology-live/${inv}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.detail || `Error ${r.status}`);
+      }
+    }
     result.className = 'insert-result ok';
-    result.innerHTML = `✓ Captura validada · ${j.n_plants} planta(s)${week ? ' · semana ' + week : ''}<br>Promedios → ${avgTxt}<br><em>${j.note}</em>`;
+    result.textContent = `✓ ${rows.length} planta(s) guardadas · ${weekDate}`;
+    document.getElementById('ins-tbody').innerHTML = '';
+    insRowSeq = 0;
+    insAddRow(); insAddRow();
   } catch (e) {
-    result.className = 'insert-result bad'; result.textContent = 'No se pudo enviar: ' + e.message;
+    result.className = 'insert-result bad';
+    result.textContent = '⚠ ' + e.message;
   }
 }
+
 function buildInsertForm() {
   if (!phenoFields.length) return;
   insBuildHeader();
   document.getElementById('ins-tbody').innerHTML = '';
   document.getElementById('ins-add').addEventListener('click', insAddRow);
   document.getElementById('ins-submit').addEventListener('click', insSubmit);
-  insAddRow(); insAddRow();   // arranca con 2 filas
+  document.getElementById('ins-confirm-btn').addEventListener('click', insConfirm);
+  document.getElementById('ins-cancel').addEventListener('click', () => {
+    document.getElementById('ins-confirm').hidden = true;
+    document.getElementById('ins-submit').disabled = false;
+  });
+  insAddRow(); insAddRow();
+}
+
+function initInsTabs() {
+  document.querySelectorAll('.ins-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ins-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('ins-panel-pheno').hidden = tab !== 'pheno';
+      document.getElementById('ins-panel-prod').hidden  = tab !== 'prod';
+      if (tab === 'prod') loadProdPredictions(+document.getElementById('ins-inv').value);
+    });
+  });
+  document.getElementById('ins-inv').addEventListener('change', () => {
+    const activeTab = document.querySelector('.ins-tab.active')?.dataset.tab;
+    if (activeTab === 'prod') loadProdPredictions(+document.getElementById('ins-inv').value);
+  });
 }
 
 /* ── Rendimiento kg/m² (superficie de cultivo, m²) ── */

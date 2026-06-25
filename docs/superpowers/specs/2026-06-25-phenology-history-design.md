@@ -90,9 +90,40 @@ Exact same confirm/cancel UI pattern as `ins-confirm` / `prod-confirm` already i
 
 ---
 
+---
+
+## kg_reales Delete (Producción real tab extension)
+
+The "Producción real" tab already shows a dropdown of predictions with `✓ real: X kg` for confirmed weeks. Add a delete (clear) action so the user can remove a wrongly entered kg_actual.
+
+### Backend
+
+```
+DELETE /live-predictions/{inv}/{id}/kg-actual
+Authorization: Bearer <token>
+```
+
+Sets `kg_actual = NULL` on the prediction row (does not delete the prediction itself — only clears the real value). Returns `{"ok": true}`.
+
+### Frontend
+
+In `loadProdPredictions`, each option that already has `kg_actual` gets a visible "Borrar real" button next to it in the panel (not inside the `<select>` — a separate list row). On click: same confirm pattern:
+
+```
+Borrar producción real
+Invernadero 3 · Semana 2026-07-27
+kg real registrado: 37,200 kg
+
+[ Cancelar ]   [ Confirmar ]
+```
+
+On confirm: fires the DELETE endpoint, re-fetches `loadProdPredictions` + `refreshLiveData`.
+
+---
+
 ## Out of Scope
 
-- Editing a row (delete + re-insert is the workflow)
+- Editing a row (delete + re-insert is the workflow for phenology)
 - Bulk delete
 - Pagination (limit=500 covers realistic use)
 - Inv4 separate from inv3 — same shared inv selector handles both

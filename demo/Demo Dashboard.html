@@ -3531,12 +3531,47 @@ function renderMenuBadge(inv, data) {
     `${next.predicted_for} · ${Math.round(next.kg_predicted).toLocaleString('es-MX')} kg</span>`;
 }
 
+function extendSliderWithLive(inv, data) {
+  const raw = rawInv[inv];
+  if (!raw) return;
+
+  function toWeekKey(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const year = d.getFullYear();
+    const jan4 = new Date(year, 0, 4);
+    const isoWeek = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+    return year * 100 + isoWeek;
+  }
+
+  const existingKeys = new Set(raw.weeks.map(w => w.week_key));
+  const newRows = [...data]
+    .sort((a, b) => a.predicted_for > b.predicted_for ? 1 : -1)
+    .filter(d => !existingKeys.has(toWeekKey(d.predicted_for)));
+
+  if (!newRows.length) return;
+
+  newRows.forEach(d => {
+    const wk = toWeekKey(d.predicted_for);
+    raw.weeks.push({ week_key: wk, iso_week: wk % 100, year: Math.floor(wk / 100) });
+    raw.y_true.push(d.kg_actual ?? null);
+    raw.y_pred.push(d.kg_predicted);
+    raw.pi_lower.push(null);
+    raw.pi_upper.push(null);
+  });
+
+  raw.n_weeks = raw.weeks.length;
+
+  const slider = document.getElementById(`slider${inv}`);
+  if (slider) slider.max = raw.n_weeks - 1;
+}
+
 async function refreshLiveData() {
   for (const inv of [3, 4]) {
     const data = await fetchJSON(`/live-predictions/${inv}?limit=20`);
     if (!data) continue;
     renderForecastSection(inv, data);
     renderMenuBadge(inv, data);
+    extendSliderWithLive(inv, data);
   }
 }
 

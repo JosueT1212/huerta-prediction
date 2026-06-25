@@ -3219,6 +3219,94 @@ function initInsTabs() {
   });
 }
 
+async function loadProdPredictions(inv) {
+  const select = document.getElementById('prod-week-select');
+  select.innerHTML = '<option disabled selected>Cargando…</option>';
+  try {
+    const token = localStorage.getItem('sb_token');
+    const preds = await fetch(`${API_BASE}/live-predictions/${inv}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+
+    if (!preds.length) {
+      select.innerHTML = '<option disabled selected>Sin predicciones disponibles</option>';
+      return;
+    }
+    select.innerHTML = preds.map(p =>
+      `<option value="${p.id}" data-kg-pred="${p.kg_predicted}">` +
+      `${p.predicted_for} — pred: ${Math.round(p.kg_predicted).toLocaleString('es-MX')} kg` +
+      (p.kg_actual != null ? ` ✓ real: ${Math.round(p.kg_actual).toLocaleString('es-MX')} kg` : '') +
+      `</option>`
+    ).join('');
+  } catch (e) {
+    select.innerHTML = `<option disabled selected>Error al cargar (${e.message})</option>`;
+  }
+}
+
+function prodSubmit() {
+  const inv    = +document.getElementById('ins-inv').value;
+  const select = document.getElementById('prod-week-select');
+  const kgInput = document.getElementById('prod-kg');
+  const result  = document.getElementById('prod-result');
+  result.className = 'insert-result'; result.textContent = '';
+
+  const predId  = select.value;
+  const kgVal   = parseFloat(kgInput.value);
+  const opt     = select.options[select.selectedIndex];
+  const predDate = opt ? opt.text.split(' — ')[0] : '?';
+  const kgPred   = parseFloat(opt?.dataset.kgPred || 0);
+
+  if (!predId || select.selectedIndex < 0 || opt?.disabled) {
+    result.className = 'insert-result bad'; result.textContent = 'Selecciona una semana.'; return;
+  }
+  if (isNaN(kgVal) || kgVal <= 0) {
+    result.className = 'insert-result bad'; result.textContent = 'Ingresa kg reales válidos (> 0).'; return;
+  }
+
+  document.getElementById('prod-confirm-summary').textContent =
+    `Invernadero ${inv} · Semana ${predDate}\n` +
+    `Registrar kg reales: ${Math.round(kgVal).toLocaleString('es-MX')} kg\n` +
+    `(predicción fue: ${Math.round(kgPred).toLocaleString('es-MX')} kg)`;
+  document.getElementById('prod-confirm').hidden = false;
+  document.getElementById('prod-submit-btn').disabled = true;
+
+  const confirmEl = document.getElementById('prod-confirm');
+  confirmEl.dataset.inv    = inv;
+  confirmEl.dataset.predId = predId;
+  confirmEl.dataset.kg     = kgVal;
+}
+
+async function prodConfirm() {
+  const confirmEl = document.getElementById('prod-confirm');
+  const inv    = +confirmEl.dataset.inv;
+  const predId = +confirmEl.dataset.predId;
+  const kg     = parseFloat(confirmEl.dataset.kg);
+  const result = document.getElementById('prod-result');
+  const token  = localStorage.getItem('sb_token');
+
+  confirmEl.hidden = true;
+  document.getElementById('prod-submit-btn').disabled = false;
+
+  try {
+    const r = await fetch(`${API_BASE}/live-predictions/${inv}/${predId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kg_actual: kg }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || `Error ${r.status}`);
+    }
+    result.className = 'insert-result ok';
+    result.textContent = `✓ kg reales registrados · ${Math.round(kg).toLocaleString('es-MX')} kg`;
+    document.getElementById('prod-kg').value = '';
+    await loadProdPredictions(inv);
+  } catch (e) {
+    result.className = 'insert-result bad';
+    result.textContent = '⚠ ' + e.message;
+  }
+}
+
 /* ── Rendimiento kg/m² (superficie de cultivo, m²) ── */
 const AREA_M2 = { 3: 172.8 * 115, 4: 172.8 * 135 };   // Inv3 19,872 · Inv4 23,328
 
@@ -3326,6 +3414,13 @@ async function init() {
     phenoFields = ph3.fields || [];
     renderPhenology(3); renderPhenology(4);
     buildInsertForm();
+    initInsTabs();
+    document.getElementById('prod-submit-btn').addEventListener('click', prodSubmit);
+    document.getElementById('prod-confirm-btn').addEventListener('click', prodConfirm);
+    document.getElementById('prod-cancel').addEventListener('click', () => {
+      document.getElementById('prod-confirm').hidden = true;
+      document.getElementById('prod-submit-btn').disabled = false;
+    });
 
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);

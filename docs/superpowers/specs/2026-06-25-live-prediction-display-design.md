@@ -1,8 +1,8 @@
 # Live Prediction Display & Refresh Design
 
-**Goal:** Wire the live prediction data (from `/live-predictions/{inv}`) into all dashboard views — menu badges, inv3/inv4 forecast sections — and keep it fresh on tab focus. Remove duplicate kg_reales modal and inline fenología forms (now handled by "Insertar datos" tabs).
+**Goal:** Wire the live prediction data (from `/live-predictions/{inv}`) into all dashboard views — menu badges, inv3/inv4 forecast sections, T17 slider extension — and keep it fresh on tab focus. Remove duplicate kg_reales modal and inline fenología forms (now handled by "Insertar datos" tabs).
 
-**Scope:** Frontend only (`demo/Demo Dashboard.html`). No new backend routes.
+**Scope:** Frontend only (`demo/Demo Dashboard.html`). No new backend routes needed — existing `/inference/{inv}` (T17 arrays) and `/live-predictions/{inv}` (future predictions) together provide all required data.
 
 ---
 
@@ -122,8 +122,77 @@ Remove from JS:
 
 ---
 
+## T17 Slider Extension with Live Predictions
+
+The slider currently shows 36 T17 test weeks. Live predictions append future weeks to the right, making the chart a continuous timeline: `T17 observed → live future`.
+
+### Data merging
+
+`refreshLiveData()` also calls `extendSliderWithLive(inv, data)`. This function appends live prediction weeks to `rawInv[inv]` arrays:
+
+```js
+function extendSliderWithLive(inv, data) {
+  const raw = rawInv[inv];
+  if (!raw) return;
+
+  // Derive week key from predicted_for ISO date string
+  function toWeekKey(dateStr) {
+    const d = new Date(dateStr);
+    // ISO week: use the same format as T17 week_key = year * 100 + iso_week
+    const jan4 = new Date(d.getFullYear(), 0, 4);
+    const isoWeek = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+    return d.getFullYear() * 100 + isoWeek;
+  }
+
+  // Only append weeks not already in T17
+  const existingKeys = new Set(raw.weeks.map(w => w.week_key));
+  const newRows = [...data]
+    .sort((a, b) => a.predicted_for > b.predicted_for ? 1 : -1)
+    .filter(d => !existingKeys.has(toWeekKey(d.predicted_for)));
+
+  if (!newRows.length) return;
+
+  // Append to raw arrays (y_true = null for future, pi = null)
+  newRows.forEach(d => {
+    const wk = toWeekKey(d.predicted_for);
+    raw.weeks.push({ week_key: wk, iso_week: wk % 100, year: Math.floor(wk / 100) });
+    raw.y_true.push(d.kg_actual ?? null);
+    raw.y_pred.push(d.kg_predicted);
+    raw.pi_lower.push(null);
+    raw.pi_upper.push(null);
+  });
+
+  raw.n_weeks = raw.weeks.length;
+
+  // Extend slider range
+  const slider = document.getElementById(`slider${inv}`);
+  if (slider) slider.max = raw.n_weeks - 1;
+}
+```
+
+### Slider behavior for live weeks
+- `y_true = kg_actual` (if recorded) or `null` (no real data yet) — chart omits null points
+- `pi_lower / pi_upper = null` — no confidence interval shown for live predictions
+- Slider thumb can navigate into live weeks; the detail chart and table render them as "Predicción en vivo" (not test-set history)
+- Live weeks visually distinguished: dashed line style for `y_pred` in the live range (Chart.js `borderDash`)
+
+### `refreshLiveData()` updated
+
+```js
+async function refreshLiveData() {
+  for (const inv of [3, 4]) {
+    const data = await fetchJSON(`/live-predictions/${inv}?limit=20`);
+    if (!data) continue;
+    renderForecastSection(inv, data);
+    renderMenuBadge(inv, data);
+    extendSliderWithLive(inv, data);
+  }
+}
+```
+
+---
+
 ## Out of Scope
 
-- T17 slider (static pre-computed data from `.pt` — unchanged by design)
-- Polling (tab focus refresh is sufficient for weekly-cadence inference)
-- Backend changes
+- Polling (tab focus refresh sufficient for weekly-cadence inference)
+- Backend changes (all data available from existing endpoints)

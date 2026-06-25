@@ -39,3 +39,22 @@ def update_kg_actual(
         {"kg_actual": body.kg_actual}
     ).eq("id", prediction_id).eq("greenhouse_id", inv).execute()
     return {"ok": True}
+
+
+@router.delete("/live-predictions/{inv}/{prediction_id}/kg-actual")
+def clear_kg_actual(
+    inv: int,
+    prediction_id: int,
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    resp = (
+        service_client.table("predictions")
+        .update({"kg_actual": None})
+        .eq("id", prediction_id)
+        .eq("greenhouse_id", inv)
+        .execute()
+    )
+    if not resp.data:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Predicción no encontrada")
+    return {"ok": True}

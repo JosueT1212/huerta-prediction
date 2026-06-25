@@ -49,3 +49,22 @@ def list_phenology(
         .execute()
     )
     return resp.data
+
+
+@router.delete("/phenology-live/{inv}/{obs_id}")
+def delete_phenology(
+    inv: int,
+    obs_id: int,
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    resp = (
+        service_client.table("phenology_observations")
+        .delete()
+        .eq("id", obs_id)
+        .eq("greenhouse_id", inv)
+        .execute()
+    )
+    if not resp.data:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Observación no encontrada")
+    return {"ok": True}

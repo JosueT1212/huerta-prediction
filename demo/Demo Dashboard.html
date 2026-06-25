@@ -1416,11 +1416,20 @@
         <button class="btn-primary" id="prod-submit-btn">Registrar</button>
       </div>
 
+      <div id="prod-confirmed-list" style="margin-top:16px"></div>
+
       <div class="ins-confirm-panel" id="prod-confirm" hidden>
         <pre class="ins-confirm-summary" id="prod-confirm-summary"></pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="prod-cancel">Cancelar</button>
           <button class="btn-primary" id="prod-confirm-btn">Confirmar</button>
+        </div>
+      </div>
+      <div class="ins-confirm-panel" id="prod-delete-confirm" hidden>
+        <pre class="ins-confirm-summary" id="prod-delete-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="prod-delete-cancel">Cancelar</button>
+          <button class="btn-primary" id="prod-delete-confirm-btn" style="background:#dc2626">Confirmar</button>
         </div>
       </div>
       <div class="insert-result" id="prod-result"></div>
@@ -3162,7 +3171,9 @@ function initInsTabs() {
 
 async function loadProdPredictions(inv) {
   const select = document.getElementById('prod-week-select');
+  const confirmedList = document.getElementById('prod-confirmed-list');
   select.innerHTML = '<option disabled selected>Cargando…</option>';
+  if (confirmedList) confirmedList.innerHTML = '';
   try {
     const token = localStorage.getItem('sb_token');
     const preds = await fetch(`${API_BASE}/live-predictions/${inv}`, {
@@ -3179,6 +3190,21 @@ async function loadProdPredictions(inv) {
       (p.kg_actual != null ? ` ✓ real: ${Math.round(p.kg_actual).toLocaleString('es-MX')} kg` : '') +
       `</option>`
     ).join('');
+
+    const confirmed = preds.filter(p => p.kg_actual != null);
+    if (confirmedList) {
+      confirmedList.innerHTML = confirmed.length
+        ? `<div style="font-size:0.75rem;font-weight:600;color:#9aa0a8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Producción registrada</div>` +
+          confirmed.map(p => `
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(0,0,0,0.06);font-size:0.85rem">
+              <span style="min-width:90px;color:#6b7280">${p.predicted_for}</span>
+              <span style="font-weight:600">${Math.round(p.kg_actual).toLocaleString('es-MX')} kg</span>
+              <span style="color:#9aa0a8">pred: ${Math.round(p.kg_predicted).toLocaleString('es-MX')} kg</span>
+              <button class="btn-ghost" style="margin-left:auto;padding:2px 10px;font-size:0.8rem;color:#dc2626"
+                onclick="prodDeleteKg(${p.id},${inv},'${p.predicted_for}',${p.kg_actual})">Borrar real</button>
+            </div>`).join('')
+        : '';
+    }
   } catch (e) {
     select.innerHTML = `<option disabled selected>Error al cargar (${e.message})</option>`;
   }
@@ -3366,6 +3392,10 @@ async function init() {
     document.getElementById('hist-confirm-btn').addEventListener('click', histConfirm);
     document.getElementById('hist-cancel').addEventListener('click', () => {
       document.getElementById('hist-confirm').hidden = true;
+    });
+    document.getElementById('prod-delete-confirm-btn').addEventListener('click', prodDeleteConfirm);
+    document.getElementById('prod-delete-cancel').addEventListener('click', () => {
+      document.getElementById('prod-delete-confirm').hidden = true;
     });
 
     wireMeta(3); wireMeta(4);
@@ -3602,6 +3632,44 @@ async function refreshLiveData() {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refreshLiveData();
 });
+
+// ── Borrar kg_actual ──────────────────────────────────────────────────────
+function prodDeleteKg(id, inv, predictedFor, kgActual) {
+  document.getElementById('prod-result').textContent = '';
+  document.getElementById('prod-confirm').hidden = true;
+  const confirmEl = document.getElementById('prod-delete-confirm');
+  confirmEl.dataset.id  = id;
+  confirmEl.dataset.inv = inv;
+  document.getElementById('prod-delete-summary').textContent =
+    `Borrar producción real\nInvernadero ${inv} · Semana ${predictedFor}\nkg real registrado: ${Math.round(kgActual).toLocaleString('es-MX')} kg`;
+  confirmEl.hidden = false;
+}
+
+async function prodDeleteConfirm() {
+  const confirmEl = document.getElementById('prod-delete-confirm');
+  const id    = +confirmEl.dataset.id;
+  const inv   = +confirmEl.dataset.inv;
+  const result = document.getElementById('prod-result');
+  confirmEl.hidden = true;
+  const token = localStorage.getItem('sb_token');
+  try {
+    const r = await fetch(`${API_BASE}/live-predictions/${inv}/${id}/kg-actual`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || (r.status === 401 ? 'Sesión expirada — recarga la página' : `Error ${r.status}`));
+    }
+    result.className = 'insert-result ok';
+    result.textContent = '✓ Producción real eliminada';
+    await loadProdPredictions(inv);
+    refreshLiveData();
+  } catch (e) {
+    result.className = 'insert-result bad';
+    result.textContent = '⚠ ' + e.message;
+  }
+}
 
 // ── Historial de fenología ────────────────────────────────────────────────
 async function loadHistorial(inv) {

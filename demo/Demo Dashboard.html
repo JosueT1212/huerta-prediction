@@ -1500,7 +1500,6 @@
       <div id="forecast-cards-3" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
         <p style="color:#9aa0a8">Cargando predicciones…</p>
       </div>
-      <canvas id="forecast-chart-3" style="max-height:300px"></canvas>
     </div>
 
   </section>
@@ -1600,7 +1599,6 @@
       <div id="forecast-cards-4" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
         <p style="color:#9aa0a8">Cargando predicciones…</p>
       </div>
-      <canvas id="forecast-chart-4" style="max-height:300px"></canvas>
     </div>
 
   </section>
@@ -3481,8 +3479,6 @@ document.querySelector('[data-goto="usuarios"]')
 // This JS was dead code — no callsites on the page after deletion of inline forms
 
 // ── Live Prediction Display ───────────────────────────────────────────────
-const _forecastCharts = {};
-
 function renderForecastSection(inv, data) {
   const upcoming = data.filter(d => d.kg_actual == null).slice(0, 4);
   const cards = document.getElementById(`forecast-cards-${inv}`);
@@ -3498,25 +3494,6 @@ function renderForecastSection(inv, data) {
       : '<p style="color:#9aa0a8">Sin predicciones próximas.</p>';
   }
 
-  const ctx = document.getElementById(`forecast-chart-${inv}`);
-  if (!ctx) return;
-  const sorted = [...data].sort((a, b) => a.predicted_for > b.predicted_for ? 1 : -1);
-  if (_forecastCharts[inv]) _forecastCharts[inv].destroy();
-  _forecastCharts[inv] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: sorted.map(d => d.predicted_for),
-      datasets: [
-        { label: 'Predicción (kg)', data: sorted.map(d => d.kg_predicted),
-          borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.3 },
-        { label: 'Real (kg)', data: sorted.map(d => d.kg_actual ?? null),
-          borderColor: '#16a34a', backgroundColor: '#16a34a',
-          pointStyle: 'circle', pointRadius: 5, showLine: false },
-      ],
-    },
-    options: { responsive: true, plugins: { legend: { position: 'top' } },
-               scales: { y: { beginAtZero: false } } },
-  });
 }
 
 function renderMenuBadge(inv, data) {

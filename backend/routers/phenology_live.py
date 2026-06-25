@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Annotated
 from backend.auth import get_current_user
@@ -65,6 +65,5 @@ def delete_phenology(
         .execute()
     )
     if not resp.data:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Observación no encontrada")
     return {"ok": True}

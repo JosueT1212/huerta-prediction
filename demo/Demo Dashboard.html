@@ -3484,7 +3484,7 @@ document.querySelector('[data-goto="usuarios"]')
 const _forecastCharts = {};
 
 function renderForecastSection(inv, data) {
-  const upcoming = data.filter(d => !d.kg_actual).slice(0, 4);
+  const upcoming = data.filter(d => d.kg_actual == null).slice(0, 4);
   const cards = document.getElementById(`forecast-cards-${inv}`);
   if (cards) {
     cards.innerHTML = upcoming.length

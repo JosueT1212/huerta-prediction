@@ -3089,7 +3089,7 @@ function insRecompute() {
     });
   });
   const tfoot = document.getElementById('ins-tfoot');
-  tfoot.innerHTML = '<tr><td>Promedio</td>' +
+  tfoot.innerHTML = '<tr><td></td><td></td><td>Prom.</td>' +
     phenoFields.map(f => `<td>${counts[f.key] ? (sums[f.key] / counts[f.key]).toFixed(2) : '—'}</td>`).join('') +
     '<td></td></tr>';
 }
@@ -3139,6 +3139,8 @@ function insSubmit() {
   confirmEl.dataset.rows  = JSON.stringify(rows);
 }
 
+// Maps phenoFields keys (from /phenology/{inv} response) to /phenology-live/{inv} field names.
+// racimos_puestos, cantidad_tomates, tomates_maduros are identical on both sides — no entry needed.
 const PHENO_KEY_TO_LIVE = {
   flores_abiertas:     'flores_racimo_abiertas',
   racimos_planta:      'racimos_en_planta',

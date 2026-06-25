@@ -3539,9 +3539,20 @@ function extendSliderWithLive(inv, data) {
     const d = new Date(dateStr + 'T12:00:00');
     const year = d.getFullYear();
     const jan4 = new Date(year, 0, 4);
-    const isoWeek = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+    const dow = jan4.getDay() || 7; // ISO: Sunday = 7, not 0
+    const isoWeek = Math.ceil(((d - jan4) / 86400000 + dow + 1) / 7);
     return year * 100 + isoWeek;
   }
+
+  // Update y_true for already-appended rows where kg_actual has arrived
+  const keyToIndex = {};
+  raw.weeks.forEach((w, idx) => { keyToIndex[w.week_key] = idx; });
+  data.forEach(d => {
+    if (d.kg_actual == null) return;
+    const wk = toWeekKey(d.predicted_for);
+    const idx = keyToIndex[wk];
+    if (idx !== undefined) raw.y_true[idx] = d.kg_actual;
+  });
 
   const existingKeys = new Set(raw.weeks.map(w => w.week_key));
   const newRows = [...data]
@@ -3559,10 +3570,13 @@ function extendSliderWithLive(inv, data) {
     raw.pi_upper.push(null);
   });
 
-  raw.n_weeks = raw.weeks.length;
+  if (newRows.length) raw.n_weeks = raw.weeks.length;
 
   const slider = document.getElementById(`slider${inv}`);
   if (slider) slider.max = raw.n_weeks - 1;
+
+  // Repaint the active view so chart/table reflect extended data or updated y_true
+  if (typeof renderInv === 'function') renderInv(inv, cursorInv[inv] ?? null);
 }
 
 async function refreshLiveData() {

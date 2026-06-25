@@ -3484,10 +3484,12 @@ document.querySelector('[data-goto="usuarios"]')
 const _forecastCharts = {};
 
 function renderForecastSection(inv, data) {
-  const upcoming = data.filter(d => d.kg_actual == null).slice(0, 4);
+  const upcoming  = data.filter(d => d.kg_actual == null).slice(0, 4);
+  const confirmed = data.filter(d => d.kg_actual != null)
+                        .sort((a, b) => b.predicted_for > a.predicted_for ? 1 : -1);
   const cards = document.getElementById(`forecast-cards-${inv}`);
   if (cards) {
-    cards.innerHTML = upcoming.length
+    const upcomingHtml = upcoming.length
       ? upcoming.map(d => `
           <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:130px;text-align:center">
             <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">
@@ -3496,6 +3498,25 @@ function renderForecastSection(inv, data) {
             <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${Math.round(d.kg_predicted).toLocaleString('es-MX')} kg</div>
           </div>`).join('')
       : '<p style="color:#9aa0a8">Sin predicciones próximas.</p>';
+
+    const confirmedHtml = confirmed.length
+      ? `<div style="margin-top:16px;width:100%">
+           <div style="font-size:0.75rem;font-weight:600;color:#9aa0a8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Producción registrada</div>
+           ${confirmed.map(d => {
+             const diff = d.kg_actual - d.kg_predicted;
+             const sign = diff >= 0 ? '+' : '';
+             const col  = diff >= 0 ? '#16a34a' : '#dc2626';
+             return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);font-size:0.85rem">
+               <span style="color:#9aa0a8;min-width:72px">${new Date(d.predicted_for + 'T12:00:00').toLocaleDateString('es-MX',{month:'short',day:'numeric'})}</span>
+               <span style="color:#f4ede0;font-weight:600">${Math.round(d.kg_actual).toLocaleString('es-MX')} kg</span>
+               <span style="color:#9aa0a8">pred: ${Math.round(d.kg_predicted).toLocaleString('es-MX')} kg</span>
+               <span style="color:${col};font-size:0.75rem">${sign}${Math.round(diff).toLocaleString('es-MX')} kg</span>
+             </div>`;
+           }).join('')}
+         </div>`
+      : '';
+
+    cards.innerHTML = upcomingHtml + confirmedHtml;
   }
 
   const ctx = document.getElementById(`forecast-chart-${inv}`);

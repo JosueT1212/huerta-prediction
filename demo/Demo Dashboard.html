@@ -3234,6 +3234,7 @@ function prodSubmit() {
     `Invernadero ${inv} · Semana ${predDate}\n` +
     `Registrar kg reales: ${Math.round(kgVal).toLocaleString('es-MX')} kg\n` +
     `(predicción fue: ${Math.round(kgPred).toLocaleString('es-MX')} kg)`;
+  document.getElementById('prod-delete-confirm').hidden = true;
   document.getElementById('prod-confirm').hidden = false;
   document.getElementById('prod-submit-btn').disabled = true;
 
@@ -3689,7 +3690,7 @@ async function loadHistorial(inv) {
     }
 
     const fmt = v => (v == null ? '—' : v);
-    rows.sort((a, b) => b.week_date > a.week_date ? 1 : b.week_date < a.week_date ? -1 : (a.zona - b.zona) || (a.planta - b.planta));
+    rows.sort((a, b) => b.week_date > a.week_date ? -1 : b.week_date < a.week_date ? 1 : (a.zona - b.zona) || (a.planta - b.planta));
     tbody.innerHTML = rows.map(r => `
       <tr>
         <td>${r.week_date}</td>

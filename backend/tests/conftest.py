@@ -57,6 +57,8 @@ def mock_supa(monkeypatch):
     monkeypatch.setattr("backend.routers.admin.service_client", mock)
     monkeypatch.setattr("backend.routers.predictions.service_client", mock)
     monkeypatch.setattr("backend.routers.phenology_live.service_client", mock)
+    monkeypatch.setattr("backend.routers.uploads.service_client", mock)
+    monkeypatch.setattr("backend.lock_utils.service_client", mock)
     return mock
 
 

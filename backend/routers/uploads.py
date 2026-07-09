@@ -63,6 +63,7 @@ async def upload_excel(
         raise HTTPException(422, f"Columnas faltantes: {', '.join(missing)}")
 
     df = df[required_cols].dropna(how="all")
+    df = df.where(pd.notna(df), None)
     rows_inserted = rows_updated = rows_skipped = 0
     skipped_reasons: list[str] = []
 
@@ -77,11 +78,20 @@ async def upload_excel(
 
     elif form_type == "fenologia":
         for _, row in df.iterrows():
+            try:
+                zona = int(row["zona"])
+                planta = int(row["planta"])
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    422,
+                    f"Valores no numéricos en zona/planta para la fila con fecha "
+                    f"{_date_str(row['fecha'])}: zona={row['zona']!r}, planta={row['planta']!r}",
+                )
             record = {
                 "greenhouse_id": inv,
                 "week_date": _date_str(row["fecha"]),
-                "zona": int(row["zona"]),
-                "planta": int(row["planta"]),
+                "zona": zona,
+                "planta": planta,
             }
             record.update({c: row[c] for c in required_cols if c not in ("fecha", "zona", "planta")})
             service_client.table("phenology_observations").upsert(

@@ -102,6 +102,38 @@ def test_upload_produccion_skips_unmatched_week_and_does_not_lock(api_client, mo
     assert mock_supa.table.call_args_list[-1] != (("submission_locks",),)
 
 
+def test_upload_fenologia_rejects_non_numeric_zona(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    df = pd.DataFrame([{
+        "fecha": "2026-07-01", "zona": "abc", "planta": 1,
+        "racimos_puestos": 1, "flores_racimo_abiertas": 1,
+        "racimos_en_planta": 1, "cantidad_tomates": 1, "racimo_en_cosecha": 1,
+        "tomates_maduros": 1, "diametro_fruto_cm": 1.0, "crecimiento_planta_cm": 1.0,
+    }])
+    files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "zona" in r.text
+
+
+def test_upload_sensores_handles_blank_optional_cell(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    df = pd.DataFrame([{
+        "fecha": "2026-07-01", "temp_prom_int": 22.1, "temp_min_int": 18.0,
+        "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
+        "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
+        "temp_prom_ext": 20.0, "temp_max_ext": 26.0, "temp_min_ext": None,
+        "rad_sum": 300.0,
+    }])
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 1
+
+
 def test_history_requires_auth(api_client):
     r = api_client.get("/uploads/3/fenologia/history")
     assert r.status_code == 401

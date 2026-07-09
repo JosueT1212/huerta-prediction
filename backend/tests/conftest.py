@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
-os.environ.setdefault("INGEST_TOKEN", "test-ingest-token")
 
 # ── Inject stub modules BEFORE backend.main is imported ────────────────────
 # engine.py depends on numpy/pandas which aren't in the test venv.
@@ -52,8 +51,6 @@ def mock_supa(monkeypatch):
     mock = MagicMock()
     monkeypatch.setattr("backend.supabase_client.service_client", mock)
     monkeypatch.setattr("backend.auth.service_client", mock)
-    monkeypatch.setattr("backend.routers.ingest.service_client", mock)
-    monkeypatch.setattr("backend.routers.sensors.service_client", mock)
     monkeypatch.setattr("backend.routers.admin.service_client", mock)
     monkeypatch.setattr("backend.routers.predictions.service_client", mock)
     monkeypatch.setattr("backend.routers.phenology_live.service_client", mock)

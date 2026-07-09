@@ -30,8 +30,6 @@ import data_api  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from backend.auth import get_current_user  # noqa: E402
 from backend.supabase_client import service_client  # noqa: E402
-from backend.routers import ingest as ingest_router  # noqa: E402
-from backend.routers import sensors as sensors_router  # noqa: E402
 from backend.routers import admin as admin_router  # noqa: E402
 from backend.routers import predictions as predictions_router  # noqa: E402
 from backend.routers import phenology_live as phenology_live_router  # noqa: E402
@@ -65,8 +63,6 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-app.include_router(ingest_router.router)
-app.include_router(sensors_router.router)
 app.include_router(admin_router.router)
 app.include_router(predictions_router.router)
 app.include_router(phenology_live_router.router)

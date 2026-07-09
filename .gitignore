@@ -1,4 +1,5 @@
 .worktrees/
+.superpowers/
 
 # macOS
 .DS_Store

@@ -76,3 +76,14 @@ def test_get_lock_status_unlocked_no_prior(monkeypatch):
 
     status = lock_utils.get_lock_status(3, "sensores")
     assert status == {"locked": False, "next_allowed_at": None}
+
+
+def test_get_lock_status_unlocked_when_older_than_7_days(monkeypatch):
+    from backend import lock_utils
+    mock = MagicMock()
+    old = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
+    mock.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = _mock_row(old)
+    monkeypatch.setattr(lock_utils, "service_client", mock)
+
+    status = lock_utils.get_lock_status(3, "sensores")
+    assert status == {"locked": False, "next_allowed_at": None}

@@ -128,10 +128,16 @@ UI and `DELETE /phenology-live/{inv}/{obs_id}` /
 - **Supabase**: migration `007_drop_sensor_readings.sql` drops only the
   narrow `sensor_readings` table. **`sensor_readings_wide` is kept** — it's
   now the Sensores upload target.
-- **Note for the record**: nothing currently reads `sensor_readings_wide`
-  for live inference — `backend/engine.py` serves predictions from cached
-  `.npz`/`.pt` computed offline. This upload pipeline archives data for a
-  future retraining/live-swap; it does not change current prediction output.
+- **Note for the record**: `backend/engine.py` (demo predictions endpoint)
+  serves from cached `.npz`/`.pt` and is unaffected by this change. But
+  `scripts/live_inference.py` (weekly cron, see
+  `docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`)
+  reads `sensor_readings_wide` directly to run live Inv3 inference — it has
+  no dependency on `ingest.py` (table-only read), so removing `ingest.py` is
+  safe, but that cron currently assumes rows arrive via continuous daily
+  ingest rather than a weekly bulk upload. Whether that assumption still
+  holds is out of scope here — tracked as a **separate spec** (cadence
+  mismatch between weekly bulk upload and the cron's rolling-window read).
 
 ## Out of scope
 

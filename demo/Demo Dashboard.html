@@ -407,8 +407,6 @@
 
   #view-kpi3 .page-title em,
   #view-kpi4 .page-title em,
-  #view-live3 .page-title em,
-  #view-live4 .page-title em,
   #view-hist3 .page-title em,
   #view-hist4 .page-title em {
     color: var(--navy);
@@ -909,182 +907,6 @@
   .chart-md { height: 260px; position: relative; }
   .chart-sm { height: 220px; position: relative; }
 
-  /* ===== LIVE / TIEMPO REAL VIEW ===== */
-  .live-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--navy);
-    color: var(--cream);
-    border-radius: 4px;
-    padding: 16px 24px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow);
-  }
-  .live-banner .left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .live-banner .title {
-    font-family: var(--font-ui);
-    font-size: 18px;
-    letter-spacing: 0.3px;
-  }
-  .live-banner .sub {
-    font-family: var(--font-data);
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    color: var(--accent-soft);
-    text-transform: uppercase;
-    margin-top: 2px;
-  }
-  .live-banner .ts {
-    font-family: var(--font-data);
-    font-size: 11px;
-    color: var(--cream-soft);
-    letter-spacing: 1px;
-    text-align: right;
-  }
-  .live-banner .ts strong {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  .sensor-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-bottom: 24px;
-  }
-  .sensor-card {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 22px 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .sensor-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-  }
-  .sensor-name {
-    font-family: var(--font-data);
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--ink-muted);
-
-  }
-  .sensor-chip {
-    font-family: var(--font-data);
-    font-size: 9px;
-    letter-spacing: 1px;
-    padding: 3px 8px;
-    border-radius: 2px;
-    text-transform: uppercase;
-  }
-  .chip-ok { background: rgba(107, 142, 90, 0.14); color: var(--success); }
-  .chip-warn { background: rgba(192, 138, 74, 0.14); color: var(--warning); }
-  .chip-bad { background: rgba(168, 90, 74, 0.14); color: var(--danger); }
-
-  .sensor-value {
-    font-family: var(--font-data);
-    font-size: 54px;
-    color: var(--navy);
-    line-height: 1;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .sensor-value .unit {
-    font-family: var(--font-data);
-    font-size: 13px;
-    color: var(--ink-muted);
-    letter-spacing: 1px;
-  }
-  .sensor-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 14px;
-    font-family: var(--font-data);
-    font-size: 10px;
-    color: var(--ink-muted);
-    letter-spacing: 1px;
-
-  }
-  .sensor-meta b {
-    color: var(--navy);
-    font-weight: 500;
-  }
-  .sensor-bar {
-    margin-top: 12px;
-    height: 4px;
-    background: rgba(30, 42, 58, 0.08);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .sensor-bar > i {
-    display: block;
-    height: 100%;
-    background: var(--accent);
-    border-radius: 2px;
-    transition: width 0.6s ease;
-  }
-
-  .live-bottom-grid {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 24px;
-  }
-  .status-list {
-    display: flex;
-    flex-direction: column;
-  }
-  .status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .status-row:last-child { border-bottom: none; }
-  .status-row .name {
-    font-family: var(--font-ui);
-    font-size: 17px;
-    color: var(--navy);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .status-row .name .ico {
-    width: 28px; height: 28px;
-    display: grid; place-items: center;
-    background: rgba(30, 42, 58, 0.05);
-    border-radius: 2px;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--navy);
-  }
-  .status-row .detail {
-    font-family: var(--font-data);
-    font-size: 11px;
-    color: var(--ink-muted);
-    letter-spacing: 0.5px;
-  }
-  .status-pill {
-    font-family: var(--font-data);
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border-radius: 2px;
-  }
-
   /* Decorative serif quote mark for menu */
   .ornament {
     font-family: var(--font-ui);
@@ -1236,7 +1058,6 @@
   <div class="sb-group">
     <button class="sb-link sb-sub" data-view="inv3"><span class="ico">⌖</span>Predicción</button>
     <button class="sb-link sb-sub" data-view="kpi3"><span class="ico">▦</span>KPIs &amp; gráficas</button>
-    <button class="sb-link sb-sub" data-view="live3"><span class="ico">◉</span>Tiempo real</button>
     <button class="sb-link sb-sub" data-view="hist3"><span class="ico">≡</span>Histórico</button>
   </div>
 
@@ -1244,7 +1065,6 @@
   <div class="sb-group">
     <button class="sb-link sb-sub" data-view="inv4"><span class="ico">⌖</span>Predicción</button>
     <button class="sb-link sb-sub" data-view="kpi4"><span class="ico">▦</span>KPIs &amp; gráficas</button>
-    <button class="sb-link sb-sub" data-view="live4"><span class="ico">◉</span>Tiempo real</button>
     <button class="sb-link sb-sub" data-view="hist4"><span class="ico">≡</span>Histórico</button>
   </div>
 
@@ -1808,86 +1628,6 @@
     </div>
   </section>
 
-  <!-- ============ LIVE INV3 VIEW ============ -->
-  <section class="view" id="view-live3">
-    <div class="detail-header">
-      <div>
-        <div class="breadcrumb">Menú · Invernadero 3 · <span>Tiempo real</span></div>
-        <h1 class="page-title">Tiempo <em>real</em></h1>
-        <div class="ornament">Lecturas de sensores · refresco cada 5s</div>
-      </div>
-      <div class="page-subtitle">Invernadero 3 · 12 sensores activos</div>
-    </div>
-    <div class="divider"></div>
-
-    <div class="live-banner">
-      <div class="left">
-        <span class="pulse"></span>
-        <div>
-          <div class="title">Transmitiendo en vivo</div>
-          <div class="sub">Telemetría · 12 sensores · Inv-03</div>
-        </div>
-      </div>
-      <div class="ts">
-        Última lectura · <strong id="live3-ts">--:--:--</strong>
-      </div>
-    </div>
-
-    <div class="sensor-grid" id="sensor-grid-3"></div>
-
-    <div class="live-bottom-grid">
-      <div class="panel chart-panel">
-        <div class="panel-title">Tendencia 24h · Clima interior</div>
-        <div class="chart-sub">Temperatura, humedad y CO₂ relativos</div>
-        <div class="chart-md"><canvas id="chart-live3"></canvas></div>
-      </div>
-      <div class="panel">
-        <div class="panel-title">Sistemas</div>
-        <div class="status-list" id="status-list-3"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ LIVE INV4 VIEW ============ -->
-  <section class="view" id="view-live4">
-    <div class="detail-header">
-      <div>
-        <div class="breadcrumb">Menú · Invernadero 4 · <span>Tiempo real</span></div>
-        <h1 class="page-title">Tiempo <em>real</em></h1>
-        <div class="ornament">Lecturas de sensores · refresco cada 5s</div>
-      </div>
-      <div class="page-subtitle">Invernadero 4 · 12 sensores activos</div>
-    </div>
-    <div class="divider"></div>
-
-    <div class="live-banner">
-      <div class="left">
-        <span class="pulse"></span>
-        <div>
-          <div class="title">Transmitiendo en vivo</div>
-          <div class="sub">Telemetría · 12 sensores · Inv-04</div>
-        </div>
-      </div>
-      <div class="ts">
-        Última lectura · <strong id="live4-ts">--:--:--</strong>
-      </div>
-    </div>
-
-    <div class="sensor-grid" id="sensor-grid-4"></div>
-
-    <div class="live-bottom-grid">
-      <div class="panel chart-panel">
-        <div class="panel-title">Tendencia 24h · Clima interior</div>
-        <div class="chart-sub">Temperatura, humedad y CO₂ relativos</div>
-        <div class="chart-md"><canvas id="chart-live4"></canvas></div>
-      </div>
-      <div class="panel">
-        <div class="panel-title">Sistemas</div>
-        <div class="status-list" id="status-list-4"></div>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ HIST INV3 VIEW ============ -->
   <section class="view" id="view-hist3">
     <div class="history-header">
@@ -2217,8 +1957,8 @@ function showView(viewId) {
   // Update top nav active state (only top-level views)
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   let navId = viewId;
-  if (viewId === 'hist3' || viewId === 'kpi3' || viewId === 'live3') navId = 'inv3';
-  if (viewId === 'hist4' || viewId === 'kpi4' || viewId === 'live4') navId = 'inv4';
+  if (viewId === 'hist3' || viewId === 'kpi3') navId = 'inv3';
+  if (viewId === 'hist4' || viewId === 'kpi4') navId = 'inv4';
   const navBtn = document.querySelector(`.nav-btn[data-view="${navId}"]`);
   if (navBtn) navBtn.classList.add('active');
 
@@ -2228,12 +1968,6 @@ function showView(viewId) {
   if (sbBtn) sbBtn.classList.add('active');
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  // start/stop sensor polling when entering/leaving live views
-  if (viewId === 'live3') startSensorPolling(3);
-  else stopSensorPolling(3);
-  if (viewId === 'live4') startSensorPolling(4);
-  else stopSensorPolling(4);
 
   refreshLiveData();
 }
@@ -2630,168 +2364,6 @@ makeResChart('chart-kpi4-res',
   [85, 87, 84, 82, 86, 84, 83, 85],
   [70, 68, 72, 69, 71, 70, 68, 72]
 );
-
-/* =========================================================
-   LIVE VIEW · sensors + system status
-========================================================= */
-const sensorsBase = {
-  3: [
-    { id: 'temp',   name: 'Temperatura',     base: 24.6, min: 18, max: 30, range: 0.5, unit: '°C', okLo: 20, okHi: 28, range_label: 'Óptimo 20–28' },
-    { id: 'hum',    name: 'Humedad relativa', base: 68,   min: 0,  max: 100, range: 2,   unit: '%',  okLo: 60, okHi: 80, range_label: 'Óptimo 60–80' },
-    { id: 'co2',    name: 'CO₂',              base: 820,  min: 400, max: 1500, range: 30, unit: 'ppm', okLo: 600, okHi: 1000, range_label: 'Óptimo 600–1000' },
-    { id: 'soil',   name: 'Humedad de suelo', base: 42,   min: 0,  max: 100, range: 1.5, unit: '%',  okLo: 35, okHi: 55, range_label: 'Óptimo 35–55' },
-    { id: 'light',  name: 'Radiación PAR',    base: 480,  min: 0,  max: 1200, range: 25, unit: 'μmol', okLo: 300, okHi: 800, range_label: 'Diurno 300–800' },
-    { id: 'ec',     name: 'CE · Nutrientes',  base: 2.4,  min: 0,  max: 5,   range: 0.08, unit: 'mS/cm', okLo: 2.0, okHi: 3.0, range_label: 'Óptimo 2.0–3.0' },
-  ],
-  4: [
-    { id: 'temp',   name: 'Temperatura',     base: 25.8, min: 18, max: 30, range: 0.6, unit: '°C', okLo: 20, okHi: 28, range_label: 'Óptimo 20–28' },
-    { id: 'hum',    name: 'Humedad relativa', base: 72,   min: 0,  max: 100, range: 2.2, unit: '%',  okLo: 60, okHi: 80, range_label: 'Óptimo 60–80' },
-    { id: 'co2',    name: 'CO₂',              base: 940,  min: 400, max: 1500, range: 35, unit: 'ppm', okLo: 600, okHi: 1000, range_label: 'Óptimo 600–1000' },
-    { id: 'soil',   name: 'Humedad de suelo', base: 38,   min: 0,  max: 100, range: 1.8, unit: '%',  okLo: 35, okHi: 55, range_label: 'Óptimo 35–55' },
-    { id: 'light',  name: 'Radiación PAR',    base: 520,  min: 0,  max: 1200, range: 28, unit: 'μmol', okLo: 300, okHi: 800, range_label: 'Diurno 300–800' },
-    { id: 'ec',     name: 'CE · Nutrientes',  base: 2.6,  min: 0,  max: 5,   range: 0.1, unit: 'mS/cm', okLo: 2.0, okHi: 3.0, range_label: 'Óptimo 2.0–3.0' },
-  ]
-};
-
-const systemsData = {
-  3: [
-    { name: 'Riego automatizado', state: 'Activo · Ciclo 3/5', icon: '◐', status: 'ok' },
-    { name: 'Ventilación lateral', state: 'Abierta 65%', icon: '≋', status: 'ok' },
-    { name: 'Cortina térmica', state: 'Replegada', icon: '▤', status: 'ok' },
-    { name: 'Inyección de CO₂', state: 'Pausada · Día', icon: '◯', status: 'warn' },
-    { name: 'Sistema de calefacción', state: 'En espera', icon: '✦', status: 'ok' },
-    { name: 'Sensor de tallo', state: '12/12 conectados', icon: '✓', status: 'ok' },
-  ],
-  4: [
-    { name: 'Riego automatizado', state: 'Activo · Ciclo 4/5', icon: '◐', status: 'ok' },
-    { name: 'Ventilación lateral', state: 'Abierta 80%', icon: '≋', status: 'warn' },
-    { name: 'Cortina térmica', state: 'Replegada', icon: '▤', status: 'ok' },
-    { name: 'Inyección de CO₂', state: 'Activa · 850 ppm', icon: '◯', status: 'ok' },
-    { name: 'Sistema de calefacción', state: 'En espera', icon: '✦', status: 'ok' },
-    { name: 'Sensor de tallo', state: '11/12 · 1 offline', icon: '!', status: 'warn' },
-  ]
-};
-
-function jitter(base, range) {
-  return base + (Math.random() * 2 - 1) * range;
-}
-
-function statusOf(s, v) {
-  if (v < s.okLo) return ['chip-warn','BAJO'];
-  if (v > s.okHi) return ['chip-warn','ALTO'];
-  return ['chip-ok','ÓPTIMO'];
-}
-
-function fmtVal(s, v) {
-  if (s.id === 'co2' || s.id === 'light') return Math.round(v).toString();
-  if (s.id === 'ec') return v.toFixed(2);
-  return v.toFixed(1);
-}
-
-const sensorState = { 3: null, 4: null };
-
-function renderSensors(num) {
-  const sensors = sensorsBase[num];
-  if (!sensorState[num]) {
-    sensorState[num] = sensors.map(s => ({ ...s, value: s.base }));
-  }
-  const grid = document.getElementById(`sensor-grid-${num}`);
-  grid.innerHTML = sensorState[num].map(s => {
-    const [chipCls, chipLbl] = statusOf(s, s.value);
-    const pct = Math.max(0, Math.min(100, ((s.value - s.min) / (s.max - s.min)) * 100));
-    return `
-      <div class="sensor-card">
-        <div class="sensor-head">
-          <span class="sensor-name">${s.name}</span>
-          <span class="sensor-chip ${chipCls}">${chipLbl}</span>
-        </div>
-        <div class="sensor-value">${fmtVal(s, s.value)}<span class="unit">${s.unit}</span></div>
-        <div class="sensor-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
-        <div class="sensor-meta">
-          <span>${s.range_label}</span>
-          <span>Δ <b>${(s.value - s.base >= 0 ? '+' : '')}${(s.value - s.base).toFixed(s.id==='co2'||s.id==='light'?0:1)}</b></span>
-        </div>
-        ${SENSOR_HIST_MAP[s.id] ? `<button class="sensor-hist-btn" data-hist-var="${SENSOR_HIST_MAP[s.id]}" data-hist-inv="${num}" data-hist-name="${s.name}">📈 ver histórico</button>` : ''}
-      </div>`;
-  }).join('');
-}
-
-/* Mapa id-de-sensor → variable del backend (suelo no tiene histórico) */
-const SENSOR_HIST_MAP = { temp: 'temp', hum: 'hr', co2: 'co2', light: 'par', ec: 'ce' };
-
-function renderStatus(num) {
-  const list = document.getElementById(`status-list-${num}`);
-  list.innerHTML = systemsData[num].map(s => {
-    const cls = s.status === 'ok' ? 'chip-ok' : s.status === 'warn' ? 'chip-warn' : 'chip-bad';
-    const lbl = s.status === 'ok' ? 'OK' : s.status === 'warn' ? 'Atención' : 'Falla';
-    return `
-      <div class="status-row">
-        <div class="name"><span class="ico">${s.icon}</span>${s.name}</div>
-        <div class="detail">${s.state}</div>
-        <span class="status-pill ${cls}">${lbl}</span>
-      </div>`;
-  }).join('');
-}
-
-function tickLive(num) {
-  const sensors = sensorState[num];
-  sensors.forEach(s => {
-    s.value = Math.max(s.min, Math.min(s.max, jitter(s.value, s.range)));
-    // pull toward base gently
-    s.value = s.value * 0.85 + s.base * 0.15;
-  });
-  renderSensors(num);
-  const ts = new Date().toLocaleTimeString('es-MX', { hour12: false });
-  const el = document.getElementById(`live${num}-ts`);
-  if (el) el.textContent = ts;
-}
-
-// Initial render
-renderSensors(3); renderStatus(3); tickLive(3);
-renderSensors(4); renderStatus(4); tickLive(4);
-setInterval(() => { tickLive(3); tickLive(4); }, 5000);
-
-// Live 24h trend charts
-function makeLiveChart(ctxId, tempData, humData, co2Data) {
-  const ctx = document.getElementById(ctxId).getContext('2d');
-  const hours = [];
-  for (let i = 23; i >= 0; i--) {
-    const h = (new Date().getHours() - i + 24) % 24;
-    hours.push(String(h).padStart(2,'0') + ':00');
-  }
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: hours,
-      datasets: [
-        { label: 'Temp (°C)', data: tempData, borderColor: palette.accent, backgroundColor: 'transparent', borderWidth: 2, tension: 0.35, pointRadius: 0, yAxisID: 'y1' },
-        { label: 'Humedad (%)', data: humData, borderColor: palette.navy, backgroundColor: 'transparent', borderWidth: 2, tension: 0.35, pointRadius: 0, yAxisID: 'y2' },
-        { label: 'CO₂ (ppm)', data: co2Data, borderColor: '#a89578', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4,3], tension: 0.35, pointRadius: 0, yAxisID: 'y3' },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', align: 'end',
-          labels: { color: palette.inkMuted, boxWidth: 10, boxHeight: 2, padding: 10, font: { size: 10, family: "'Space Mono', monospace" } }
-        },
-        tooltip: tooltipOpts()
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: palette.inkMuted, font: { size: 9 }, maxTicksLimit: 8 } },
-        y1: { display: false }, y2: { display: false }, y3: { display: false }
-      },
-      interaction: { mode: 'index', intersect: false }
-    }
-  });
-}
-
-function gen24(base, amp) {
-  return Array.from({length: 24}, (_, i) => base + Math.sin((i / 24) * Math.PI * 2) * amp + (Math.random() - 0.5) * amp * 0.3);
-}
-
-makeLiveChart('chart-live3', gen24(24.6, 3.2), gen24(68, 6), gen24(820, 120));
-makeLiveChart('chart-live4', gen24(25.8, 3.5), gen24(72, 5.5), gen24(940, 140));
 
 /* =========================================================
    BOOTSTRAP · fetch backend + render predicciones e histórico
@@ -3417,50 +2989,6 @@ async function init() {
 }
 
 init();
-
-// ── Live sensor polling ────────────────────────────────────────────────────
-const SENSOR_LABELS = {
-  temp_prom_int: 'Temp interior (°C)',
-  hr_prom_int:   'Humedad interior (%)',
-  co2_ppm:       'CO₂ (ppm)',
-  temp_prom_ext: 'Temp exterior (°C)',
-  rad_sum:       'Radiación (W/m²)',
-  riego_total:   'Riego total (L)',
-};
-
-const _sensorIntervals = {};
-
-async function startSensorPolling(inv) {
-  if (_sensorIntervals[inv]) clearInterval(_sensorIntervals[inv]);
-  await refreshSensors(inv);
-  _sensorIntervals[inv] = setInterval(() => refreshSensors(inv), 30000);
-}
-
-function stopSensorPolling(inv) {
-  if (_sensorIntervals[inv]) {
-    clearInterval(_sensorIntervals[inv]);
-    delete _sensorIntervals[inv];
-  }
-}
-
-async function refreshSensors(inv) {
-  const data = await fetchJSON(`/sensors/${inv}?limit=200`);
-  if (!data) return;
-
-  const grid = document.getElementById(`sensor-grid-${inv}`);
-  if (!grid) return;
-
-  const latest = {};
-  data.forEach(r => { if (!latest[r.sensor_name]) latest[r.sensor_name] = r; });
-
-  grid.innerHTML = Object.entries(latest).map(([name, r]) => `
-    <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:140px">
-      <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">${SENSOR_LABELS[name] || name}</div>
-      <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${r.value.toFixed(1)}</div>
-      <div style="font-size:0.7rem;color:#9aa0a8;margin-top:4px">${new Date(r.recorded_at).toLocaleTimeString('es-MX')}</div>
-    </div>
-  `).join('') || '<p style="color:#9aa0a8">Sin lecturas recientes.</p>';
-}
 
 // ── Usuarios management ───────────────────────────────────────────────────
 async function loadUsers() {

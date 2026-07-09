@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --font-ui:   'Space Grotesk', sans-serif;
@@ -1157,46 +1158,93 @@
     <div class="divider"></div>
 
     <div class="ins-tabs">
-      <button class="ins-tab active" data-tab="pheno">Fenología</button>
-      <button class="ins-tab" data-tab="prod">Producción real</button>
+      <button class="ins-tab active" data-tab="sensores">Sensores</button>
+      <button class="ins-tab" data-tab="fenologia">Fenología</button>
+      <button class="ins-tab" data-tab="produccion">Producción</button>
       <button class="ins-tab" data-tab="hist">Historial</button>
     </div>
 
-    <!-- ── Fenología panel ── -->
-    <div class="panel insert-panel ins-panel" id="ins-panel-pheno">
+    <div class="panel insert-panel ins-panel" id="ins-panel-sensores">
       <div class="insert-toolbar">
-        <label class="insert-field">
-          <span>Fecha de observación</span>
-          <input id="ins-date" type="date" />
-        </label>
+        <input type="file" id="upload-sensores-file" accept=".xlsx" />
         <div class="insert-spacer"></div>
-        <button class="btn-ghost" id="ins-add">+ Agregar planta</button>
+        <button class="btn-primary" id="upload-sensores-btn" disabled>Enviar captura</button>
       </div>
-
-      <div class="insert-table-wrap">
-        <table class="insert-table" id="ins-table">
-          <thead id="ins-thead"></thead>
-          <tbody id="ins-tbody"></tbody>
-          <tfoot id="ins-tfoot"></tfoot>
-        </table>
-      </div>
-
-      <div class="insert-actions">
-        <div class="insert-hint" id="ins-hint">Agrega plantas y captura sus mediciones. El promedio se calcula automáticamente.</div>
-        <button class="btn-primary" id="ins-submit">Enviar captura</button>
-      </div>
-
-      <div class="ins-confirm-panel" id="ins-confirm" hidden>
-        <pre class="ins-confirm-summary" id="ins-confirm-summary"></pre>
+      <div class="insert-hint" id="upload-sensores-lock-banner"></div>
+      <div class="insert-hint" id="upload-sensores-preview"></div>
+      <div class="ins-confirm-panel" id="upload-sensores-confirm1" hidden>
+        <pre class="ins-confirm-summary" id="upload-sensores-confirm1-summary"></pre>
         <div class="ins-confirm-actions">
-          <button class="btn-ghost" id="ins-cancel">Cancelar</button>
-          <button class="btn-primary" id="ins-confirm-btn">Confirmar envío</button>
+          <button class="btn-ghost" id="upload-sensores-cancel1">Cancelar</button>
+          <button class="btn-primary" id="upload-sensores-next1">Continuar</button>
         </div>
       </div>
-      <div class="insert-result" id="ins-result"></div>
+      <div class="ins-confirm-panel" id="upload-sensores-confirm2" hidden>
+        <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
+Próximo envío disponible en 7 días.
+¿Confirmar definitivamente?</pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-sensores-cancel2">Cancelar</button>
+          <button class="btn-primary" id="upload-sensores-confirm-btn">Confirmar definitivamente</button>
+        </div>
+      </div>
+      <div class="insert-result" id="upload-sensores-result"></div>
     </div>
 
-    <!-- ── Producción real panel ── -->
+    <div class="panel insert-panel ins-panel" id="ins-panel-fenologia" hidden>
+      <div class="insert-toolbar">
+        <input type="file" id="upload-fenologia-file" accept=".xlsx" />
+        <div class="insert-spacer"></div>
+        <button class="btn-primary" id="upload-fenologia-btn" disabled>Enviar captura</button>
+      </div>
+      <div class="insert-hint" id="upload-fenologia-lock-banner"></div>
+      <div class="insert-hint" id="upload-fenologia-preview"></div>
+      <div class="ins-confirm-panel" id="upload-fenologia-confirm1" hidden>
+        <pre class="ins-confirm-summary" id="upload-fenologia-confirm1-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-fenologia-cancel1">Cancelar</button>
+          <button class="btn-primary" id="upload-fenologia-next1">Continuar</button>
+        </div>
+      </div>
+      <div class="ins-confirm-panel" id="upload-fenologia-confirm2" hidden>
+        <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
+Próximo envío disponible en 7 días.
+¿Confirmar definitivamente?</pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-fenologia-cancel2">Cancelar</button>
+          <button class="btn-primary" id="upload-fenologia-confirm-btn">Confirmar definitivamente</button>
+        </div>
+      </div>
+      <div class="insert-result" id="upload-fenologia-result"></div>
+    </div>
+
+    <div class="panel insert-panel ins-panel" id="ins-panel-produccion" hidden>
+      <div class="insert-toolbar">
+        <input type="file" id="upload-produccion-file" accept=".xlsx" />
+        <div class="insert-spacer"></div>
+        <button class="btn-primary" id="upload-produccion-btn" disabled>Enviar captura</button>
+      </div>
+      <div class="insert-hint" id="upload-produccion-lock-banner"></div>
+      <div class="insert-hint" id="upload-produccion-preview"></div>
+      <div class="ins-confirm-panel" id="upload-produccion-confirm1" hidden>
+        <pre class="ins-confirm-summary" id="upload-produccion-confirm1-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-produccion-cancel1">Cancelar</button>
+          <button class="btn-primary" id="upload-produccion-next1">Continuar</button>
+        </div>
+      </div>
+      <div class="ins-confirm-panel" id="upload-produccion-confirm2" hidden>
+        <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
+Próximo envío disponible en 7 días.
+¿Confirmar definitivamente?</pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-produccion-cancel2">Cancelar</button>
+          <button class="btn-primary" id="upload-produccion-confirm-btn">Confirmar definitivamente</button>
+        </div>
+      </div>
+      <div class="insert-result" id="upload-produccion-result"></div>
+    </div>
+
     <div class="panel insert-panel ins-panel" id="ins-panel-hist" hidden>
       <div style="overflow-x:auto">
         <table class="insert-table" id="hist-table" style="min-width:900px">
@@ -1212,33 +1260,6 @@
         </table>
       </div>
       <div class="insert-result" id="hist-result"></div>
-    </div>
-    <div class="panel insert-panel ins-panel" id="ins-panel-prod" hidden>
-      <div class="insert-toolbar" style="flex-wrap:wrap;gap:16px">
-        <label class="insert-field">
-          <span>Semana (predicción)</span>
-          <select id="prod-week-select" style="min-width:280px">
-            <option disabled selected>Cargando…</option>
-          </select>
-        </label>
-        <label class="insert-field">
-          <span>kg reales</span>
-          <input id="prod-kg" type="number" min="0" step="1" placeholder="ej. 38000" style="width:140px" />
-        </label>
-        <div class="insert-spacer"></div>
-        <button class="btn-primary" id="prod-submit-btn">Registrar</button>
-      </div>
-
-      <div id="prod-confirmed-list" style="margin-top:16px"></div>
-
-      <div class="ins-confirm-panel" id="prod-confirm" hidden>
-        <pre class="ins-confirm-summary" id="prod-confirm-summary"></pre>
-        <div class="ins-confirm-actions">
-          <button class="btn-ghost" id="prod-cancel">Cancelar</button>
-          <button class="btn-primary" id="prod-confirm-btn">Confirmar</button>
-        </div>
-      </div>
-      <div class="insert-result" id="prod-result"></div>
     </div>
   </section>
 
@@ -2564,291 +2585,172 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHistModal(); });
 
-/* ── Formulario "Insertar datos" (fila por planta) ── */
-function insBuildHeader() {
-  const thead = document.getElementById('ins-thead');
-  thead.innerHTML = '<tr><th>#</th><th>Zona</th><th>Planta</th>' +
-    phenoFields.map(f => `<th>${f.label}<span class="th-unit">${f.unit}</span></th>`).join('') +
-    '<th></th></tr>';
-}
-let insRowSeq = 0;
-function insAddRow() {
-  const tbody = document.getElementById('ins-tbody');
-  const id = ++insRowSeq;
-  const tr = document.createElement('tr');
-  tr.dataset.row = id;
-  const zonaOpts  = [1,2,3,4].map(n => `<option value="${n}">${n}</option>`).join('');
-  const plantaOpts = [1,2,3,4].map(n => `<option value="${n}">${n}</option>`).join('');
-  tr.innerHTML =
-    `<td>#${tbody.children.length + 1}</td>` +
-    `<td><select data-key="zona" style="width:52px">${zonaOpts}</select></td>` +
-    `<td><select data-key="planta" style="width:52px">${plantaOpts}</select></td>` +
-    phenoFields.map(f =>
-      `<td><input type="number" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" placeholder="—"></td>`
-    ).join('') +
-    `<td><span class="row-del" title="Quitar">✕</span></td>`;
-  tbody.appendChild(tr);
-  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', insRecompute));
-  tr.querySelector('.row-del').addEventListener('click', () => { tr.remove(); insRenumber(); insRecompute(); });
-  insRenumber();
-  insRecompute();
-}
-function insRenumber() {
-  document.querySelectorAll('#ins-tbody tr').forEach((tr, i) => { tr.firstElementChild.textContent = `#${i + 1}`; });
-}
-function insRecompute() {
-  const sums = {}, counts = {};
-  phenoFields.forEach(f => { sums[f.key] = 0; counts[f.key] = 0; });
-  document.querySelectorAll('#ins-tbody tr').forEach(tr => {
-    tr.querySelectorAll('input').forEach(inp => {
-      const f = phenoFields.find(x => x.key === inp.dataset.key);
-      inp.classList.remove('err');
-      if (inp.value === '') return;
-      const v = parseFloat(inp.value);
-      if (isNaN(v) || v < f.min || v > f.max) { inp.classList.add('err'); return; }
-      sums[f.key] += v; counts[f.key]++;
-    });
-  });
-  const tfoot = document.getElementById('ins-tfoot');
-  tfoot.innerHTML = '<tr><td></td><td></td><td>Prom.</td>' +
-    phenoFields.map(f => `<td>${counts[f.key] ? (sums[f.key] / counts[f.key]).toFixed(2) : '—'}</td>`).join('') +
-    '<td></td></tr>';
-}
-function insSubmit() {
-  const inv     = +document.getElementById('ins-inv').value;
-  const dateVal = document.getElementById('ins-date').value;
-  const result  = document.getElementById('ins-result');
-  result.className = 'insert-result'; result.textContent = '';
-
-  if (!dateVal) {
-    result.className = 'insert-result bad';
-    result.textContent = 'Selecciona una fecha de observación.';
-    return;
-  }
-
-  const rows = [];
-  document.querySelectorAll('#ins-tbody tr').forEach(tr => {
-    const zona   = +tr.querySelector('[data-key="zona"]').value;
-    const planta = +tr.querySelector('[data-key="planta"]').value;
-    const pheno  = {};
-    let hasData  = false;
-    tr.querySelectorAll('input[data-key]').forEach(inp => {
-      if (inp.value !== '') { pheno[inp.dataset.key] = parseFloat(inp.value); hasData = true; }
-    });
-    if (hasData) rows.push({ zona, planta, ...pheno });
-  });
-
-  if (!rows.length) {
-    result.className = 'insert-result bad';
-    result.textContent = 'Captura al menos una planta con datos.';
-    return;
-  }
-
-  const summary = `Invernadero ${inv} · ${dateVal}\nPlantas: ${rows.length}\n\n` +
-    rows.map(r =>
-      `  Z${r.zona}·P${r.planta}: ` +
-      phenoFields.filter(f => r[f.key] != null).map(f => `${f.label.split(' ')[0]}=${r[f.key]}`).join(', ')
-    ).join('\n');
-
-  document.getElementById('ins-confirm-summary').textContent = summary;
-  document.getElementById('ins-confirm').hidden = false;
-  document.getElementById('ins-submit').disabled = true;
-
-  const confirmEl = document.getElementById('ins-confirm');
-  confirmEl.dataset.inv   = inv;
-  confirmEl.dataset.date  = dateVal;
-  confirmEl.dataset.rows  = JSON.stringify(rows);
-}
-
-// Maps phenoFields keys (from /phenology/{inv} response) to /phenology-live/{inv} field names.
-// racimos_puestos, cantidad_tomates, tomates_maduros are identical on both sides — no entry needed.
-const PHENO_KEY_TO_LIVE = {
-  flores_abiertas:     'flores_racimo_abiertas',
-  racimos_planta:      'racimos_en_planta',
-  racimo_cosecha:      'racimo_en_cosecha',
-  diametro_fruto:      'diametro_fruto_cm',
-  crecimiento_planta:  'crecimiento_planta_cm',
+/* ── Insertar datos: captura semanal por archivo Excel ── */
+const UPLOAD_TYPES = {
+  sensores:   { requiredCols: ['fecha','temp_prom_int','temp_min_int','temp_max_int','hr_prom_int','co2_ppm','riego_total','ph_promedio','ce_promedio','temp_prom_ext','temp_max_ext','temp_min_ext','rad_sum'] },
+  fenologia:  { requiredCols: ['fecha','zona','planta','racimos_puestos','flores_racimo_abiertas','racimos_en_planta','cantidad_tomates','racimo_en_cosecha','tomates_maduros','diametro_fruto_cm','crecimiento_planta_cm'] },
+  produccion: { requiredCols: ['fecha','kg_reales'] },
 };
 
-async function insConfirm() {
-  const confirmEl = document.getElementById('ins-confirm');
-  const inv       = +confirmEl.dataset.inv;
-  const weekDate  = confirmEl.dataset.date;
-  const rows      = JSON.parse(confirmEl.dataset.rows);
-  const result    = document.getElementById('ins-result');
-  const token     = localStorage.getItem('sb_token');
+const uploadState = {}; // { [formType]: { file, rows, inv } }
 
-  confirmEl.hidden = true;
-  document.getElementById('ins-submit').disabled = false;
+function parseXlsxPreview(formType, file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
+        resolve(rows);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
 
+async function refreshLockBanner(formType, inv) {
+  const banner = document.getElementById(`upload-${formType}-lock-banner`);
+  const btn = document.getElementById(`upload-${formType}-btn`);
+  const token = localStorage.getItem('sb_token');
   try {
-    for (const row of rows) {
-      const body = { week_date: weekDate, zona: row.zona, planta: row.planta };
-      phenoFields.forEach(f => {
-        if (row[f.key] != null) {
-          const liveKey = PHENO_KEY_TO_LIVE[f.key] ?? f.key;
-          body[liveKey] = row[f.key];
-        }
-      });
-      const r = await fetch(`${API_BASE}/phenology-live/${inv}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        throw new Error(j.detail || `Error ${r.status}`);
-      }
+    const status = await fetch(`${API_BASE}/submission-lock/${inv}/${formType}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).then(r => r.json());
+    if (status.locked) {
+      const date = new Date(status.next_allowed_at).toLocaleDateString('es-MX');
+      banner.textContent = `Próximo envío disponible: ${date}`;
+      banner.classList.add('bad');
+      btn.disabled = true;
+      document.getElementById(`upload-${formType}-file`).disabled = true;
+    } else {
+      banner.textContent = '';
+      banner.classList.remove('bad');
+      document.getElementById(`upload-${formType}-file`).disabled = false;
+      btn.disabled = !uploadState[formType]?.rows?.length;
     }
-    result.className = 'insert-result ok';
-    result.textContent = `✓ ${rows.length} planta(s) guardadas · ${weekDate}`;
-    document.getElementById('ins-tbody').innerHTML = '';
-    insRowSeq = 0;
-    insAddRow(); insAddRow();
   } catch (e) {
-    result.className = 'insert-result bad';
-    result.textContent = '⚠ ' + e.message;
+    banner.textContent = '';
   }
 }
 
-function buildInsertForm() {
-  if (!phenoFields.length) return;
-  insBuildHeader();
-  document.getElementById('ins-tbody').innerHTML = '';
-  document.getElementById('ins-add').addEventListener('click', insAddRow);
-  document.getElementById('ins-submit').addEventListener('click', insSubmit);
-  document.getElementById('ins-confirm-btn').addEventListener('click', insConfirm);
-  document.getElementById('ins-cancel').addEventListener('click', () => {
-    document.getElementById('ins-confirm').hidden = true;
-    document.getElementById('ins-submit').disabled = false;
+function wireUploadTab(formType) {
+  const fileInput = document.getElementById(`upload-${formType}-file`);
+  const btn = document.getElementById(`upload-${formType}-btn`);
+  const preview = document.getElementById(`upload-${formType}-preview`);
+  const result = document.getElementById(`upload-${formType}-result`);
+
+  fileInput.addEventListener('change', async () => {
+    result.textContent = ''; result.className = 'insert-result';
+    preview.textContent = '';
+    btn.disabled = true;
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const rows = await parseXlsxPreview(formType, file);
+      const required = UPLOAD_TYPES[formType].requiredCols;
+      const missing = required.filter(c => !(rows[0] && c in rows[0]));
+      if (missing.length) {
+        preview.textContent = `⚠ Columnas faltantes: ${missing.join(', ')}`;
+        preview.classList.add('bad');
+        return;
+      }
+      preview.classList.remove('bad');
+      const fechas = rows.map(r => r.fecha).filter(Boolean).sort();
+      preview.textContent = `${rows.length} fila(s) detectada(s) · ${fechas[0]} → ${fechas[fechas.length - 1]}`;
+      uploadState[formType] = { file, rows, inv: +document.getElementById('ins-inv').value };
+      btn.disabled = false;
+    } catch (e) {
+      preview.textContent = '⚠ No se pudo leer el archivo: ' + e.message;
+      preview.classList.add('bad');
+    }
   });
-  insAddRow(); insAddRow();
+
+  btn.addEventListener('click', () => {
+    const state = uploadState[formType];
+    if (!state) return;
+    document.getElementById(`upload-${formType}-confirm1-summary`).textContent =
+      `Invernadero ${state.inv} · ${state.rows.length} fila(s) en el archivo\nArchivo: ${state.file.name}`;
+    document.getElementById(`upload-${formType}-confirm1`).hidden = false;
+    btn.disabled = true;
+  });
+
+  document.getElementById(`upload-${formType}-cancel1`).addEventListener('click', () => {
+    document.getElementById(`upload-${formType}-confirm1`).hidden = true;
+    btn.disabled = false;
+  });
+
+  document.getElementById(`upload-${formType}-next1`).addEventListener('click', () => {
+    document.getElementById(`upload-${formType}-confirm1`).hidden = true;
+    document.getElementById(`upload-${formType}-confirm2`).hidden = false;
+  });
+
+  document.getElementById(`upload-${formType}-cancel2`).addEventListener('click', () => {
+    document.getElementById(`upload-${formType}-confirm2`).hidden = true;
+    btn.disabled = false;
+  });
+
+  document.getElementById(`upload-${formType}-confirm-btn`).addEventListener('click', async () => {
+    const state = uploadState[formType];
+    document.getElementById(`upload-${formType}-confirm2`).hidden = true;
+    const token = localStorage.getItem('sb_token');
+    const formData = new FormData();
+    formData.append('file', state.file);
+    try {
+      const r = await fetch(`${API_BASE}/uploads/${state.inv}/${formType}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (r.status === 429) {
+          throw new Error(`Ya se envió una captura esta semana. Próximo envío: ${new Date(j.detail?.next_allowed_at).toLocaleDateString('es-MX')}`);
+        }
+        throw new Error(j.detail || `Error ${r.status}`);
+      }
+      result.className = 'insert-result ok';
+      result.textContent = `✓ ${j.rows_inserted + j.rows_updated} fila(s) guardadas` +
+        (j.rows_skipped ? ` · ${j.rows_skipped} omitida(s): ${j.skipped_reasons.join('; ')}` : '');
+      fileInput.value = '';
+      preview.textContent = '';
+      delete uploadState[formType];
+      refreshLockBanner(formType, state.inv);
+    } catch (e) {
+      result.className = 'insert-result bad';
+      result.textContent = '⚠ ' + e.message;
+      btn.disabled = false;
+    }
+  });
 }
 
 function initInsTabs() {
+  ['sensores', 'fenologia', 'produccion'].forEach(wireUploadTab);
+
   document.querySelectorAll('.ins-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.ins-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.dataset.tab;
       const inv = +document.getElementById('ins-inv').value;
-      document.getElementById('ins-panel-pheno').hidden = tab !== 'pheno';
-      document.getElementById('ins-panel-prod').hidden  = tab !== 'prod';
-      document.getElementById('ins-panel-hist').hidden  = tab !== 'hist';
-      if (tab === 'prod')  loadProdPredictions(inv);
-      if (tab === 'hist')  loadHistorial(inv);
+      document.getElementById('ins-panel-sensores').hidden  = tab !== 'sensores';
+      document.getElementById('ins-panel-fenologia').hidden = tab !== 'fenologia';
+      document.getElementById('ins-panel-produccion').hidden = tab !== 'produccion';
+      document.getElementById('ins-panel-hist').hidden = tab !== 'hist';
+      if (tab === 'hist') loadHistorial(inv);
+      else refreshLockBanner(tab, inv);
     });
   });
+
   document.getElementById('ins-inv').addEventListener('change', () => {
     const activeTab = document.querySelector('.ins-tab.active')?.dataset.tab;
     const inv = +document.getElementById('ins-inv').value;
-    if (activeTab === 'prod') loadProdPredictions(inv);
     if (activeTab === 'hist') loadHistorial(inv);
+    else if (activeTab) refreshLockBanner(activeTab, inv);
   });
-}
 
-async function loadProdPredictions(inv) {
-  const select = document.getElementById('prod-week-select');
-  const confirmedList = document.getElementById('prod-confirmed-list');
-  select.innerHTML = '<option disabled selected>Cargando…</option>';
-  if (confirmedList) confirmedList.innerHTML = '';
-  try {
-    const token = localStorage.getItem('sb_token');
-    const preds = await fetch(`${API_BASE}/live-predictions/${inv}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-
-    if (!preds.length) {
-      select.innerHTML = '<option disabled selected>Sin predicciones disponibles</option>';
-      return;
-    }
-    select.innerHTML = preds.map(p =>
-      `<option value="${p.id}" data-kg-pred="${p.kg_predicted}">` +
-      `${p.predicted_for} — pred: ${Math.round(p.kg_predicted).toLocaleString('es-MX')} kg` +
-      (p.kg_actual != null ? ` ✓ real: ${Math.round(p.kg_actual).toLocaleString('es-MX')} kg` : '') +
-      `</option>`
-    ).join('');
-
-    const confirmed = preds.filter(p => p.kg_actual != null);
-    if (confirmedList) {
-      confirmedList.innerHTML = confirmed.length
-        ? `<div style="font-size:0.75rem;font-weight:600;color:#9aa0a8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Producción registrada</div>` +
-          confirmed.map(p => `
-            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(0,0,0,0.06);font-size:0.85rem">
-              <span style="min-width:90px;color:#6b7280">${p.predicted_for}</span>
-              <span style="font-weight:600">${Math.round(p.kg_actual).toLocaleString('es-MX')} kg</span>
-              <span style="color:#9aa0a8">pred: ${Math.round(p.kg_predicted).toLocaleString('es-MX')} kg</span>
-            </div>`).join('')
-        : '';
-    }
-  } catch (e) {
-    select.innerHTML = `<option disabled selected>Error al cargar (${e.message})</option>`;
-  }
-}
-
-function prodSubmit() {
-  const inv    = +document.getElementById('ins-inv').value;
-  const select = document.getElementById('prod-week-select');
-  const kgInput = document.getElementById('prod-kg');
-  const result  = document.getElementById('prod-result');
-  result.className = 'insert-result'; result.textContent = '';
-
-  const predId  = select.value;
-  const kgVal   = parseFloat(kgInput.value);
-  const opt     = select.options[select.selectedIndex];
-  const predDate = opt ? opt.text.split(' — ')[0] : '?';
-  const kgPred   = parseFloat(opt?.dataset.kgPred || 0);
-
-  if (!predId || select.selectedIndex < 0 || opt?.disabled) {
-    result.className = 'insert-result bad'; result.textContent = 'Selecciona una semana.'; return;
-  }
-  if (isNaN(kgVal) || kgVal <= 0) {
-    result.className = 'insert-result bad'; result.textContent = 'Ingresa kg reales válidos (> 0).'; return;
-  }
-
-  document.getElementById('prod-confirm-summary').textContent =
-    `Invernadero ${inv} · Semana ${predDate}\n` +
-    `Registrar kg reales: ${Math.round(kgVal).toLocaleString('es-MX')} kg\n` +
-    `(predicción fue: ${Math.round(kgPred).toLocaleString('es-MX')} kg)`;
-  document.getElementById('prod-confirm').hidden = false;
-  document.getElementById('prod-submit-btn').disabled = true;
-
-  const confirmEl = document.getElementById('prod-confirm');
-  confirmEl.dataset.inv    = inv;
-  confirmEl.dataset.predId = predId;
-  confirmEl.dataset.kg     = kgVal;
-}
-
-async function prodConfirm() {
-  const confirmEl = document.getElementById('prod-confirm');
-  const inv    = +confirmEl.dataset.inv;
-  const predId = +confirmEl.dataset.predId;
-  const kg     = parseFloat(confirmEl.dataset.kg);
-  const result = document.getElementById('prod-result');
-  const token  = localStorage.getItem('sb_token');
-
-  confirmEl.hidden = true;
-  document.getElementById('prod-submit-btn').disabled = false;
-
-  try {
-    const r = await fetch(`${API_BASE}/live-predictions/${inv}/${predId}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kg_actual: kg }),
-    });
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}));
-      throw new Error(j.detail || `Error ${r.status}`);
-    }
-    result.className = 'insert-result ok';
-    result.textContent = `✓ kg reales registrados · ${Math.round(kg).toLocaleString('es-MX')} kg`;
-    document.getElementById('prod-kg').value = '';
-    await loadProdPredictions(inv);
-    refreshLiveData();
-  } catch (e) {
-    result.className = 'insert-result bad';
-    result.textContent = '⚠ ' + e.message;
-  }
+  refreshLockBanner('sensores', +document.getElementById('ins-inv').value);
 }
 
 /* ── Rendimiento kg/m² (superficie de cultivo, m²) ── */
@@ -2957,14 +2859,7 @@ async function init() {
     rawPheno[3] = ph3; rawPheno[4] = ph4;
     phenoFields = ph3.fields || [];
     renderPhenology(3); renderPhenology(4);
-    buildInsertForm();
     initInsTabs();
-    document.getElementById('prod-submit-btn').addEventListener('click', prodSubmit);
-    document.getElementById('prod-confirm-btn').addEventListener('click', prodConfirm);
-    document.getElementById('prod-cancel').addEventListener('click', () => {
-      document.getElementById('prod-confirm').hidden = true;
-      document.getElementById('prod-submit-btn').disabled = false;
-    });
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);
 

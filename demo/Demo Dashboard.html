@@ -2601,8 +2601,9 @@ function parseXlsxPreview(formType, file) {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array' });
         const sheet = wb.Sheets[wb.SheetNames[0]];
+        const headerRow = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false })[0] || [];
         const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
-        resolve(rows);
+        resolve({ headerRow, rows });
       } catch (err) { reject(err); }
     };
     reader.onerror = () => reject(reader.error);
@@ -2648,9 +2649,9 @@ function wireUploadTab(formType) {
     const file = fileInput.files[0];
     if (!file) return;
     try {
-      const rows = await parseXlsxPreview(formType, file);
+      const { headerRow, rows } = await parseXlsxPreview(formType, file);
       const required = UPLOAD_TYPES[formType].requiredCols;
-      const missing = required.filter(c => !(rows[0] && c in rows[0]));
+      const missing = required.filter(c => !headerRow.includes(c));
       if (missing.length) {
         preview.textContent = `⚠ Columnas faltantes: ${missing.join(', ')}`;
         preview.classList.add('bad');

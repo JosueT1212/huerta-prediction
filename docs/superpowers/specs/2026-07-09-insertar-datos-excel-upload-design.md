@@ -41,17 +41,25 @@ riego_total, ph_promedio, ce_promedio, temp_prom_ext, temp_max_ext,
 temp_min_ext, rad_sum
 ```
 
-**Fenología** — mirrors `phenology_observations`:
+**Fenología** — mirrors `phenology_observations` (exact DB column names):
 ```
-semana, zona, planta, racimos_puestos, flores_abiertas, racimos_planta,
-cantidad_tomates, racimo_cosecha, tomates_maduros, diametro_fruto,
-crecimiento_planta
+fecha, zona, planta, racimos_puestos, flores_racimo_abiertas,
+racimos_en_planta, cantidad_tomates, racimo_en_cosecha, tomates_maduros,
+diametro_fruto_cm, crecimiento_planta_cm
 ```
+`fecha` maps to `week_date`.
 
 **Producción** — mirrors `predictions.kg_actual`:
 ```
-semana, kg_reales
+fecha, kg_reales
 ```
+`fecha` maps to `predicted_for`. Rows are **update-only**: a matching
+`predictions` row (greenhouse_id, predicted_for) must already exist —
+created by the live-inference cron, per
+`docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`.
+`predictions.kg_predicted` is `not null`, so this endpoint never inserts a
+new prediction row; a `fecha` with no matching row is reported in
+`rows_skipped` with reason "no existe predicción para esa semana".
 
 ## 2. Backend: `backend/routers/uploads.py` (new)
 

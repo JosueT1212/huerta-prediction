@@ -1001,7 +1001,7 @@
     margin: 0 0 -1px 0;
     padding: 0 var(--pad, 24px);
   }
-  .ins-tab {
+  .ins-tab, .hist-subtab {
     padding: 8px 20px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -1015,12 +1015,12 @@
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
   }
-  .ins-tab.active {
+  .ins-tab.active, .hist-subtab.active {
     background: var(--surface, #fff);
     color: var(--ink, #1e2a3a);
     border-color: var(--border, #d2d6db);
   }
-  .ins-tab:not(.active):hover { background: rgba(0,0,0,.04); }
+  .ins-tab:not(.active):hover, .hist-subtab:not(.active):hover { background: rgba(0,0,0,.04); }
   .ins-panel { border-top-left-radius: 0; }
   .ins-confirm-panel {
     margin-top: 16px;
@@ -1246,18 +1246,15 @@ Próximo envío disponible en 7 días.
     </div>
 
     <div class="panel insert-panel ins-panel" id="ins-panel-hist" hidden>
+      <div class="ins-tabs">
+        <button class="hist-subtab active" data-histtab="sensores">Sensores</button>
+        <button class="hist-subtab" data-histtab="fenologia">Fenología</button>
+        <button class="hist-subtab" data-histtab="produccion">Producción</button>
+      </div>
       <div style="overflow-x:auto">
-        <table class="insert-table" id="hist-table" style="min-width:900px">
-          <thead>
-            <tr>
-              <th>Semana</th><th>Zona</th><th>Planta</th>
-              <th>Rac. puestos</th><th>Flores</th><th>Rac. planta</th>
-              <th>Tomates</th><th>Rac. cosecha</th><th>Maduros</th>
-              <th>Diám. (cm)</th><th>Crec. (cm)</th>
-            </tr>
-          </thead>
-          <tbody id="hist-tbody"></tbody>
-        </table>
+        <table class="insert-table" id="hist-table-sensores" style="min-width:900px"></table>
+        <table class="insert-table" id="hist-table-fenologia" style="min-width:900px" hidden></table>
+        <table class="insert-table" id="hist-table-produccion" style="min-width:900px" hidden></table>
       </div>
       <div class="insert-result" id="hist-result"></div>
     </div>
@@ -2727,6 +2724,7 @@ function wireUploadTab(formType) {
 }
 
 function initInsTabs() {
+  initHistSubtabs();
   ['sensores', 'fenologia', 'produccion'].forEach(wireUploadTab);
 
   document.querySelectorAll('.ins-tab').forEach(btn => {
@@ -3052,42 +3050,65 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refreshLiveData();
 });
 
-// ── Historial de fenología ────────────────────────────────────────────────
-async function loadHistorial(inv) {
-  const tbody = document.getElementById('hist-tbody');
-  const result = document.getElementById('hist-result');
-  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#9aa0a8">Cargando…</td></tr>';
-  result.textContent = '';
+// ── Historial (Sensores / Fenología / Producción) ──────────────────────────
+const HIST_COLUMNS = {
+  sensores: [
+    ['fecha','Fecha'], ['temp_prom_int','Temp int.'], ['hr_prom_int','HR int.'],
+    ['co2_ppm','CO2'], ['riego_total','Riego'], ['ph_promedio','pH'], ['ce_promedio','CE'],
+  ],
+  fenologia: [
+    ['week_date','Semana'], ['zona','Zona'], ['planta','Planta'],
+    ['racimos_puestos','Rac. puestos'], ['flores_racimo_abiertas','Flores'],
+    ['racimos_en_planta','Rac. planta'], ['cantidad_tomates','Tomates'],
+    ['racimo_en_cosecha','Rac. cosecha'], ['tomates_maduros','Maduros'],
+    ['diametro_fruto_cm','Diám. (cm)'], ['crecimiento_planta_cm','Crec. (cm)'],
+  ],
+  produccion: [
+    ['predicted_for','Semana'], ['kg_predicted','kg predicho'], ['kg_actual','kg real'],
+  ],
+};
+
+async function loadHistTable(inv, formType) {
+  const table = document.getElementById(`hist-table-${formType}`);
   const token = localStorage.getItem('sb_token');
+  const cols = HIST_COLUMNS[formType];
+  table.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;color:#9aa0a8">Cargando…</td></tr>`;
   try {
-    const rows = await fetch(`${API_BASE}/phenology-live/${inv}?limit=500`, {
+    const rows = await fetch(`${API_BASE}/uploads/${inv}/${formType}/history?limit=500`, {
       headers: { 'Authorization': `Bearer ${token}` },
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#9aa0a8">Sin observaciones registradas.</td></tr>';
+      table.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;color:#9aa0a8">Sin datos registrados.</td></tr>`;
       return;
     }
-
     const fmt = v => (v == null ? '—' : v);
-    rows.sort((a, b) => b.week_date > a.week_date ? -1 : b.week_date < a.week_date ? 1 : (a.zona - b.zona) || (a.planta - b.planta));
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${r.week_date}</td>
-        <td>${r.zona}</td>
-        <td>${r.planta}</td>
-        <td>${fmt(r.racimos_puestos)}</td>
-        <td>${fmt(r.flores_racimo_abiertas)}</td>
-        <td>${fmt(r.racimos_en_planta)}</td>
-        <td>${fmt(r.cantidad_tomates)}</td>
-        <td>${fmt(r.racimo_en_cosecha)}</td>
-        <td>${fmt(r.tomates_maduros)}</td>
-        <td>${fmt(r.diametro_fruto_cm)}</td>
-        <td>${fmt(r.crecimiento_planta_cm)}</td>
-      </tr>`).join('');
+    table.innerHTML =
+      `<thead><tr>${cols.map(([, label]) => `<th>${label}</th>`).join('')}</tr></thead>` +
+      `<tbody>${rows.map(r => `<tr>${cols.map(([key]) => `<td>${fmt(r[key])}</td>`).join('')}</tr>`).join('')}</tbody>`;
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="12" style="color:#dc2626">Error al cargar (${e.message})</td></tr>`;
+    table.innerHTML = `<tr><td colspan="${cols.length}" style="color:#dc2626">Error al cargar (${e.message})</td></tr>`;
   }
+}
+
+async function loadHistorial(inv) {
+  const activeSub = document.querySelector('.hist-subtab.active')?.dataset.histtab || 'sensores';
+  await loadHistTable(inv, activeSub);
+}
+
+function initHistSubtabs() {
+  document.querySelectorAll('.hist-subtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.hist-subtab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sub = btn.dataset.histtab;
+      ['sensores', 'fenologia', 'produccion'].forEach(t =>
+        document.getElementById(`hist-table-${t}`).hidden = t !== sub
+      );
+      const inv = +document.getElementById('ins-inv').value;
+      loadHistTable(inv, sub);
+    });
+  });
 }
 </script>
 

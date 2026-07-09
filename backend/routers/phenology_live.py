@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from typing import Annotated
 from backend.auth import get_current_user
@@ -51,19 +51,3 @@ def list_phenology(
     return resp.data
 
 
-@router.delete("/phenology-live/{inv}/{obs_id}")
-def delete_phenology(
-    inv: int,
-    obs_id: int,
-    _user: Annotated[dict, Depends(get_current_user)] = None,
-):
-    resp = (
-        service_client.table("phenology_observations")
-        .delete()
-        .eq("id", obs_id)
-        .eq("greenhouse_id", inv)
-        .execute()
-    )
-    if not resp.data:
-        raise HTTPException(status_code=404, detail="Observación no encontrada")
-    return {"ok": True}

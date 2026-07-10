@@ -2745,6 +2745,18 @@ function initInsTabs() {
   document.getElementById('ins-inv').addEventListener('change', () => {
     const activeTab = document.querySelector('.ins-tab.active')?.dataset.tab;
     const inv = +document.getElementById('ins-inv').value;
+    // Switching invernadero invalidates any staged (unsubmitted) file, since
+    // the picked file's data is invernadero-specific. Clear staged state for
+    // all upload tabs so the selector and the pending submission can never desync.
+    ['sensores', 'fenologia', 'produccion'].forEach(formType => {
+      delete uploadState[formType];
+      const fileEl = document.getElementById(`upload-${formType}-file`);
+      const previewEl = document.getElementById(`upload-${formType}-preview`);
+      const btnEl = document.getElementById(`upload-${formType}-btn`);
+      if (fileEl) fileEl.value = '';
+      if (previewEl) previewEl.textContent = '';
+      if (btnEl) btnEl.disabled = true;
+    });
     if (activeTab === 'hist') loadHistorial(inv);
     else if (activeTab) refreshLockBanner(activeTab, inv);
   });

@@ -115,6 +115,9 @@ Base URL: `http://localhost:8000`
 | **GET** | **`/phenology/{inv}`** | **Serie semanal (promedio sobre plantas) de las 8 vars de fenología + `fields` (metadatos) + `latest`** |
 | **POST** | **`/phenology/{inv}`** | **Valida filas-por-planta y devuelve el promedio (stub demo: NO persiste, ver §13)** |
 | **GET** | **`/sensor-history/{inv}?var=temp\|hr\|co2\|ce\|par`** | **Promedio mensual por temporada (una serie por T13–T17) para el modal "ver histórico"** |
+| **POST** | **`/uploads/{inv}/{form_type}`** | **Sube un `.xlsx` (`form_type` = `sensores`\|`fenologia`\|`produccion`), valida columnas requeridas, hace upsert a Supabase; `429` si el bloqueo semanal (`submission-lock`) sigue activo. Tab "Insertar datos"** |
+| **GET** | **`/uploads/{inv}/{form_type}/history`** | **Historial de capturas ya enviadas para ese invernadero/tipo (tab Historial, solo lectura)** |
+| **GET** | **`/submission-lock/{inv}/{form_type}`** | **`{locked, next_allowed_at}` — si ya se envió una captura esta semana, bloquea el próximo envío 7 días** |
 | GET | `/demo/...` | Archivos estáticos del directorio `demo/` |
 
 ### Formato de `/inference/{inv}` (alias: `/predictions/{inv}`)
@@ -221,20 +224,48 @@ Mapeo `var` → fuente: `temp/hr/co2` (internas), `ce` (riego), `par`
 <script>                  → datos + Chart.js + router + init() async
 ```
 
-### 10 vistas (`id="view-<name>"`)
+### Vistas (`id="view-<name>"`)
+
+> `view-live3` / `view-live4` ("Tiempo real") fueron **eliminadas** (no había
+> sensores live que las alimentaran; solo quedaba el mock + histórico real,
+> que ahora vive dentro de "Insertar datos" → tab Historial).
 
 | View | Sidebar | Contenido | Estado |
 |---|---|---|---|
 | `view-menu` | "Vista general" | Saludo + 2 cards (inv3, inv4) con KPIs + chart resumen | **Conectado** |
-| `view-insert` | "Insertar datos" | **Formulario fila-por-planta** de fenología (8 vars) + promedio auto + envío (stub) | **Conectado** |
+| `view-insert` | "Insertar datos" | **4 tabs**: Sensores/Fenología/Producción (carga de Excel) + Historial (3 subtablas de solo lectura) — ver detalle abajo | **Conectado** |
 | `view-inv3` / `view-inv4` | "Predicción" | Slider manual (`‹ ›`) + KPIs (volumen, pico, **kg/m² 6 sem + acumulado T17**, semana pasada) + chart detalle + tabla 6 sem | **Conectado** |
 | `view-kpi3` / `view-kpi4` | "KPIs & gráficas" | **Hero kg/m² combo (meta vs producción)** arriba + card rendimiento prom. ambos + **panel fenología (8 vars)** + (mock: calibres, error, recursos) | **Parcial** |
-| `view-live3` / `view-live4` | "Tiempo real" | 6 sensores (temp, HR, CO₂, suelo, PAR, CE) con botón **"ver histórico"** (excepto suelo) + sistemas + chart 24h | **Mock + histórico real** |
 | `view-hist3` / `view-hist4` | "Histórico" | Tabla completa observado + predicho con % error | **Conectado** |
+
+### "Insertar datos" (`view-insert`) — detalle de los 4 tabs
+
+Reemplaza el antiguo formulario manual fila-por-planta (`ins-week`, `ins-add`,
+`ins-submit`). Selector `#ins-inv` (Invernadero 3/4) arriba, compartido por
+los 4 tabs (`.ins-tab[data-tab]`):
+
+| Tab | Panel | Contenido |
+|---|---|---|
+| Sensores | `ins-panel-sensores` | Carga `.xlsx` (`upload-sensores-file`) → preview de filas/fechas → doble confirmación → `POST /uploads/{inv}/sensores` |
+| Fenología | `ins-panel-fenologia` | Igual, columnas de fenología por planta → `POST /uploads/{inv}/fenologia` |
+| Producción | `ins-panel-produccion` | Igual, `fecha` + `kg_reales` → `POST /uploads/{inv}/produccion` |
+| Historial | `ins-panel-hist` | 3 subtabs de solo lectura (`.hist-subtab`: sensores/fenología/producción), cada uno una tabla (`hist-table-{tipo}`) de las capturas ya enviadas |
+
+Flujo de envío por tab (`wireUploadTab(formType)`):
+1. Se elige el `.xlsx` → se parsea client-side (SheetJS) y se valida que
+   existan las columnas requeridas (`UPLOAD_TYPES[formType].requiredCols`).
+2. Preview de filas detectadas + rango de fechas.
+3. Doble confirmación (`ins-confirm1` → `ins-confirm2`, con advertencia de
+   que la captura **no podrá modificarse ni eliminarse** y que el próximo
+   envío estará bloqueado 7 días).
+4. `POST /uploads/{inv}/{formType}` con el archivo; `429` si ya hay un envío
+   reciente (semanal) — banner de bloqueo vía `GET /submission-lock/{inv}/{formType}`.
+5. Cambiar `#ins-inv` limpia cualquier archivo/estado en staging de los 3
+   tabs de carga (evita enviar a un invernadero distinto al mostrado).
 
 ### Router (JS)
 - `showView(viewId)`: toggle `.active` en `.view`, sincroniza `.nav-btn` y `.sb-link`
-- Sub-vistas (`hist3`/`kpi3`/`live3`) mapean al padre `inv3` para el highlight
+- Sub-vistas (`hist3`/`kpi3`) mapean al padre `inv3` para el highlight
 - Listeners en `[data-goto]` y `.nav-btn, .sb-link`
 
 ### Carga de datos (`init()`)
@@ -244,7 +275,7 @@ Mapeo `var` → fuente: `temp/hr/co2` (internas), `ce` (riego), `par`
 3. wireSimControls(inv): listeners del slider (input) y flechas prev/next
 4. renderInv(inv, cursor=null): cursor inicial = mitad de T17 (índice 18)
 5. renderPhenology(3,4): cards de las 8 vars con sparkline SVG
-6. buildInsertForm(): construye el formulario (header dinámico desde phenoFields + 2 filas)
+6. initInsTabs(): wire de los 4 tabs de "Insertar datos" (Sensores/Fenología/Producción/Historial, ver §5)
 7. wireMeta(3,4) + renderYieldGoal(3,4): combo kg/m² meta vs producción (ver §13)
 8. Si falla → banner rojo "Backend no disponible"
 ```
@@ -271,13 +302,13 @@ const API_BASE = window.API_BASE
 
 ### IDs DOM relevantes (para hooks futuros)
 - `tbody-inv3`, `tbody-inv4`, `tbody-hist3`, `tbody-hist4`
-- `chart-menu-3/4`, `chart-inv3/4`, `chart-kpi{3,4}-{prod,cat,err,res}`, `chart-live3/4`
+- `chart-menu-3/4`, `chart-inv3/4`, `chart-kpi{3,4}-{prod,cat,err,res}`
 - KPI cards: `menu{3,4}-total/peak/peak-unit`, `inv{3,4}-total/peak/peak-unit`, `inv{3,4}-vs-{pred,real,err}`
 - **kg/m²**: `inv{3,4}-kgm2-win` (6 sem), `inv{3,4}-kgm2-acc` (T17), `kpi-yield-avg-{3,4}`, `kpi-yield-trend-{3,4}`, `chart-yield-{3,4}` (combo), `meta-input-{3,4}`
-- **Fenología**: `pheno-grid-{3,4}` (KPIs); formulario: `ins-inv`, `ins-week`, `ins-add`, `ins-thead/tbody/tfoot`, `ins-submit`, `ins-result`
+- **Fenología**: `pheno-grid-{3,4}` (KPIs)
+- **Insertar datos**: `ins-inv` (selector), `.ins-tab[data-tab]` (sensores/fenologia/produccion/hist), por tab: `upload-{tipo}-file/btn/preview/lock-banner/result`, `upload-{tipo}-confirm1/confirm2`; Historial: `.hist-subtab[data-histtab]`, `hist-table-{tipo}`
 - **Histórico sensor**: `hist-modal`, `hist-canvas`, `hist-modal-title/sub`; botón `.sensor-hist-btn[data-hist-var][data-hist-inv]`
 - Slider de semana: `slider{3,4}` (range), `prev{3,4}` / `next{3,4}` (flechas), `simweek{3,4}` (rango fecha), `simcur{3,4}` ("19 / 36")
-- `sensor-grid-{3,4}`, `status-list-{3,4}`, `live{3,4}-ts`
 
 ---
 
@@ -491,21 +522,20 @@ Todos los datos viven en `/Data/` (mayúscula). Archivos clave:
 - **Login** `login.html` (gate cosmético, `sessionStorage.jata_auth`)
 - **`backend/data_api.py`** + endpoints `/phenology/{inv}` (GET/POST), `/sensor-history/{inv}`
 - **Fenología en KPIs**: panel con las 8 vars (valor + sparkline) desde `/phenology`
-- **"Insertar datos"**: formulario fila-por-planta, promedio automático, validación de rango (stub sin persistencia)
+- **"Insertar datos"**: rediseñado como 4 tabs por invernadero — carga de `.xlsx` (Sensores/Fenología/Producción) con preview + doble confirmación + bloqueo semanal, y tab Historial de solo lectura (ver §5) — **persiste en Supabase** vía `/uploads/{inv}/{form_type}`
 - **"Ver histórico"** de sensores: modal con line-chart de promedio mensual, una línea por temporada T13–T17
 - **Rendimiento kg/m²** (ver §13): KPIs de predicción + card prom. ambos + hero combo meta vs producción
-- Verificado en navegador (Playwright): paneles, formulario (envío OK + 422), modal, combo y cambio de meta
+- Verificado en navegador (Playwright): paneles, carga de Excel (envío OK + validaciones), modal, combo y cambio de meta
 
 ### 🚧 En desarrollo
 - (Opcional) Endpoint SSE `/inference/{inv}/stream?delay_ms=N` para animar server-side
-- Banner "MOCK / Demo" sobre las gráficas mock restantes de KPIs & Live
-- **Persistencia de fenología** (POST hoy es stub) → migrar a **Supabase** en deployment
+- Banner "MOCK / Demo" sobre las gráficas mock restantes de KPIs
+- **Persistencia de fenología manual** (`POST /phenology/{inv}`, formulario de KPIs, hoy es stub) → migrar a **Supabase** en deployment; la fenología cargada por Excel en "Insertar datos" **sí** persiste
 
 ### 📋 Lo que sigue mock (por diseño)
 | Elemento | Por qué | Cuándo conectar |
 |---|---|---|
 | KPIs: calibres (dona), error 8 sem, recursos | Calibres requiere Vision Computer (YOLO) que aún no produce features | Tras integración YOLOv11-seg |
-| Tiempo real: valores de sensores + sistemas | No hay sensores live aún, solo Excel diario (el **histórico** sí es real) | Tras stack InfluxDB+Telegraf+Grafana |
 | KPIs: eficiencia hídrica, precisión, mortalidad | Cards estáticas de ejemplo | Cuando haya datos de riego/mortalidad por ciclo |
 
 ---

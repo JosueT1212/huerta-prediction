@@ -71,9 +71,7 @@ def test_upload_sensores_upserts_and_touches_lock(api_client, mock_supa):
     df = pd.DataFrame([{
         "fecha": "2026-07-01", "temp_prom_int": 22.1, "temp_min_int": 18.0,
         "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
-        "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
-        "temp_prom_ext": 20.0, "temp_max_ext": 26.0, "temp_min_ext": 15.0,
-        "rad_sum": 300.0,
+        "deficit_humedad": 3.2, "deficit_presion_vapor": 0.8, "humedad_abs_int": 11.5,
     }])
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
@@ -123,9 +121,7 @@ def test_upload_sensores_handles_blank_optional_cell(api_client, mock_supa):
     df = pd.DataFrame([{
         "fecha": "2026-07-01", "temp_prom_int": 22.1, "temp_min_int": 18.0,
         "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
-        "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
-        "temp_prom_ext": 20.0, "temp_max_ext": 26.0, "temp_min_ext": None,
-        "rad_sum": 300.0,
+        "deficit_humedad": 3.2, "deficit_presion_vapor": 0.8, "humedad_abs_int": None,
     }])
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
@@ -160,3 +156,91 @@ def test_lock_status_endpoint_returns_status(api_client, mock_supa):
     r = api_client.get("/submission-lock/3/sensores", headers=headers)
     assert r.status_code == 200
     assert r.json() == {"locked": False, "next_allowed_at": None}
+
+
+def test_upload_riego_upserts_and_touches_lock(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    df = pd.DataFrame([{
+        "fecha": "2026-07-01", "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
+    }])
+    files = {"file": ("riego.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/riego", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 1
+    mock_supa.table.assert_any_call("riego_readings")
+    mock_supa.table.assert_any_call("submission_locks")
+
+
+def test_riego_history_returns_list(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    mock_supa.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value.data = [
+        {"greenhouse_id": 3, "fecha": "2026-07-01", "riego_total": 120.0}
+    ]
+    r = api_client.get("/uploads/3/riego/history", headers=headers)
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
+
+def test_riego_lock_status_returns_status(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    r = api_client.get("/submission-lock/3/riego", headers=headers)
+    assert r.status_code == 200
+    assert r.json() == {"locked": False, "next_allowed_at": None}
+
+
+def test_upload_exteriores_requires_auth(api_client):
+    df = pd.DataFrame([{"fecha": "2026-07-01", "temp_prom_ext": 20.0}])
+    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/exteriores", files=files)
+    assert r.status_code == 401
+
+
+def test_upload_exteriores_upserts_without_greenhouse_id(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    df = pd.DataFrame([{
+        "fecha": "2026-07-01", "temp_prom_ext": 20.0, "temp_max_ext": 26.0,
+        "temp_min_ext": 15.0, "hr_prom_ext": 70.0, "rad_sum": 1800.0,
+        "rad_max": 850.0, "dh_ext": 5.0, "humedad_abs_ext": 9.5,
+    }])
+    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/exteriores", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 1
+    mock_supa.table.assert_any_call("exterior_readings")
+    # verify no greenhouse_id key was sent for the exterior_readings upsert
+    upsert_call = next(
+        c for c in mock_supa.table.return_value.upsert.call_args_list
+    )
+    assert "greenhouse_id" not in upsert_call[0][0]
+
+
+def test_upload_exteriores_rejects_per_inv_route(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    df = pd.DataFrame([{"fecha": "2026-07-01", "temp_prom_ext": 20.0}])
+    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/exteriores", headers=headers, files=files)
+    assert r.status_code == 422
+
+
+def test_exteriores_history_returns_list(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    mock_supa.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value.data = [
+        {"fecha": "2026-07-01", "temp_prom_ext": 20.0}
+    ]
+    r = api_client.get("/uploads/exteriores/history", headers=headers)
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
+
+def test_exteriores_lock_status_uses_sentinel(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    r = api_client.get("/submission-lock/exteriores", headers=headers)
+    assert r.status_code == 200
+    assert r.json() == {"locked": False, "next_allowed_at": None}
+    mock_supa.table.return_value.select.return_value.eq.assert_any_call("greenhouse_id", 0)

@@ -1159,6 +1159,8 @@
 
     <div class="ins-tabs">
       <button class="ins-tab active" data-tab="sensores">Sensores</button>
+      <button class="ins-tab" data-tab="riego">Riego</button>
+      <button class="ins-tab" data-tab="exteriores">Exteriores</button>
       <button class="ins-tab" data-tab="fenologia">Fenología</button>
       <button class="ins-tab" data-tab="produccion">Producción</button>
       <button class="ins-tab" data-tab="hist">Historial</button>
@@ -1189,6 +1191,61 @@ Próximo envío disponible en 7 días.
         </div>
       </div>
       <div class="insert-result" id="upload-sensores-result"></div>
+    </div>
+
+    <div class="panel insert-panel ins-panel" id="ins-panel-riego" hidden>
+      <div class="insert-toolbar">
+        <input type="file" id="upload-riego-file" accept=".xlsx" />
+        <div class="insert-spacer"></div>
+        <button class="btn-primary" id="upload-riego-btn" disabled>Enviar captura</button>
+      </div>
+      <div class="insert-hint" id="upload-riego-lock-banner"></div>
+      <div class="insert-hint" id="upload-riego-preview"></div>
+      <div class="ins-confirm-panel" id="upload-riego-confirm1" hidden>
+        <pre class="ins-confirm-summary" id="upload-riego-confirm1-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-riego-cancel1">Cancelar</button>
+          <button class="btn-primary" id="upload-riego-next1">Continuar</button>
+        </div>
+      </div>
+      <div class="ins-confirm-panel" id="upload-riego-confirm2" hidden>
+        <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
+Próximo envío disponible en 7 días.
+¿Confirmar definitivamente?</pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-riego-cancel2">Cancelar</button>
+          <button class="btn-primary" id="upload-riego-confirm-btn">Confirmar definitivamente</button>
+        </div>
+      </div>
+      <div class="insert-result" id="upload-riego-result"></div>
+    </div>
+
+    <div class="panel insert-panel ins-panel" id="ins-panel-exteriores" hidden>
+      <div class="insert-hint" style="margin-bottom:8px">Aplica a ambos invernaderos (dato climático compartido).</div>
+      <div class="insert-toolbar">
+        <input type="file" id="upload-exteriores-file" accept=".xlsx" />
+        <div class="insert-spacer"></div>
+        <button class="btn-primary" id="upload-exteriores-btn" disabled>Enviar captura</button>
+      </div>
+      <div class="insert-hint" id="upload-exteriores-lock-banner"></div>
+      <div class="insert-hint" id="upload-exteriores-preview"></div>
+      <div class="ins-confirm-panel" id="upload-exteriores-confirm1" hidden>
+        <pre class="ins-confirm-summary" id="upload-exteriores-confirm1-summary"></pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-exteriores-cancel1">Cancelar</button>
+          <button class="btn-primary" id="upload-exteriores-next1">Continuar</button>
+        </div>
+      </div>
+      <div class="ins-confirm-panel" id="upload-exteriores-confirm2" hidden>
+        <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
+Próximo envío disponible en 7 días.
+¿Confirmar definitivamente?</pre>
+        <div class="ins-confirm-actions">
+          <button class="btn-ghost" id="upload-exteriores-cancel2">Cancelar</button>
+          <button class="btn-primary" id="upload-exteriores-confirm-btn">Confirmar definitivamente</button>
+        </div>
+      </div>
+      <div class="insert-result" id="upload-exteriores-result"></div>
     </div>
 
     <div class="panel insert-panel ins-panel" id="ins-panel-fenologia" hidden>
@@ -1248,11 +1305,15 @@ Próximo envío disponible en 7 días.
     <div class="panel insert-panel ins-panel" id="ins-panel-hist" hidden>
       <div class="ins-tabs">
         <button class="hist-subtab active" data-histtab="sensores">Sensores</button>
+        <button class="hist-subtab" data-histtab="riego">Riego</button>
+        <button class="hist-subtab" data-histtab="exteriores">Exteriores</button>
         <button class="hist-subtab" data-histtab="fenologia">Fenología</button>
         <button class="hist-subtab" data-histtab="produccion">Producción</button>
       </div>
       <div style="overflow-x:auto">
         <table class="insert-table" id="hist-table-sensores" style="min-width:900px"></table>
+        <table class="insert-table" id="hist-table-riego" style="min-width:900px" hidden></table>
+        <table class="insert-table" id="hist-table-exteriores" style="min-width:900px" hidden></table>
         <table class="insert-table" id="hist-table-fenologia" style="min-width:900px" hidden></table>
         <table class="insert-table" id="hist-table-produccion" style="min-width:900px" hidden></table>
       </div>
@@ -2583,8 +2644,13 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHistModal(); });
 
 /* ── Insertar datos: captura semanal por archivo Excel ── */
+const PER_INV_UPLOAD_TYPES = ['sensores', 'riego', 'fenologia', 'produccion'];
+const GLOBAL_UPLOAD_TYPES = ['exteriores'];
+
 const UPLOAD_TYPES = {
-  sensores:   { requiredCols: ['fecha','temp_prom_int','temp_min_int','temp_max_int','hr_prom_int','co2_ppm','riego_total','ph_promedio','ce_promedio','temp_prom_ext','temp_max_ext','temp_min_ext','rad_sum'] },
+  sensores:   { requiredCols: ['fecha','temp_prom_int','temp_min_int','temp_max_int','hr_prom_int','co2_ppm','deficit_humedad','deficit_presion_vapor','humedad_abs_int'] },
+  riego:      { requiredCols: ['fecha','riego_total','ph_promedio','ce_promedio'] },
+  exteriores: { requiredCols: ['fecha','temp_prom_ext','temp_max_ext','temp_min_ext','hr_prom_ext','rad_sum','rad_max','dh_ext','humedad_abs_ext'], global: true },
   fenologia:  { requiredCols: ['fecha','zona','planta','racimos_puestos','flores_racimo_abiertas','racimos_en_planta','cantidad_tomates','racimo_en_cosecha','tomates_maduros','diametro_fruto_cm','crecimiento_planta_cm'] },
   produccion: { requiredCols: ['fecha','kg_reales'] },
 };
@@ -2612,8 +2678,11 @@ async function refreshLockBanner(formType, inv) {
   const banner = document.getElementById(`upload-${formType}-lock-banner`);
   const btn = document.getElementById(`upload-${formType}-btn`);
   const token = localStorage.getItem('sb_token');
+  const lockUrl = inv == null
+    ? `${API_BASE}/submission-lock/${formType}`
+    : `${API_BASE}/submission-lock/${inv}/${formType}`;
   try {
-    const status = await fetch(`${API_BASE}/submission-lock/${inv}/${formType}`, {
+    const status = await fetch(lockUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
     }).then(r => r.json());
     if (status.locked) {
@@ -2657,7 +2726,8 @@ function wireUploadTab(formType) {
       preview.classList.remove('bad');
       const fechas = rows.map(r => r.fecha).filter(Boolean).sort();
       preview.textContent = `${rows.length} fila(s) detectada(s) · ${fechas[0]} → ${fechas[fechas.length - 1]}`;
-      uploadState[formType] = { file, rows, inv: +document.getElementById('ins-inv').value };
+      const isGlobal = !!UPLOAD_TYPES[formType].global;
+      uploadState[formType] = { file, rows, inv: isGlobal ? null : +document.getElementById('ins-inv').value };
       btn.disabled = false;
     } catch (e) {
       preview.textContent = '⚠ No se pudo leer el archivo: ' + e.message;
@@ -2668,8 +2738,9 @@ function wireUploadTab(formType) {
   btn.addEventListener('click', () => {
     const state = uploadState[formType];
     if (!state) return;
+    const invLabel = state.inv == null ? '' : `Invernadero ${state.inv} · `;
     document.getElementById(`upload-${formType}-confirm1-summary`).textContent =
-      `Invernadero ${state.inv} · ${state.rows.length} fila(s) en el archivo\nArchivo: ${state.file.name}`;
+      `${invLabel}${state.rows.length} fila(s) en el archivo\nArchivo: ${state.file.name}`;
     document.getElementById(`upload-${formType}-confirm1`).hidden = false;
     btn.disabled = true;
   });
@@ -2696,7 +2767,10 @@ function wireUploadTab(formType) {
     const formData = new FormData();
     formData.append('file', state.file);
     try {
-      const r = await fetch(`${API_BASE}/uploads/${state.inv}/${formType}`, {
+      const uploadUrl = state.inv == null
+        ? `${API_BASE}/uploads/${formType}`
+        : `${API_BASE}/uploads/${state.inv}/${formType}`;
+      const r = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
@@ -2725,7 +2799,7 @@ function wireUploadTab(formType) {
 
 function initInsTabs() {
   initHistSubtabs();
-  ['sensores', 'fenologia', 'produccion'].forEach(wireUploadTab);
+  [...PER_INV_UPLOAD_TYPES, ...GLOBAL_UPLOAD_TYPES].forEach(wireUploadTab);
 
   document.querySelectorAll('.ins-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2734,11 +2808,13 @@ function initInsTabs() {
       const tab = btn.dataset.tab;
       const inv = +document.getElementById('ins-inv').value;
       document.getElementById('ins-panel-sensores').hidden  = tab !== 'sensores';
+      document.getElementById('ins-panel-riego').hidden     = tab !== 'riego';
+      document.getElementById('ins-panel-exteriores').hidden = tab !== 'exteriores';
       document.getElementById('ins-panel-fenologia').hidden = tab !== 'fenologia';
       document.getElementById('ins-panel-produccion').hidden = tab !== 'produccion';
       document.getElementById('ins-panel-hist').hidden = tab !== 'hist';
       if (tab === 'hist') loadHistorial(inv);
-      else refreshLockBanner(tab, inv);
+      else refreshLockBanner(tab, GLOBAL_UPLOAD_TYPES.includes(tab) ? null : inv);
     });
   });
 
@@ -2748,7 +2824,7 @@ function initInsTabs() {
     // Switching invernadero invalidates any staged (unsubmitted) file, since
     // the picked file's data is invernadero-specific. Clear staged state for
     // all upload tabs so the selector and the pending submission can never desync.
-    ['sensores', 'fenologia', 'produccion'].forEach(formType => {
+    PER_INV_UPLOAD_TYPES.forEach(formType => {
       delete uploadState[formType];
       const fileEl = document.getElementById(`upload-${formType}-file`);
       const previewEl = document.getElementById(`upload-${formType}-preview`);
@@ -2758,7 +2834,7 @@ function initInsTabs() {
       if (btnEl) btnEl.disabled = true;
     });
     if (activeTab === 'hist') loadHistorial(inv);
-    else if (activeTab) refreshLockBanner(activeTab, inv);
+    else if (activeTab) refreshLockBanner(activeTab, GLOBAL_UPLOAD_TYPES.includes(activeTab) ? null : inv);
   });
 
   refreshLockBanner('sensores', +document.getElementById('ins-inv').value);
@@ -3065,8 +3141,18 @@ document.addEventListener('visibilitychange', () => {
 // ── Historial (Sensores / Fenología / Producción) ──────────────────────────
 const HIST_COLUMNS = {
   sensores: [
-    ['fecha','Fecha'], ['temp_prom_int','Temp int.'], ['hr_prom_int','HR int.'],
-    ['co2_ppm','CO2'], ['riego_total','Riego'], ['ph_promedio','pH'], ['ce_promedio','CE'],
+    ['fecha','Fecha'], ['temp_prom_int','Temp int.'], ['temp_min_int','Temp min.'],
+    ['temp_max_int','Temp máx.'], ['hr_prom_int','HR int.'], ['co2_ppm','CO2'],
+    ['deficit_humedad','Déficit hum.'], ['deficit_presion_vapor','Déficit vapor'],
+    ['humedad_abs_int','Hum. absoluta'],
+  ],
+  riego: [
+    ['fecha','Fecha'], ['riego_total','Riego total'], ['ph_promedio','pH'], ['ce_promedio','CE'],
+  ],
+  exteriores: [
+    ['fecha','Fecha'], ['temp_prom_ext','Temp ext.'], ['temp_max_ext','Temp máx.'],
+    ['temp_min_ext','Temp mín.'], ['hr_prom_ext','HR ext.'], ['rad_sum','Radiación (suma)'],
+    ['rad_max','Radiación (máx)'], ['dh_ext','Déficit hum.'], ['humedad_abs_ext','Hum. absoluta'],
   ],
   fenologia: [
     ['week_date','Semana'], ['zona','Zona'], ['planta','Planta'],
@@ -3085,8 +3171,11 @@ async function loadHistTable(inv, formType) {
   const token = localStorage.getItem('sb_token');
   const cols = HIST_COLUMNS[formType];
   table.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;color:#9aa0a8">Cargando…</td></tr>`;
+  const historyUrl = GLOBAL_UPLOAD_TYPES.includes(formType)
+    ? `${API_BASE}/uploads/${formType}/history?limit=500`
+    : `${API_BASE}/uploads/${inv}/${formType}/history?limit=500`;
   try {
-    const rows = await fetch(`${API_BASE}/uploads/${inv}/${formType}/history?limit=500`, {
+    const rows = await fetch(historyUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
@@ -3114,7 +3203,7 @@ function initHistSubtabs() {
       document.querySelectorAll('.hist-subtab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const sub = btn.dataset.histtab;
-      ['sensores', 'fenologia', 'produccion'].forEach(t =>
+      [...PER_INV_UPLOAD_TYPES, ...GLOBAL_UPLOAD_TYPES].forEach(t =>
         document.getElementById(`hist-table-${t}`).hidden = t !== sub
       );
       const inv = +document.getElementById('ins-inv').value;

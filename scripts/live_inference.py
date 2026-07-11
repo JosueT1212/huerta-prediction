@@ -54,15 +54,35 @@ def main():
 
     cutoff = (date.today() - timedelta(weeks=12)).isoformat()
 
-    wide_resp = (
+    sensor_resp = (
         supa.table("sensor_readings_wide")
         .select("*")
         .eq("greenhouse_id", INV_ID)
         .gte("fecha", cutoff)
         .execute()
     )
-    wide_rows = wide_resp.data or []
-    print(f"  Wide sensor rows pulled: {len(wide_rows)}")
+    riego_resp = (
+        supa.table("riego_readings")
+        .select("*")
+        .eq("greenhouse_id", INV_ID)
+        .gte("fecha", cutoff)
+        .execute()
+    )
+    # exterior_readings is global (no greenhouse_id column) — same weather feeds both invernaderos
+    ext_resp = (
+        supa.table("exterior_readings")
+        .select("*")
+        .gte("fecha", cutoff)
+        .execute()
+    )
+
+    merged_by_fecha: dict[str, dict] = {}
+    for row in (sensor_resp.data or []) + (riego_resp.data or []) + (ext_resp.data or []):
+        merged_by_fecha.setdefault(row["fecha"], {}).update(row)
+    wide_rows = list(merged_by_fecha.values())
+    print(f"  Sensor rows pulled: {len(sensor_resp.data or [])} sensores + "
+          f"{len(riego_resp.data or [])} riego + {len(ext_resp.data or [])} exteriores "
+          f"→ {len(wide_rows)} merged by fecha")
 
     pheno_resp = (
         supa.table("phenology_observations")

@@ -19,15 +19,22 @@ PHENOLOGY_COLS = [
     "tomates_maduros", "diametro_fruto_cm", "crecimiento_planta_cm",
 ]
 PRODUCTION_COLS = ["fecha", "kg_reales"]
+EXTERIOR_COLS = [
+    "fecha", "temp_prom_ext", "temp_max_ext", "temp_min_ext", "hr_prom_ext",
+    "rad_sum", "rad_max", "dh_ext", "humedad_abs_ext",
+]
 
 FORM_TYPES = {
     "sensores": SENSOR_COLS,
     "riego": RIEGO_COLS,
     "fenologia": PHENOLOGY_COLS,
     "produccion": PRODUCTION_COLS,
+    "exteriores": EXTERIOR_COLS,
 }
 
 PER_INV_TYPES = {"sensores", "riego", "fenologia", "produccion"}
+
+EXTERIORES_GH_ID = 0  # sentinel: exteriores has no real invernadero (0 is never a real id)
 
 
 def _require_form_type(form_type: str) -> list[str]:
@@ -77,6 +84,15 @@ def _ingest_rows(df: pd.DataFrame, form_type: str, greenhouse_id: int | None):
             record.update({c: row[c] for c in required_cols if c != "fecha"})
             service_client.table(table).upsert(
                 record, on_conflict="greenhouse_id,fecha"
+            ).execute()
+            rows_inserted += 1
+
+    elif form_type == "exteriores":
+        for _, row in df.iterrows():
+            record = {"fecha": _date_str(row["fecha"])}
+            record.update({c: row[c] for c in required_cols if c != "fecha"})
+            service_client.table("exterior_readings").upsert(
+                record, on_conflict="fecha"
             ).execute()
             rows_inserted += 1
 
@@ -187,3 +203,49 @@ def lock_status(
         raise HTTPException(422, f"{form_type} no usa invernadero; usa /submission-lock/{form_type}")
     _require_form_type(form_type)
     return get_lock_status(inv, form_type)
+
+
+@router.post("/uploads/exteriores")
+async def upload_exteriores(
+    file: UploadFile,
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    required_cols = FORM_TYPES["exteriores"]
+    check_submission_lock(EXTERIORES_GH_ID, "exteriores")
+
+    contents = await file.read()
+    df = _parse_excel(contents, required_cols)
+    rows_inserted, rows_updated, rows_skipped, skipped_reasons = _ingest_rows(df, "exteriores", None)
+
+    if rows_inserted + rows_updated > 0:
+        touch_submission_lock(EXTERIORES_GH_ID, "exteriores")
+
+    return {
+        "rows_in_file": len(df),
+        "rows_inserted": rows_inserted,
+        "rows_updated": rows_updated,
+        "rows_skipped": rows_skipped,
+        "skipped_reasons": skipped_reasons,
+    }
+
+
+@router.get("/uploads/exteriores/history")
+def upload_history_exteriores(
+    limit: int = 200,
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    resp = (
+        service_client.table("exterior_readings")
+        .select("*")
+        .order("fecha", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return resp.data
+
+
+@router.get("/submission-lock/exteriores")
+def lock_status_exteriores(
+    _user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    return get_lock_status(EXTERIORES_GH_ID, "exteriores")

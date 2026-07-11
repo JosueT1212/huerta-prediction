@@ -12,7 +12,8 @@
 - `hp_inv3.yaml` and `hp_inv4.yaml` both currently set `use_gap_norm: false`.
 - `cnn_rnn_inv3.py` / `cnn_rnn_inv4.py` already run a full grid search: 4 init methods × 54 seeds = 216 runs, train on T13–T15, validate on T16 (early stopping on val loss), test on T17. Best run selected by val performance, reported metrics computed on T17.
 - Current best (pre-change) results: inv3 best = lecun/seed=100, R²=0.6973 (test), early-stopped at epoch 164. Inv4 best = R²=0.6551 (test), from a run where gap-norm happened to be enabled at the time.
-- Test season is hardcoded to `'T17'` in two places: `build_dataset_for_greenhouse` (line 587) and `prepare_data` (line 914). There is currently no way to pool all 5 seasons into training — this must change for the production-refit step.
+- `build_dataset_for_greenhouse` and `prepare_data` already accept arbitrary `train_seasons` (list) and `val_season` (single season name) — `train_seasons=['T13',...,'T17']` pools all 5 seasons into `train_df` with no code change needed. `test_df` stays hardcoded to `'T17'`, which is fine for production: it becomes an unused loader (harmless, no metrics reported from it).
+- `train_model` (line 1166) already reads `epochs` and `patience` from the `hp` dict passed in — a production `hp` copy with `epochs=<target>` and `patience=<target>+10` forces the loop to run for exactly `<target>` epochs without ever early-stopping, no code change needed.
 - `make_sequences_per_season` (line 626) takes a single fixed `seq_len` int applied uniformly to every season within one greenhouse. `seq_len` stays fixed per greenhouse — CLAUDE.md §7 already established that varying `seq_len` per *season* causes zero-padding problems (inv4 T16 case). What varies per season instead is the *skip*, which `_apply_gap_norm_cnn` already computes automatically via `extra_skip = max(0, gap - seq_len - HORIZON)`.
 - `extra_skip` can only trim rows *down* (shrink eff_horizon when gap is larger than `seq_len + HORIZON`) — it can never push eff_horizon up, since there's no sensor data earlier than a season's actual sensor start. So gap-norm is a ceiling, not a normalizer: seasons where `gap < seq_len + HORIZON` keep their natural (smaller) `eff_horizon = gap - seq_len`, no matter what.
 - Analysis with `HORIZON=5`: at `seq_len=6` (old fixed value), inv4 T15 (gap=8) and T16 (gap=6) fall structurally short of horizon=5 (natural eff_horizon 2 and 0). Lowering `seq_len` shrinks the trim threshold (`seq_len+HORIZON`) and raises natural eff_horizon for short-gap seasons, closing the gap without touching per-season alignment logic:
@@ -40,18 +41,15 @@ Run `python Models/cnn_rnn_inv3.py` and `python Models/cnn_rnn_inv4.py` unchange
 
 From each log, record the winning run's: init method, seed, and early-stop epoch number (needed for step 4).
 
-### 4. Production refit (code change required)
+### 4. Production refit (no code change to `cnn_rnn_yield.py` — new thin scripts only)
 
-**Code change:** make the test season configurable instead of hardcoded `'T17'`:
-- `build_dataset_for_greenhouse(...)`: accept a `test_season` parameter (default `'T17'` to preserve existing grid-search behavior); when `test_season=None`, skip creating a separate test split — all seasons not in `val_season` go to train.
-- `prepare_data(...)`: thread `test_season` through the same way; when `None`, skip building `test_df`/`sensor_te_df`/test `DataLoader` entirely.
-
-**New production mode** (small addition per greenhouse — either a CLI flag on the existing scripts or a new thin script, e.g. `cnn_rnn_inv3_production.py` / `cnn_rnn_inv4_production.py`, reusing all shared logic from `cnn_rnn_yield.py`):
-- `train_seasons = ['T13','T14','T15','T16','T17']`, `val_season = None`, `test_season = None` — all 5 seasons pooled into training, nothing held out.
-- Hyperparameters fixed to the winning config from step 3 (init method, seed) — no seed/init sweep.
-- No early stopping (no val set exists). Train for a **fixed number of epochs** equal to the winning grid-search run's early-stop epoch (e.g. inv3 was 164 in the pre-change run; re-derive from the new HORIZON=5 run's log).
+New scripts `Models/cnn_rnn_inv3_production.py` / `Models/cnn_rnn_inv4_production.py`, mirroring the structure of the existing `cnn_rnn_inv3.py`/`cnn_rnn_inv4.py` but simplified to a single run:
+- `train_seasons = ['T13','T14','T15','T16','T17']` — all 5 seasons pooled into `train_df`. `val_season` stays `'T16'` (already inside `train_seasons`, so it's a redundant/overlapping subset used only to keep the existing `prepare_data`/`train_model` plumbing working — not a real holdout).
+- A copy of the greenhouse's `hp_inv*.yaml` dict with `epochs` and `patience` overridden: `epochs = <target_epoch>` (the winning grid-search run's early-stop epoch from step 3), `patience = <target_epoch> + 10` (large enough that early stopping can never trigger before the loop naturally completes `epochs` iterations).
+- Single seed/init: the winning `(init_method, seed)` pair from step 3 — no sweep loop.
 - Save the resulting weights to a distinct path so they never clobber the eval checkpoints used for reporting metrics: `Models/results/production_cnn_rnn_inv3.pt`, `Models/results/production_cnn_rnn_inv4.pt`.
-- No test-set metrics are computed or reported for the production model (data leakage — it trained on everything). Training-loss curve can still be logged for sanity-checking convergence.
+- Also save the inference pipeline (scalers, PCA, etc., fit on the full pooled training data) via `prepare_data(..., pipeline_path=RESULTS_DIR / 'production_pipeline_inv3.pkl')` (and `_inv4.pkl`) — this is the artifact the live-inference pipeline will actually consume.
+- No test-set metrics are computed or reported (the "test" loader is technically built from `T17`, which is now inside the training data too — reporting metrics from it would be pure data leakage, so this step is skipped entirely). Training-loss curve can still be logged for sanity-checking convergence.
 
 ### 5. Order of operations
 

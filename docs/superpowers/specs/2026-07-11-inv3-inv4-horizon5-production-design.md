@@ -13,6 +13,7 @@
 - `cnn_rnn_inv3.py` / `cnn_rnn_inv4.py` already run a full grid search: 4 init methods × 54 seeds = 216 runs, train on T13–T15, validate on T16 (early stopping on val loss), test on T17. Best run selected by val performance, reported metrics computed on T17.
 - Current best (pre-change) results: inv3 best = lecun/seed=100, R²=0.6973 (test), early-stopped at epoch 164. Inv4 best = R²=0.6551 (test), from a run where gap-norm happened to be enabled at the time.
 - Test season is hardcoded to `'T17'` in two places: `build_dataset_for_greenhouse` (line 587) and `prepare_data` (line 914). There is currently no way to pool all 5 seasons into training — this must change for the production-refit step.
+- `make_sequences_per_season` (line 626) takes a single fixed `seq_len` int applied uniformly to every season. `seq_len` stays this way — CLAUDE.md §7 already established that varying `seq_len` per season causes zero-padding problems (inv4 T16 case). What varies per season instead is the *skip*, which `_apply_gap_norm_cnn` already computes automatically.
 
 ## Design
 
@@ -26,7 +27,7 @@ In both `Models/hp_inv3.yaml` and `Models/hp_inv4.yaml`, set `use_gap_norm: true
 
 ### 3. Grid search re-run (existing scripts, no code changes needed here)
 
-Run `python Models/cnn_rnn_inv3.py` and `python Models/cnn_rnn_inv4.py` unchanged. Each does its existing 216-run search (train T13-15 / val T16 / test T17) under the new HORIZON=5 + gap-norm settings. This produces fresh `inv3.log` / `inv4.log`, `cnn_rnn_inv3_metrics.csv` / `cnn_rnn_inv4_metrics.csv`, and eval checkpoints `best_cnn_rnn_inv3.pt` / `best_cnn_rnn_inv4.pt`. These are validation artifacts, not the production models.
+Run `python Models/cnn_rnn_inv3.py` and `python Models/cnn_rnn_inv4.py` unchanged. Each does its existing 216-run search (train T13-15 / val T16 / test T17) under the new HORIZON=5 + gap-norm settings. `seq_len` stays fixed at `6` for all seasons in both greenhouses — `_apply_gap_norm_cnn` already computes the per-season skip (`extra_skip = max(0, gap - seq_len - HORIZON)`) needed so effective horizon aligns to `HORIZON=5` without touching `seq_len` itself. This produces fresh `inv3.log` / `inv4.log`, `cnn_rnn_inv3_metrics.csv` / `cnn_rnn_inv4_metrics.csv`, and eval checkpoints `best_cnn_rnn_inv3.pt` / `best_cnn_rnn_inv4.pt`. These are validation artifacts, not the production models.
 
 From each log, record the winning run's: init method, seed, and early-stop epoch number (needed for step 4).
 
@@ -56,4 +57,4 @@ For each greenhouse (inv3, inv4), in order:
 
 - No changes to feature engineering, architecture (CNN/LSTM structure), or the other model families (ARIMAX, XGBoost, SVR, ElasticNet).
 - No changes to the live-inference pipeline design (separate spec) — this only produces the trained weights it would eventually consume.
-- No re-derivation of `seq_len` (stays fixed at 6 per CLAUDE.md §7 rationale — variable seq_len caused zero-padding issues previously).
+- No per-season `seq_len` (stays fixed at 6 for all seasons, both greenhouses, per CLAUDE.md §7 rationale). Per-season horizon alignment is handled entirely by adjusting the skip via `_apply_gap_norm_cnn`, not by varying `seq_len`.

@@ -300,3 +300,9 @@ def test_spline_yield_in_sensor_frame_after_prepare_data():
         f"spline_yield should add 1 CNN channel: without={n_sensor_without}, with={n_sensor_with}. "
         f"If equal, spline_yield is being dropped from the pheno path."
     )
+
+
+def test_horizon_is_5():
+    """Target prediction horizon changed from 4 to 5 weeks (2026-07-11 retune)."""
+    from cnn_rnn_yield import HORIZON
+    assert HORIZON == 5

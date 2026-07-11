@@ -49,7 +49,7 @@ print(f'Using device: {DEVICE}')
 DATA_DIR = Path(__file__).resolve().parent.parent / 'Data'
 RESULTS_DIR = Path(__file__).resolve().parent / 'results'
 
-HORIZON = 4   # fixed prediction horizon (weeks); seq_len = gap - HORIZON + skip_first_weeks
+HORIZON = 5   # fixed prediction horizon (weeks); per-season alignment via _apply_gap_norm_cnn (seq_len set per greenhouse in hp_inv*.yaml)
 RESULTS_DIR.mkdir(exist_ok=True)
 
 SEASON_NAMES = ['T13', 'T14', 'T15', 'T16', 'T17']

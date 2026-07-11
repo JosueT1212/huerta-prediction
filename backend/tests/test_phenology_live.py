@@ -19,7 +19,7 @@ def _auth(mock_supa):
     from backend.tests.conftest import make_user
     user, profile = make_user()
     mock_supa.auth.get_user.return_value.user = user
-    mock_supa.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = profile
+    mock_supa.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = profile
     return {"Authorization": "Bearer valid-token"}
 
 

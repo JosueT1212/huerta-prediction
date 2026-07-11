@@ -306,3 +306,70 @@ def test_horizon_is_5():
     """Target prediction horizon changed from 4 to 5 weeks (2026-07-11 retune)."""
     from cnn_rnn_yield import HORIZON
     assert HORIZON == 5
+
+
+# ── gap-norm regression tests ────────────────────────────────────────────────
+
+def _make_gap_norm_fixture(gaps, n_rows=20):
+    """Build a synthetic sensor_df/prod_df pair for _apply_gap_norm_cnn tests.
+
+    gaps: dict of {season: gap_weeks}. Each season gets n_rows sensor rows
+    (indexed 0..n_rows-1 via the 'row' column) and a matching 1-row prod_df
+    entry carrying 'sensor_gap'.
+    """
+    import pandas as pd
+    sensor_df = pd.concat([
+        pd.DataFrame({'temporada': [temp] * n_rows, 'row': range(n_rows)})
+        for temp in gaps
+    ], ignore_index=True)
+    prod_df = pd.DataFrame({
+        'temporada': list(gaps.keys()),
+        'sensor_gap': list(gaps.values()),
+    })
+    return sensor_df, prod_df
+
+
+def test_gap_norm_extra_skip_inv3_seq_len_4_horizon_5():
+    """Inv3 gaps (11,10,10,10,11) with seq_len=4, horizon=5 all trim to
+    eff_horizon=5 exactly — extra_skip = gap - seq_len - horizon."""
+    from cnn_rnn_yield import _apply_gap_norm_cnn
+
+    gaps = {'T13': 11, 'T14': 10, 'T15': 10, 'T16': 10, 'T17': 11}
+    seq_len, horizon, n_rows = 4, 5, 20
+    sensor_df, prod_df = _make_gap_norm_fixture(gaps, n_rows)
+
+    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon)
+
+    expected_extra_skip = {'T13': 2, 'T14': 1, 'T15': 1, 'T16': 1, 'T17': 2}
+    for temp, skip in expected_extra_skip.items():
+        kept = out[out['temporada'] == temp]
+        assert len(kept) == n_rows - skip, (
+            f'{temp}: expected {n_rows - skip} rows after trim, got {len(kept)}')
+        assert kept['row'].iloc[0] == skip, (
+            f'{temp}: expected first kept row index {skip}, got {kept["row"].iloc[0]}')
+        eff_horizon = gaps[temp] - seq_len - skip
+        assert eff_horizon == horizon, (
+            f'{temp}: eff_horizon should be exactly {horizon}, got {eff_horizon}')
+
+
+def test_gap_norm_extra_skip_inv4_seq_len_2_horizon_5():
+    """Inv4 gaps (10,10,8,6,11) with seq_len=2, horizon=5: T13/T14/T15/T17
+    trim to eff_horizon=5; T16 (gap=6) is untouched (extra_skip=0) and stays
+    at its natural eff_horizon=4 — 1 week short of target, a structural limit."""
+    from cnn_rnn_yield import _apply_gap_norm_cnn
+
+    gaps = {'T13': 10, 'T14': 10, 'T15': 8, 'T16': 6, 'T17': 11}
+    seq_len, horizon, n_rows = 2, 5, 20
+    sensor_df, prod_df = _make_gap_norm_fixture(gaps, n_rows)
+
+    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon)
+
+    expected_extra_skip = {'T13': 3, 'T14': 3, 'T15': 1, 'T16': 0, 'T17': 4}
+    expected_eff_horizon = {'T13': 5, 'T14': 5, 'T15': 5, 'T16': 4, 'T17': 5}
+    for temp, skip in expected_extra_skip.items():
+        kept = out[out['temporada'] == temp]
+        assert len(kept) == n_rows - skip, (
+            f'{temp}: expected {n_rows - skip} rows after trim, got {len(kept)}')
+        eff_horizon = gaps[temp] - seq_len - skip
+        assert eff_horizon == expected_eff_horizon[temp], (
+            f'{temp}: expected eff_horizon={expected_eff_horizon[temp]}, got {eff_horizon}')

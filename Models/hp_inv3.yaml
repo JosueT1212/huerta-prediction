@@ -1,4 +1,4 @@
-seq_len: 6
+seq_len: 4
 skip_first_weeks: 3
 ramp_weeks: 4
 ramp_weight: 0.5
@@ -7,7 +7,7 @@ batch_size: 8
 lag_features: []
 include_rolling_mean: false
 use_spline_feature: false
-use_gap_norm: false
+use_gap_norm: true
 temporal_keep: [dias_desde_transplante, week_in_season]
 
 # CNN

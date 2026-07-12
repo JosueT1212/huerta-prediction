@@ -265,6 +265,66 @@ def test_train_model_uses_nse_stopping(tmp_path):
     assert all(np.isfinite(v) for v in val_l)
 
 
+def test_train_model_track_best_false_ignores_patience_and_runs_all_epochs(tmp_path):
+    """
+    track_best=False (production refit) must run the full `epochs` count
+    regardless of `patience`, and the saved/returned checkpoint must be the
+    FINAL epoch's weights — not whichever epoch had the best val score.
+
+    With track_best=True and patience=0, training stops after epoch 2 (no
+    improvement possible after the first epoch sets best_val_loss). This
+    test proves track_best=False does NOT stop early under the same
+    patience=0 setting, and that the saved checkpoint matches the model's
+    in-memory state after the final epoch (not an earlier "best" epoch).
+    """
+    import torch
+    from torch.utils.data import TensorDataset, DataLoader
+    from cnn_rnn_yield import CNNRNN, DEVICE, train_model, set_seed
+
+    n_sensor, n_temporal, seq_len = 4, 2, 6
+    batch = 8
+
+    hp = {
+        'epochs': 5, 'patience': 0, 'learning_rate': 1e-3,
+        'weight_decay': 0.0, 'corr_weight': 0.5, 'loss_type': 'wmae',
+        'ramp_weeks': 0, 'ramp_weight': 1.0,
+    }
+
+    set_seed(0)
+    Xs = torch.randn(batch, seq_len, n_sensor)
+    Xt = torch.randn(batch, seq_len, n_temporal)
+    y_norm = torch.linspace(0.1, 0.9, batch)
+    w = torch.ones(batch)
+    dataset = TensorDataset(Xs, Xt, y_norm, w)
+    loader = DataLoader(dataset, batch_size=batch)
+
+    def make_model():
+        set_seed(0)
+        return CNNRNN(n_sensor=n_sensor, n_temporal=n_temporal,
+                      cnn_filters=8, cnn_kernel_size=2, cnn_padding=1,
+                      num_cnn_blocks=1, lstm_hidden=16, lstm_layers=1,
+                      dropout=0.0, fc_hidden=8, n_out=1).to(DEVICE)
+
+    ckpt_best = tmp_path / 'ckpt_best.pt'
+    _, train_l_best, _ = train_model(make_model(), loader, loader, hp, ckpt_best,
+                                      var_y_train=0.1, track_best=True)
+    assert len(train_l_best) < 5, (
+        f'track_best=True with patience=0 should early-stop before all 5 epochs, '
+        f'got {len(train_l_best)} epochs')
+
+    ckpt_final = tmp_path / 'ckpt_final.pt'
+    model_final, train_l_final, _ = train_model(make_model(), loader, loader, hp, ckpt_final,
+                                                 var_y_train=0.1, track_best=False)
+    assert len(train_l_final) == 5, (
+        f'track_best=False must ignore patience and run all 5 epochs, got {len(train_l_final)}')
+
+    saved_state = torch.load(ckpt_final, map_location=DEVICE, weights_only=True)
+    live_state = model_final.state_dict()
+    for key in live_state:
+        assert torch.equal(saved_state[key], live_state[key]), (
+            f'track_best=False checkpoint must match the final in-memory model state at key {key}')
+
+
 def test_spline_yield_in_sensor_frame_after_prepare_data():
     """
     spline_yield must appear in the pheno path's actual CNN input (sensor_tr_df),

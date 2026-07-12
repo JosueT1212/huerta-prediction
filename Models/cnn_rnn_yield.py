@@ -1176,8 +1176,18 @@ class PinballLoss(nn.Module):
         return loss.mean()
 
 
-def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0):
-    """Train the CNN-RNN model with early stopping on validation score."""
+def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0, track_best=True):
+    """Train the CNN-RNN model with early stopping on validation score.
+
+    track_best=True (default, grid-search behavior): checkpoint only on
+    val-score improvement, reload that best checkpoint at the end.
+    track_best=False (production-refit behavior): no checkpoint selection —
+    save every epoch unconditionally, so `epochs` always completes in full
+    and the returned/saved model is the FINAL epoch's weights, not
+    whichever epoch happened to have the best val score. Use this when the
+    val_loader isn't a genuine holdout (e.g. it overlaps the training data),
+    since "best val" is not a meaningful signal in that case.
+    """
     loss_type = hp.get('loss_type', 'wmae')
     if loss_type == 'huber':
         criterion = nn.HuberLoss(delta=hp.get('huber_delta', 1.0))
@@ -1262,12 +1272,17 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
         val_nse = 1.0 - _mse / _var_t
         val_score = -val_nse  # minimize negative NSE = maximize NSE
 
-        if val_score < best_val_loss:
-            best_val_loss = val_score
-            patience_counter = 0
-            torch.save(model.state_dict(), model_path)
+        if track_best:
+            if val_score < best_val_loss:
+                best_val_loss = val_score
+                patience_counter = 0
+                torch.save(model.state_dict(), model_path)
+            else:
+                patience_counter += 1
         else:
-            patience_counter += 1
+            # Production refit: no best-checkpoint selection, always keep
+            # the current (eventually final) epoch's weights.
+            torch.save(model.state_dict(), model_path)
 
         if (epoch + 1) % 20 == 0 or epoch == 0:
             print(f'  Epoch {epoch+1:>4d}/{hp["epochs"]} | '
@@ -1275,7 +1290,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
                   f'Val Loss: {avg_val_loss:.6f} | '
                   f'Val NSE: {val_nse:.4f}')
 
-        if patience_counter >= hp['patience']:
+        if track_best and patience_counter >= hp['patience']:
             print(f'  Early stopping at epoch {epoch+1}')
             break
 

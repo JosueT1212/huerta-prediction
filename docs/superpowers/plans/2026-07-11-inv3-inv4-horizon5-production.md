@@ -2,6 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Amendment (2026-07-12, post-implementation):** during execution, `_apply_gap_norm_cnn`'s
+> formula was found to be missing a `skip_first_weeks` term (true horizon was silently 9
+> weeks instead of 5, for every season in both greenhouses) — fixed to
+> `extra_skip = max(0, gap - seq_len - HORIZON + skip_first_weeks + 1)`. This means every
+> claim in this plan (e.g. Global Constraints below, Task 2's test code) that inv4 T16 is
+> "1 week short of horizon=5" is **incorrect and superseded** — T16 reaches exactly
+> horizon=5 too, same as every other season. `train_model` also gained a `track_best`
+> parameter (production refits use `track_best=False` for final-epoch weights, not
+> best-val). See CLAUDE.md §7 and the actual committed test code in
+> `Models/tests/test_cnn_rnn_yield.py` for the authoritative current state.
+
 **Goal:** Change the CNN-RNN pipeline's target prediction horizon from 4 to 5 weeks for both greenhouses, fix inv4's per-season effective-horizon instability via gap normalization + per-greenhouse `seq_len` tuning, then produce final deployable ("production") model weights trained on all 5 seasons for both inv3 and inv4.
 
 **Architecture:** All changes build on the existing `Models/cnn_rnn_yield.py` shared pipeline — no new abstractions. One constant change (`HORIZON`), two yaml hyperparameter tweaks (`use_gap_norm`, `seq_len`), two grid-search re-runs using the existing per-greenhouse scripts unchanged, then two new thin "production" scripts that reuse `prepare_data`/`train_model` exactly as-is with different season/epoch arguments.

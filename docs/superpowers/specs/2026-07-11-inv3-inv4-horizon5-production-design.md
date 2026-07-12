@@ -1,5 +1,16 @@
 # Inv3 production retrain + Inv4 gap fix, HORIZON=5 for both
 
+> **Amendment (2026-07-12, post-implementation):** this spec's `extra_skip` formula
+> (`max(0, gap - seq_len - HORIZON)`) turned out to be missing a `skip_first_weeks`
+> term — see `_apply_gap_norm_cnn` in `Models/cnn_rnn_yield.py` and CLAUDE.md §7 for
+> the corrected formula (`extra_skip = max(0, gap - seq_len - HORIZON + skip_first_weeks + 1)`).
+> This means every claim below that inv4 T16 is "1 week short of horizon=5" or a
+> "structural limitation" is **incorrect** — that shortfall was an artifact of the
+> missing term. With the corrected formula, T16 also reaches exactly horizon=5, same
+> as every other season in both greenhouses. The `seq_len` choices (inv3=4, inv4=2)
+> and the rest of the design below still stand; only the T16-shortfall claims are
+> superseded. See CLAUDE.md §7 for the authoritative current state.
+
 ## Problem
 
 - Inv3 needs a final deployable model trained on all available data (T13–T17), using the best hyperparameters already found via grid search.

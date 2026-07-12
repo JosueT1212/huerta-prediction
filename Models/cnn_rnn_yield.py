@@ -926,7 +926,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         # (target production week - last sensor week in window) equals HORIZON.
         # Must account for skip_first_weeks (see _apply_gap_norm_cnn docstring)
         # or the true horizon silently drifts by skip_first_weeks+1 weeks.
-        _seq = hp.get('seq_len', 6)
+        _seq = hp['seq_len']
         if hp.get('use_gap_norm', True):
             sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq, skip_first_weeks=skip_first_weeks)
             sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq, skip_first_weeks=skip_first_weeks)
@@ -998,7 +998,8 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     # ── Sequences ──
     seq_len = hp['seq_len']
     stride  = hp.get('stride', 7 if hp.get('resolution') == 'daily' else 1)
-    print(f'  HORIZON={HORIZON} (doc) | seq_len={seq_len} | eff_horizon = gap - seq_len (per temporada, shown above)')
+    print(f'  HORIZON={HORIZON} (doc) | seq_len={seq_len} | true_horizon = gap + skip_first_weeks - extra_skip - seq_len + 1 '
+          f'(= HORIZON when use_gap_norm=true; see _apply_gap_norm_cnn)')
     temps_sensor_tr = sensor_tr_df['temporada'].values
     temps_sensor_va = sensor_va_df['temporada'].values
     temps_sensor_te = sensor_te_df['temporada'].values

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Greenhouse crop yield prediction project ("Huerta Prediction"). Predicts weekly kg production for greenhouses (invernaderos 3 & 4) using internal sensor data and external environmental variables. All models forecast 4 weeks ahead (h=4).
+Greenhouse crop yield prediction project ("Huerta Prediction"). Predicts weekly kg production for greenhouses (invernaderos 3 & 4) using internal sensor data and external environmental variables. CNN-RNN models forecast 5 weeks ahead (h=5, see §7-8 below for the horizon retune history).
 
 ## Data
 
@@ -158,18 +158,78 @@ Live sensors planeados → stack recomendado: **InfluxDB OSS + Grafana OSS en VP
 Por ahora (sin sensores live): mantener Streamlit para demo cliente + preparar `docker-compose.yml` local para desarrollo del pipeline.
 ---
 
-## 7. Horizonte de Predicción — Diseño seq_len
+## 7. Horizonte de Predicción — Diseño seq_len (actualizado 2026-07-12)
 
-`HORIZON = 4` es una constante de documentación en `cnn_rnn_yield.py`. Representa el horizonte objetivo (semanas entre el último dato del sensor en la ventana y la producción target).
+`HORIZON = 5` en `cnn_rnn_yield.py` es el horizonte objetivo real (semanas entre el
+último dato del sensor en la ventana y la producción target).
 
-`seq_len` es fijo por invernadero en `hp_inv*.yaml` (actualmente = 6). El horizonte efectivo real es `gap - seq_len` y varía ±1 semana entre temporadas según el gap sensor→producción:
+`seq_len` es fijo **por invernadero** (no varía por temporada — ver razón abajo):
 
-| Invernadero | gap típico | seq_len | eff_horizon |
-|-------------|-----------|---------|-------------|
-| Inv3        | 10–11     | 6       | 4–5 sem     |
-| Inv4        | 6–11      | 6       | 0–5 sem     |
+| Invernadero | seq_len | Resultado |
+|-------------|---------|-----------|
+| Inv3        | 4       | Las 5 temporadas alcanzan horizonte real = 5 exacto |
+| Inv4        | 2       | Las 5 temporadas (incluyendo T16, gap=6) alcanzan horizonte real = 5 exacto |
 
-Los logs muestran `gap` por temporada y la línea `HORIZON=4 (doc) | seq_len=6 | eff_horizon = gap - seq_len`.
+**Por qué NO se usa seq_len variable por temporada:** con `seq_len` distinto por
+temporada, las ventanas deben rellenarse con ceros (padding) hasta `max_seq_len`
+para compartir forma en un batch. Un experimento previo con `seq_len = gap - HORIZON
++ skip_first_weeks` (HORIZON=4 entonces) dio `seq_len=3` en inv4 T16, con 5 de 8
+filas de padding en la temporada de validación → R² muy bajo (~0.39). Se mantiene
+`seq_len` fijo por invernadero; el ajuste por temporada lo hace únicamente
+`_apply_gap_norm_cnn` recortando filas del sensor, sin padding.
 
-**Por qué NO se usa seq_len variable por temporada:**
-Con `seq_len = gap - HORIZON + skip_first_weeks`, inv4 T16 (gap=6, skip=1) da `seq_len=3`, que al hacer padding hasta `max_seq_len=8` rellena 5 de 8 filas con ceros. El modelo veía mayormente ceros en la temporada de validación → R² muy bajo (~0.39). Decisión: `seq_len` fijo, horizonte efectivo varía ligeramente entre temporadas.
+### `use_gap_norm` y el bug de `skip_first_weeks` (crítico — leer antes de tocar `_apply_gap_norm_cnn`)
+
+`use_gap_norm: true` en ambos `hp_inv*.yaml` activa `_apply_gap_norm_cnn`, que recorta
+filas del INICIO de la serie de sensores por temporada para alinear el horizonte real.
+
+`make_sequences_per_season` empareja fila `j` del sensor (ya recortado) con fila `j`
+de producción (ya filtrada por `skip_first_weeks`, que recorta las primeras
+`skip_first_weeks` semanas de cosecha) **por posición**, no por semana calendario.
+Como ambos recortes son independientes, la fórmula de `extra_skip` DEBE incluir
+`skip_first_weeks`, o el horizonte real se desincroniza silenciosamente:
+
+```
+extra_skip = max(0, gap - seq_len - HORIZON + skip_first_weeks + 1)
+```
+
+Se verificó empíricamente (con fechas reales `week_key`, no solo aritmética) que
+omitir el término `skip_first_weeks + 1` produce un horizonte real de
+`HORIZON + skip_first_weeks + 1` (9 semanas con `skip_first_weeks=3`, `HORIZON=5`)
+en **todas** las temporadas de ambos invernaderos — no solo un caso aislado. Este bug
+existía desde antes de este retune (skip_first_weeks=3 ya estaba en los yaml), pero
+nunca se manifestó porque `use_gap_norm` estaba en `false` hasta ahora.
+
+Este mismo bug también explicaba el "límite estructural" de T16 en inv4 (antes
+documentado como horizonte máximo=4, 1 semana corta) — era un artefacto de la
+fórmula rota, no una limitación real de datos: con la fórmula corregida, T16
+también alcanza horizonte=5 exacto.
+
+## 8. Plan final de entrenamiento de modelos de producción (2026-07-12)
+
+Ver diseño completo en `docs/superpowers/specs/2026-07-11-inv3-inv4-horizon5-production-design.md`
+y plan de implementación en `docs/superpowers/plans/2026-07-11-inv3-inv4-horizon5-production.md`.
+
+Resumen del pipeline aplicado a **ambos** invernaderos:
+1. `HORIZON=4→5` en `cnn_rnn_yield.py` (constante compartida).
+2. `use_gap_norm: true` + `seq_len` fijo por invernadero (inv3=4, inv4=2) en cada `hp_inv*.yaml`.
+3. Fix de `_apply_gap_norm_cnn` para incluir `skip_first_weeks` (ver §7 arriba).
+4. Grid search completo (216 runs: 54 seeds × 4 inits) por invernadero, train=T13-15,
+   val=T16, test=T17 — igual que antes, solo bajo la config corregida.
+5. Refit de producción: se re-entrena UNA sola vez por invernadero con el mejor
+   seed/init encontrado en el paso 4, agrupando las 5 temporadas (T13-T17) como
+   entrenamiento (sin holdout), número de épocas fijo (= época de early-stop del
+   mejor run del paso 4, sin early stopping real ya que no hay set de validación).
+   Pesos finales → `Models/results/production_cnn_rnn_inv3.pt` / `_inv4.pt`
+   (nunca sobrescriben los checkpoints de evaluación `best_cnn_rnn_inv*.pt`).
+
+### Nota para el pipeline de inferencia en vivo (importante)
+
+Las primeras `skip_first_weeks=3` semanas de cada temporada NO tienen predicción
+del modelo (se descartan del entrenamiento/evaluación por ser semanas de rampa de
+cosecha, poco confiables). **En inferencia real, esas primeras 3 semanas de cada
+temporada nueva deben inferirse usando la media histórica** (media de esas mismas
+semanas en temporadas pasadas), no con el modelo CNN-RNN — el modelo nunca fue
+entrenado para predecir esas semanas y no debe usarse ahí. Esto debe implementarse
+en el pipeline de inferencia en vivo (ver spec `docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`),
+no en este repo de entrenamiento.

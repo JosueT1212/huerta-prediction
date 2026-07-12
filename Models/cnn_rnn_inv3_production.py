@@ -70,7 +70,8 @@ def main():
 
     model_path = RESULTS_DIR / 'production_cnn_rnn_inv3.pt'
     model, train_losses, val_losses = train_model(
-        model, train_loader, val_loader, HP, model_path, var_y_train=var_y_train)
+        model, train_loader, val_loader, HP, model_path, var_y_train=var_y_train,
+        track_best=False)
 
     print(f'\n  Trained {len(train_losses)} epochs (target was {WINNING_EPOCHS}).')
     print(f'  Final train loss: {train_losses[-1]:.6f}')

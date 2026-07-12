@@ -330,46 +330,60 @@ def _make_gap_norm_fixture(gaps, n_rows=20):
 
 
 def test_gap_norm_extra_skip_inv3_seq_len_4_horizon_5():
-    """Inv3 gaps (11,10,10,10,11) with seq_len=4, horizon=5 all trim to
-    eff_horizon=5 exactly — extra_skip = gap - seq_len - horizon."""
+    """Inv3 gaps (11,10,10,10,11) with seq_len=4, horizon=5, skip_first_weeks=3
+    all trim to true_horizon=5 exactly.
+
+    extra_skip = gap - seq_len - horizon + skip_first_weeks + 1 — the
+    skip_first_weeks + 1 term is required because make_sequences_per_season
+    pairs sensor and production rows by POSITION after each is independently
+    trimmed (gap-norm trims sensor_df, skip_first_weeks trims prod_df).
+    Omitting it (as an earlier version of this function did) silently adds
+    skip_first_weeks+1 extra weeks to the true forecast horizon — verified
+    empirically against real week_key data in the repo (see
+    _apply_gap_norm_cnn's docstring)."""
     from cnn_rnn_yield import _apply_gap_norm_cnn
 
     gaps = {'T13': 11, 'T14': 10, 'T15': 10, 'T16': 10, 'T17': 11}
-    seq_len, horizon, n_rows = 4, 5, 20
+    seq_len, horizon, skip_first_weeks, n_rows = 4, 5, 3, 20
     sensor_df, prod_df = _make_gap_norm_fixture(gaps, n_rows)
 
-    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon)
+    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon,
+                               skip_first_weeks=skip_first_weeks)
 
-    expected_extra_skip = {'T13': 2, 'T14': 1, 'T15': 1, 'T16': 1, 'T17': 2}
+    expected_extra_skip = {'T13': 6, 'T14': 5, 'T15': 5, 'T16': 5, 'T17': 6}
     for temp, skip in expected_extra_skip.items():
         kept = out[out['temporada'] == temp]
         assert len(kept) == n_rows - skip, (
             f'{temp}: expected {n_rows - skip} rows after trim, got {len(kept)}')
         assert kept['row'].iloc[0] == skip, (
             f'{temp}: expected first kept row index {skip}, got {kept["row"].iloc[0]}')
-        eff_horizon = gaps[temp] - seq_len - skip
-        assert eff_horizon == horizon, (
-            f'{temp}: eff_horizon should be exactly {horizon}, got {eff_horizon}')
+        true_horizon = gaps[temp] - seq_len - skip + skip_first_weeks + 1
+        assert true_horizon == horizon, (
+            f'{temp}: true_horizon should be exactly {horizon}, got {true_horizon}')
 
 
 def test_gap_norm_extra_skip_inv4_seq_len_2_horizon_5():
-    """Inv4 gaps (10,10,8,6,11) with seq_len=2, horizon=5: T13/T14/T15/T17
-    trim to eff_horizon=5; T16 (gap=6) is untouched (extra_skip=0) and stays
-    at its natural eff_horizon=4 — 1 week short of target, a structural limit."""
+    """Inv4 gaps (10,10,8,6,11) with seq_len=2, horizon=5, skip_first_weeks=3:
+    ALL seasons (including T16, gap=6) trim to true_horizon=5 exactly. T16
+    was earlier believed to be structurally stuck at horizon=4 (1wk short)
+    under the pre-fix formula that omitted skip_first_weeks — that shortfall
+    was an artifact of the bug, not a real data-availability limit; the raw
+    sensor timeline has plenty of rows to trim from (fixture uses n_rows=20,
+    T16's real season has ~48 rows available)."""
     from cnn_rnn_yield import _apply_gap_norm_cnn
 
     gaps = {'T13': 10, 'T14': 10, 'T15': 8, 'T16': 6, 'T17': 11}
-    seq_len, horizon, n_rows = 2, 5, 20
+    seq_len, horizon, skip_first_weeks, n_rows = 2, 5, 3, 20
     sensor_df, prod_df = _make_gap_norm_fixture(gaps, n_rows)
 
-    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon)
+    out = _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=horizon,
+                               skip_first_weeks=skip_first_weeks)
 
-    expected_extra_skip = {'T13': 3, 'T14': 3, 'T15': 1, 'T16': 0, 'T17': 4}
-    expected_eff_horizon = {'T13': 5, 'T14': 5, 'T15': 5, 'T16': 4, 'T17': 5}
+    expected_extra_skip = {'T13': 7, 'T14': 7, 'T15': 5, 'T16': 3, 'T17': 8}
     for temp, skip in expected_extra_skip.items():
         kept = out[out['temporada'] == temp]
         assert len(kept) == n_rows - skip, (
             f'{temp}: expected {n_rows - skip} rows after trim, got {len(kept)}')
-        eff_horizon = gaps[temp] - seq_len - skip
-        assert eff_horizon == expected_eff_horizon[temp], (
-            f'{temp}: expected eff_horizon={expected_eff_horizon[temp]}, got {eff_horizon}')
+        true_horizon = gaps[temp] - seq_len - skip + skip_first_weeks + 1
+        assert true_horizon == horizon, (
+            f'{temp}: true_horizon should be exactly {horizon}, got {true_horizon}')

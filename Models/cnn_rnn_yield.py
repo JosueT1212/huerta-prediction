@@ -600,10 +600,20 @@ def build_dataset_for_greenhouse(invernadero_id, horizon=4, lag_features=None,
 # 2. DATASET & DATALOADER
 # ============================================================================
 
-def _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=HORIZON):
-    """Trim sensor_df front per season so eff_horizon = gap - seq_len = horizon.
+def _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=HORIZON, skip_first_weeks=0):
+    """Trim sensor_df front per season so the TRUE calendar-week forecast
+    horizon (target production week - last sensor week in the window)
+    equals `horizon`, exactly.
 
-    extra_skip = max(0, gap - seq_len - horizon)
+    sensor_df and prod_df are trimmed/filtered independently and then paired
+    by POSITION (not by calendar week) in make_sequences_per_season: sensor
+    row j (after this trim) is windowed against prod row j (after prod_df's
+    own skip_first_weeks filter). Because prod_df's filter shifts its series
+    by skip_first_weeks weeks while this function shifts sensor_df by
+    extra_skip weeks, skip_first_weeks must be included here too, or the
+    resulting horizon silently drifts by skip_first_weeks (+1 for the
+    inclusive first-kept-row) weeks. Verified against real week_key data:
+    extra_skip = max(0, gap - seq_len - horizon + skip_first_weeks + 1)
     prod_df is used only to read sensor_gap; it is NOT modified.
     sensor_df rows without a matching season in prod_df are kept unchanged.
     """
@@ -615,7 +625,7 @@ def _apply_gap_norm_cnn(sensor_df, prod_df, seq_len, horizon=HORIZON):
             parts.append(s)
             continue
         gap = int(p['sensor_gap'].iloc[0])
-        extra_skip = max(0, gap - seq_len - horizon)
+        extra_skip = max(0, gap - seq_len - horizon + skip_first_weeks + 1)
         if extra_skip >= len(s):
             raise ValueError(
                 f'Season {temp}: extra_skip={extra_skip} >= sensor rows={len(s)}.')
@@ -912,13 +922,16 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
             train_seasons if train_seasons is not None else ['T13', 'T14', 'T15'])].reset_index(drop=True)
         sensor_va_df = df_sensor_all[df_sensor_all['temporada'] == (val_season or 'T16')].reset_index(drop=True)
         sensor_te_df = df_sensor_all[df_sensor_all['temporada'] == 'T17'].reset_index(drop=True)
-        # Gap normalisation: trim sensor front so eff_horizon = gap - seq_len = HORIZON
+        # Gap normalisation: trim sensor front so the TRUE calendar-week horizon
+        # (target production week - last sensor week in window) equals HORIZON.
+        # Must account for skip_first_weeks (see _apply_gap_norm_cnn docstring)
+        # or the true horizon silently drifts by skip_first_weeks+1 weeks.
         _seq = hp.get('seq_len', 6)
         if hp.get('use_gap_norm', True):
-            sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq)
-            sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq)
-            sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq)
-            print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}): sensor frames trimmed per season')
+            sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq, skip_first_weeks=skip_first_weeks)
+            sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq, skip_first_weeks=skip_first_weeks)
+            sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq, skip_first_weeks=skip_first_weeks)
+            print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}, skip_first_weeks={skip_first_weeks}): sensor frames trimmed per season')
         # Only keep columns present in both sensor frames and feature_cols
         avail_sensor  = [c for c in sensor_cols  if c in sensor_tr_df.columns]
         avail_temporal = [c for c in temporal_cols if c in sensor_tr_df.columns]

@@ -786,8 +786,9 @@ class CNNRNN(nn.Module):
             in_ch = cnn_filters
         self.cnn = nn.Sequential(*cnn_blocks)
 
+        lstm_in = in_ch + n_temporal
         self.lstm = nn.LSTM(
-            input_size=cnn_filters + n_temporal,
+            input_size=lstm_in,
             hidden_size=lstm_hidden,
             num_layers=lstm_layers,
             batch_first=True,

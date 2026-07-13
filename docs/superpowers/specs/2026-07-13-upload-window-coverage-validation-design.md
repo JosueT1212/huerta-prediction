@@ -35,11 +35,14 @@ submission, and for every submission after it.
 
 ## Scope
 
-Sensores, Riego, Exteriores only. Fenología has a historical-mean fallback
-(`pheno_means`, keyed by week-in-season) for any week without real
+Sensores, Riego, Exteriores, Fenología. Fenología has a historical-mean
+fallback (`pheno_means`, keyed by week-in-season) for any week without real
 observations, so short coverage there degrades gracefully rather than
-silently corrupting the input. Producción is the prediction target, not a
-model input feature — it has no "window" to fill.
+silently corrupting the input — but per explicit user instruction
+(2026-07-13), the harness is applied uniformly across all four upload
+types regardless, using the same per-invernadero thresholds as
+sensores/riego. Producción is the prediction target, not a model input
+feature — it has no "window" to fill, and stays out of scope.
 
 ## 1. Required constants (new, in `backend/routers/uploads.py`)
 
@@ -75,11 +78,19 @@ gets a pipeline (`Models/results/pipeline_inv4.pkl` doesn't exist yet, but
 `hp_inv4.yaml` does — see `docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`
 for why Inv4 is currently excluded from live inference).
 
+**Fenología uses `week_date` as its DB date column** (not `fecha` —
+`phenology_observations.week_date`, see `_ingest_rows`'s fenología branch in
+`backend/routers/uploads.py`), so the existence/subsequent queries for that
+scope filter on `week_date` while the uploaded file's column stays `fecha`
+(the upload-side column name is unchanged; only the DB-column used for the
+coverage query differs by form_type).
+
 ## 2. First-submission check
 
 "First" = no existing rows for that scope: `(greenhouse_id, table)` for
-sensores/riego, table-wide for exteriores (global). Detected by a cheap
-existence query (`select fecha ... limit 1`) before validating row count.
+sensores/riego/fenología, table-wide for exteriores (global). Detected by a
+cheap existence query (`select {date_col} ... limit 1`) before validating
+row count.
 
 Count **distinct ISO-weeks** (`year`, `week` from `fecha`) in the uploaded
 file. If below the required minimum, reject with 422 before any row is
@@ -130,8 +141,7 @@ through the existing generic error path already wired for every upload tab
 
 ## Out of scope
 
-- Fenología / Producción window-coverage validation (fallback exists / not
-  a model input, respectively).
+- Producción window-coverage validation (not a model input).
 - Any change to `build_input_tensor`'s zero-padding behavior itself — this
   spec prevents the *conditions* that trigger it via upload-time validation,
   it doesn't change what happens if padding occurs anyway (e.g. via direct

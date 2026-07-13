@@ -18,17 +18,22 @@ Bring the live weekly inference pipeline (`scripts/live_inference.py` +
   (`TRANSPLANT_DATE_INV3`), with no equivalent for Inv4
 - has no fallback for the first `skip_first_weeks=3` weeks of a new season,
   which the model was never trained to predict (see CLAUDE.md §8)
-- feeds a dashboard (`backend/engine.py` + `/inference`, `/inference/window`,
-  `/metrics`, `/predictions` endpoints) that replays a static, one-time T17
-  eval snapshot (`.npz` + `_metrics.csv`) instead of live data
+- has no dashboard surface at all for the live weekly predictions it writes
+  to the `predictions` table — `/live-predictions/{inv}` exists and works,
+  but nothing in the dashboard calls it
 
-This spec covers the changes needed to close all of the above and retire the
-now-redundant `/live-predictions/{inv}` endpoint pair.
+This spec covers the changes needed to close all of the above.
 
 Supabase schema is already aligned to the current split-table design
 (migration `008_split_sensor_tables.sql`: `sensor_readings_wide`,
 `riego_readings`, global `exterior_readings`) — `live_inference.py` already
 queries these correctly. No further schema change needed there.
+
+Note: `backend/engine.py` and its `/inference`, `/inference/window`,
+`/metrics`, `/predictions` endpoints are a separate, unrelated system — the
+sales-demo replay of the static T13–T17 eval snapshot (slider, PI bands,
+kg/m² hero chart; see `demo/CLAUDE.md` §5). Out of scope here, see Section 5
+and "What is NOT in scope" below.
 
 ---
 
@@ -147,41 +152,49 @@ distinguishes provenance for later debugging/auditing.
 
 ---
 
-## Section 5: Dashboard — replace static eval replay with live data
+## Section 5: Dashboard — add a live "T18" season section, leave the T17 demo replay untouched
 
-`backend/engine.py` currently loads a static, one-time T17 eval snapshot
-(`cnn_rnn_inv{3,4}_predictions.npz` + `_metrics.csv`) into memory at startup
-and serves it unchanged (dashboard's "accuracy/history" view: windowed
-scrubber, R²/RMSE/MAPE cards, PI bands).
+**Correction from an earlier draft of this section:** `backend/engine.py` /
+`/inference/{inv}` / `/inference/{inv}/window` / `/metrics/{inv}` are **not**
+a disposable eval artifact — they are the sales-demo replay of the full
+T13–T17 slider (kg/m² hero chart, PI bands, KPI cards) documented in
+`demo/CLAUDE.md` §5. None of that is touched by this spec.
 
-This is rewritten to query the `predictions` table directly (no in-memory
-cache needed — data volume is one row per greenhouse per week):
+`/live-predictions/{inv}` (GET/PATCH, `backend/routers/predictions.py`)
+already exists, already reads/writes the `predictions` table directly, and
+already updates weekly once `live_inference.py` runs both greenhouses — it
+just isn't wired into any dashboard view yet. This section adds that UI.
 
-- `GET /inference/{inv}` — full prediction history for the greenhouse from
-  `predictions`, ordered by `predicted_for`
-- `GET /inference/{inv}/window` — windowed slice (cursor/horizon/past) over
-  the same live data
-- `GET /metrics/{inv}` — R²/RMSE/MAPE computed on the fly from rows where
-  `kg_actual is not null` (need ≥2 such rows to compute; return nulls if
-  fewer)
-- `GET /predictions/{inv}` — compat alias, same as `/inference/{inv}`
+**Season tracking.** `predictions` gets a `season` column:
 
-Prediction-interval bands (`pi_lower`/`pi_upper`/`pi_coverage`/
-`pi_avg_width`) are dropped — the live pipeline produces point estimates
-only, no PI is computed at inference time. Dashboard UI elements depending on
-PI bands are removed or hidden.
+```sql
+-- part of supabase/migrations/009_transplant_dates.sql
+alter table predictions add column if not exists season text;
+```
 
-**`/live-predictions/{inv}` (GET/PATCH, `backend/routers/predictions.py`) is
-removed** — redundant once the above endpoints read live data directly. The
-"enter real production" (`kg_actual`) write path is folded into the
-consolidated endpoints; exact request/response shape is decided at
-implementation/plan time, keeping the same underlying `predictions` table
-update.
+`scripts/live_inference.py` sets `season` on every upsert from a constant,
+`CURRENT_SEASON = "T18"`. Bumping to a future season (T19, …) is a one-line
+constant change plus a new `transplant_dates` row — no other code changes
+required.
 
-Right after go-live, `predictions` will have very few rows per greenhouse
-(no historical eval curve shown) — dashboard displays only what's actually in
-the table, however sparse, and fills in week by week as `live_inference.py`
-runs and users enter `kg_actual`.
+**Dashboard.** Each greenhouse view (`view-inv3`, `view-inv4`) gets season
+tabs above the existing content:
+
+- **"T17" tab** (default) — exactly the existing slider/chart/kg-m²-hero
+  content, unchanged.
+- **"T18" tab** (new) — simple table/cards fed by
+  `GET /live-predictions/{inv}?season=T18`: `predicted_for`, `kg_predicted`,
+  `kg_actual` (or "—" if null), one row per week, growing weekly. A
+  "Registrar producción real" button per row missing `kg_actual` opens a
+  small form → `PATCH /live-predictions/{inv}/{id}`. No slider, no PI bands
+  — there are only ever a handful of rows.
+
+`GET /live-predictions/{inv}` gets an optional `season` query param
+(defaults to returning all seasons, dashboard always passes `T18` explicitly
+for this new tab).
+
+Right after go-live, the T18 tab is nearly empty (one row per week as
+`live_inference.py` runs) — that's expected, it fills in over the season.
 
 ---
 
@@ -194,6 +207,11 @@ runs and users enter `kg_actual`.
 - Changes to `Models/cnn_rnn_yield.py` or other training scripts
 - Deleting `best_cnn_rnn_inv{3,4}.pt` / `pipeline_inv3.pkl` / the `.npz` +
   `_metrics.csv` eval artifacts — they remain for grid-search/eval use
+- Touching `backend/engine.py`, `/inference/{inv}`, `/inference/{inv}/window`,
+  `/metrics/{inv}`, or any T17-replay dashboard UI (slider, PI bands, kg/m²
+  hero) — that is the sales-demo replay and stays exactly as-is
+- Season rollover automation (T19 and beyond) — bumping `CURRENT_SEASON` and
+  adding a `transplant_dates` row is a manual step when the next season starts
 
 ---
 
@@ -205,12 +223,12 @@ runs and users enter `kg_actual`.
   defaults
 - `scripts/compute_historical_means.py` — new, one-off
 - `Models/results/historical_mean_inv{3,4}.json` — new, generated output
-- `supabase/migrations/009_transplant_dates.sql` — new table
+- `supabase/migrations/009_transplant_dates.sql` — new `transplant_dates`
+  table + `predictions.season` column
 - `backend/routers/transplant_dates.py` — new router
-- `backend/engine.py` — rewritten to source from `predictions` table
-- `backend/main.py` — no route signature changes, same 4 endpoints, new
-  backing implementation
-- `backend/routers/predictions.py` — `/live-predictions/{inv}` removed
-- Dashboard (`demo/Demo Dashboard.html` or equivalent) — transplant-date
-  form, PI-band UI removed, "enter kg_actual" wiring updated to new endpoint
-  shape
+- `backend/routers/predictions.py` — add `season` query param to
+  `GET /live-predictions/{inv}`; no removal
+- Dashboard (`demo/Demo Dashboard.html`) — transplant-date form; new T17/T18
+  season tabs per greenhouse view; new T18 tab UI (table/cards + "registrar
+  producción real"). T17 tab and all existing `/inference`-backed content
+  unchanged.

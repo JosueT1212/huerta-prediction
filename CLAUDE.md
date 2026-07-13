@@ -233,3 +233,27 @@ semanas en temporadas pasadas), no con el modelo CNN-RNN — el modelo nunca fue
 entrenado para predecir esas semanas y no debe usarse ahí. Esto debe implementarse
 en el pipeline de inferencia en vivo (ver spec `docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`),
 no en este repo de entrenamiento.
+
+## 9. Comparación pure-LSTM (sin bloques CNN) — resultado (2026-07-13)
+
+Se evaluó una variante sin CNN (`num_cnn_blocks=0` en `CNNRNN`, ver
+`Models/cnn_rnn_yield.py`) contra los modelos de producción CNN+LSTM
+(`num_cnn_blocks=1`), bajo protocolo idéntico (mismo HORIZON=5, mismo
+`seq_len` por invernadero, mismo gap-norm, mismo grid search de 216 runs
+por invernadero). Diseño completo en
+`docs/superpowers/specs/2026-07-13-pure-lstm-comparison-design.md` y plan
+en `docs/superpowers/plans/2026-07-13-pure-lstm-comparison.md`.
+
+**Resultado: la variante pure-LSTM pierde en ambos invernaderos — se
+mantiene `num_cnn_blocks=1` (CNN+LSTM) en producción.**
+
+| Invernadero | Pure-LSTM R² | Pure-LSTM RMSE | Umbral para ganar | Resultado |
+|-------------|--------------|-----------------|--------------------|-----------|
+| Inv3 | 0.4531 | 6097.7 kg | R² > 0.5286 AND RMSE < 5661.0 kg | Pierde (ambas métricas peores) |
+| Inv4 | 0.5013 | 6993.8 kg | R² > 0.5595 AND RMSE < 6572.9 kg | Pierde (ambas métricas peores) |
+
+Los scripts (`Models/cnn_rnn_inv3_lstm.py`, `Models/cnn_rnn_inv4_lstm.py`),
+configs (`Models/hp_inv3_lstm.yaml`, `Models/hp_inv4_lstm.yaml`) y
+resultados (`Models/results/*_lstm*`) quedan en el repo como herramienta de
+comparación reproducible, no se eliminan. No se hizo ningún refit de
+producción ni cambio de despliegue como consecuencia de este resultado.

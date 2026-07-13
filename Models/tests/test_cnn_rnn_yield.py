@@ -325,6 +325,32 @@ def test_train_model_track_best_false_ignores_patience_and_runs_all_epochs(tmp_p
             f'track_best=False checkpoint must match the final in-memory model state at key {key}')
 
 
+def test_cnnrnn_num_cnn_blocks_zero_runs_forward():
+    """
+    num_cnn_blocks=0 must skip the CNN entirely (empty nn.Sequential is
+    identity) and feed x_sensor's raw n_sensor channels straight into the
+    LSTM, concatenated with x_temporal. lstm.input_size must be
+    n_sensor + n_temporal, not cnn_filters + n_temporal.
+    """
+    import torch
+    from cnn_rnn_yield import CNNRNN, DEVICE
+
+    n_sensor, n_temporal, seq_len, batch = 5, 2, 4, 3
+
+    model = CNNRNN(n_sensor=n_sensor, n_temporal=n_temporal,
+                   cnn_filters=32, cnn_kernel_size=2, cnn_padding=1,
+                   num_cnn_blocks=0, lstm_hidden=16, lstm_layers=1,
+                   dropout=0.0, fc_hidden=8, n_out=1).to(DEVICE)
+
+    assert len(model.cnn) == 0
+    assert model.lstm.input_size == n_sensor + n_temporal
+
+    x_sensor = torch.randn(batch, seq_len, n_sensor).to(DEVICE)
+    x_temporal = torch.randn(batch, seq_len, n_temporal).to(DEVICE)
+    out = model(x_sensor, x_temporal)
+    assert out.shape == (batch, 1)
+
+
 def test_spline_yield_in_sensor_frame_after_prepare_data():
     """
     spline_yield must appear in the pheno path's actual CNN input (sensor_tr_df),

@@ -1,0 +1,2372 @@
+Using device: mps
+============================================================
+  Pure LSTM (no CNN) — Invernadero 3
+  Train: ['T13', 'T14', 'T15'] | Val: T16 | Test: T17
+  HORIZON=5 (doc) | seq_len=4 | num_cnn_blocks=0
+============================================================
+    T13: sensor ISO sem 26 → prod ISO sem 37  gap=11 sem
+    T14: sensor ISO sem 25 → prod ISO sem 35  gap=10 sem
+    T15: sensor ISO sem 23 → prod ISO sem 33  gap=10 sem
+    T16: sensor ISO sem 21 → prod ISO sem 31  gap=10 sem
+    T17: sensor ISO sem 21 → prod ISO sem 32  gap=11 sem
+  Invernadero 3:
+    Train samples: 111 (T13,T14,T15)
+    Val samples:   41 (T16)
+    Test samples:  39 (T17)
+    Features (30): ['temp_prom_int', 'temp_min_int', 'temp_max_int', 'hr_prom_int', 'co2_ppm', 'deficit_humedad', 'deficit_presion_vapor', 'humedad_abs_int', 'temp_prom_ext', 'temp_max_ext', 'temp_min_ext', 'hr_prom_ext', 'rad_sum', 'rad_max', 'dh_ext', 'humedad_abs_ext', 'riego_total', 'ph_promedio', 'ce_promedio', 'dias_desde_transplante', 'crad_season', 'week_in_season', 'RACIMOS PUESTOS', 'FLORES EN RACIMO ABIERTAS', 'CANTIDAD DE RACIMOS EN PLANTA', 'CANTIDAD DE TOMATES', 'Nº DE RACIMO EN COSECHA', 'TOMATES MADUROS (COLOR 2)', 'DIAMETRO DEL FRUTO cm', 'CRECIMIENTO PLANTA (cm)']
+  Skipped first 3 weeks → train: 102, val: 38, test: 36
+  Temporal features kept (2): ['dias_desde_transplante', 'week_in_season']
+  Sensor features (19): ['temp_prom_int', 'temp_min_int', 'temp_max_int', 'hr_prom_int', 'co2_ppm', 'deficit_humedad', 'deficit_presion_vapor', 'humedad_abs_int', 'temp_prom_ext', 'temp_max_ext', 'temp_min_ext', 'hr_prom_ext', 'rad_sum', 'rad_max', 'dh_ext', 'humedad_abs_ext', 'riego_total', 'ph_promedio', 'ce_promedio']
+  Phenology features (8): ['RACIMOS PUESTOS', 'FLORES EN RACIMO ABIERTAS', 'CANTIDAD DE RACIMOS EN PLANTA', 'CANTIDAD DE TOMATES', 'Nº DE RACIMO EN COSECHA', 'TOMATES MADUROS (COLOR 2)', 'DIAMETRO DEL FRUTO cm', 'CRECIMIENTO PLANTA (cm)']
+  Box-Cox λ = 0.0291
+  Gap-norm applied (HORIZON=5, seq_len=4, skip_first_weeks=3): sensor frames trimmed per season
+  PCA (sensor only): 19 -> 5 components
+  CNN input: 5 PCA + 8 pheno = 13 channels
+  HORIZON=5 (doc) | seq_len=4 | true_horizon = gap + skip_first_weeks - extra_skip - seq_len + 1 (= HORIZON when use_gap_norm=true; see _apply_gap_norm_cnn)
+  Sequences — train: 102, val: 38, test: 36
+  Train y variance (scaled boxcox): 0.095987
+  Pipeline saved → /Users/josuetapiahernandez/Documents/JATA/Huerta_Prediction/.claude/worktrees/pure-lstm-comparison/Models/results/pipeline_inv3_lstm.pkl
+
+  216 runs (54 seeds × 4 inits)
+  Epoch    1/500 | Train: 0.717814 | Val Loss: 0.870270 | Val NSE: -0.4224
+  Epoch   20/500 | Train: 0.341066 | Val Loss: 0.798651 | Val NSE: 0.1182
+  Epoch   40/500 | Train: 0.176150 | Val Loss: 0.857174 | Val NSE: -0.2618
+  Epoch   60/500 | Train: 0.137370 | Val Loss: 0.872202 | Val NSE: -0.4771
+  Epoch   80/500 | Train: 0.149924 | Val Loss: 0.942249 | Val NSE: -0.5772
+  Epoch  100/500 | Train: 0.069543 | Val Loss: 0.919593 | Val NSE: -0.3024
+  Epoch  120/500 | Train: 0.043710 | Val Loss: 0.963884 | Val NSE: -0.6894
+  Epoch  140/500 | Train: 0.041480 | Val Loss: 0.941973 | Val NSE: -0.5066
+  Epoch  160/500 | Train: 0.041978 | Val Loss: 0.960947 | Val NSE: -0.4145
+  Early stopping at epoch 166
+    [default] s42: R²=0.1278, MAPE=19.04%
+  Epoch    1/500 | Train: 0.770584 | Val Loss: 0.839314 | Val NSE: -0.0621
+  Epoch   20/500 | Train: 0.387283 | Val Loss: 0.738707 | Val NSE: 0.0290
+  Epoch   40/500 | Train: 0.228634 | Val Loss: 0.892908 | Val NSE: -0.1515
+  Epoch   60/500 | Train: 0.140093 | Val Loss: 0.846485 | Val NSE: -0.1490
+  Epoch   80/500 | Train: 0.131965 | Val Loss: 0.931850 | Val NSE: -0.6689
+  Epoch  100/500 | Train: 0.092253 | Val Loss: 0.940990 | Val NSE: -0.4176
+  Epoch  120/500 | Train: 0.053435 | Val Loss: 0.955151 | Val NSE: -0.3844
+  Epoch  140/500 | Train: 0.052848 | Val Loss: 0.947038 | Val NSE: -0.5967
+  Epoch  160/500 | Train: 0.051309 | Val Loss: 0.949555 | Val NSE: -0.3913
+  Early stopping at epoch 167
+    [default] s7: R²=0.1096, MAPE=19.93%
+  Epoch    1/500 | Train: 0.824932 | Val Loss: 0.951737 | Val NSE: 0.0720
+  Epoch   20/500 | Train: 0.321506 | Val Loss: 0.752591 | Val NSE: 0.3409
+  Epoch   40/500 | Train: 0.180841 | Val Loss: 0.833598 | Val NSE: 0.0164
+  Epoch   60/500 | Train: 0.158833 | Val Loss: 0.877253 | Val NSE: -0.3855
+  Epoch   80/500 | Train: 0.101920 | Val Loss: 0.909223 | Val NSE: -0.5911
+  Epoch  100/500 | Train: 0.073132 | Val Loss: 0.942936 | Val NSE: -0.6243
+  Epoch  120/500 | Train: 0.036750 | Val Loss: 0.890153 | Val NSE: -0.4674
+  Epoch  140/500 | Train: 0.053863 | Val Loss: 0.947190 | Val NSE: -0.4835
+  Epoch  160/500 | Train: 0.034841 | Val Loss: 0.935664 | Val NSE: -0.5154
+  Early stopping at epoch 170
+    [default] s123: R²=0.0361, MAPE=20.39%
+  Epoch    1/500 | Train: 0.772537 | Val Loss: 0.855622 | Val NSE: 0.0821
+  Epoch   20/500 | Train: 0.268600 | Val Loss: 0.809190 | Val NSE: -0.0138
+  Epoch   40/500 | Train: 0.275889 | Val Loss: 0.869372 | Val NSE: 0.0643
+  Epoch   60/500 | Train: 0.179565 | Val Loss: 0.833382 | Val NSE: -0.1840
+  Epoch   80/500 | Train: 0.110109 | Val Loss: 0.881776 | Val NSE: -0.5205
+  Epoch  100/500 | Train: 0.085182 | Val Loss: 0.877122 | Val NSE: -0.2018
+  Epoch  120/500 | Train: 0.061676 | Val Loss: 0.923718 | Val NSE: -0.2746
+  Epoch  140/500 | Train: 0.058881 | Val Loss: 0.978744 | Val NSE: -0.4694
+  Epoch  160/500 | Train: 0.057892 | Val Loss: 1.012053 | Val NSE: -0.4636
+  Early stopping at epoch 169
+    [default] s2024: R²=0.4096, MAPE=16.05%
+  Epoch    1/500 | Train: 0.737942 | Val Loss: 0.852297 | Val NSE: 0.1481
+  Epoch   20/500 | Train: 0.311826 | Val Loss: 0.837196 | Val NSE: 0.0591
+  Epoch   40/500 | Train: 0.212711 | Val Loss: 0.958381 | Val NSE: -0.3095
+  Epoch   60/500 | Train: 0.137392 | Val Loss: 0.939100 | Val NSE: -0.1507
+  Epoch   80/500 | Train: 0.129397 | Val Loss: 1.000902 | Val NSE: -0.4207
+  Epoch  100/500 | Train: 0.090954 | Val Loss: 0.994020 | Val NSE: -0.4399
+  Epoch  120/500 | Train: 0.041459 | Val Loss: 0.968402 | Val NSE: -0.4675
+  Epoch  140/500 | Train: 0.041343 | Val Loss: 0.955289 | Val NSE: -0.5899
+  Epoch  160/500 | Train: 0.043074 | Val Loss: 0.989371 | Val NSE: -0.2814
+  Early stopping at epoch 161
+    [default] s99: R²=0.1521, MAPE=17.11%
+  Epoch    1/500 | Train: 0.738062 | Val Loss: 0.865089 | Val NSE: -0.6021
+  Epoch   20/500 | Train: 0.427582 | Val Loss: 0.814264 | Val NSE: 0.2049
+  Epoch   40/500 | Train: 0.199777 | Val Loss: 0.871328 | Val NSE: -0.3736
+  Epoch   60/500 | Train: 0.126206 | Val Loss: 0.842713 | Val NSE: -0.3423
+  Epoch   80/500 | Train: 0.084483 | Val Loss: 0.929700 | Val NSE: -0.3683
+  Epoch  100/500 | Train: 0.062778 | Val Loss: 1.010940 | Val NSE: -0.4039
+  Epoch  120/500 | Train: 0.081370 | Val Loss: 1.001655 | Val NSE: -0.5404
+  Epoch  140/500 | Train: 0.045887 | Val Loss: 0.929119 | Val NSE: -0.4060
+  Epoch  160/500 | Train: 0.041193 | Val Loss: 0.997728 | Val NSE: -0.4589
+  Early stopping at epoch 166
+    [default] s13: R²=0.3868, MAPE=16.70%
+  Epoch    1/500 | Train: 0.715417 | Val Loss: 0.930343 | Val NSE: -0.1094
+  Epoch   20/500 | Train: 0.225078 | Val Loss: 0.843358 | Val NSE: 0.0126
+  Epoch   40/500 | Train: 0.190165 | Val Loss: 0.874690 | Val NSE: -0.3979
+  Epoch   60/500 | Train: 0.130851 | Val Loss: 0.911753 | Val NSE: -0.4209
+  Epoch   80/500 | Train: 0.126910 | Val Loss: 0.920342 | Val NSE: -0.6515
+  Epoch  100/500 | Train: 0.095848 | Val Loss: 0.964403 | Val NSE: -0.7496
+  Epoch  120/500 | Train: 0.072398 | Val Loss: 0.948840 | Val NSE: -0.4895
+  Epoch  140/500 | Train: 0.040008 | Val Loss: 0.957714 | Val NSE: -0.3903
+  Epoch  160/500 | Train: 0.055682 | Val Loss: 0.948474 | Val NSE: -0.4446
+  Early stopping at epoch 165
+    [default] s55: R²=-0.0513, MAPE=21.64%
+  Epoch    1/500 | Train: 0.792139 | Val Loss: 0.844419 | Val NSE: -0.9087
+  Epoch   20/500 | Train: 0.349430 | Val Loss: 0.817265 | Val NSE: 0.2799
+  Epoch   40/500 | Train: 0.221464 | Val Loss: 0.835657 | Val NSE: 0.0582
+  Epoch   60/500 | Train: 0.151855 | Val Loss: 0.850425 | Val NSE: -0.3859
+  Epoch   80/500 | Train: 0.205426 | Val Loss: 0.880552 | Val NSE: -0.7586
+  Epoch  100/500 | Train: 0.087911 | Val Loss: 0.870035 | Val NSE: -0.3995
+  Epoch  120/500 | Train: 0.060369 | Val Loss: 0.940500 | Val NSE: -0.3305
+  Epoch  140/500 | Train: 0.046483 | Val Loss: 0.926963 | Val NSE: -0.3222
+  Epoch  160/500 | Train: 0.035930 | Val Loss: 0.949736 | Val NSE: -0.3323
+  Early stopping at epoch 169
+    [default] s777: R²=0.3060, MAPE=17.26%
+  Epoch    1/500 | Train: 0.721298 | Val Loss: 0.788969 | Val NSE: -0.0904
+  Epoch   20/500 | Train: 0.362269 | Val Loss: 0.799359 | Val NSE: 0.2990
+  Epoch   40/500 | Train: 0.238361 | Val Loss: 0.882396 | Val NSE: -0.2563
+  Epoch   60/500 | Train: 0.176960 | Val Loss: 0.891111 | Val NSE: -0.2687
+  Epoch   80/500 | Train: 0.095551 | Val Loss: 0.943830 | Val NSE: -0.4436
+  Epoch  100/500 | Train: 0.084614 | Val Loss: 0.939505 | Val NSE: -0.3553
+  Epoch  120/500 | Train: 0.089220 | Val Loss: 0.957354 | Val NSE: -0.3570
+  Epoch  140/500 | Train: 0.061610 | Val Loss: 0.950768 | Val NSE: -0.4359
+  Epoch  160/500 | Train: 0.052005 | Val Loss: 1.011983 | Val NSE: -0.5735
+  Early stopping at epoch 170
+    [default] s314: R²=0.2702, MAPE=18.20%
+  Epoch    1/500 | Train: 0.878111 | Val Loss: 0.807742 | Val NSE: -0.0855
+  Epoch   20/500 | Train: 0.221108 | Val Loss: 0.830745 | Val NSE: 0.0558
+  Epoch   40/500 | Train: 0.227321 | Val Loss: 0.893025 | Val NSE: -0.0863
+  Epoch   60/500 | Train: 0.141591 | Val Loss: 0.917164 | Val NSE: -0.5193
+  Epoch   80/500 | Train: 0.110414 | Val Loss: 0.916610 | Val NSE: -0.2749
+  Epoch  100/500 | Train: 0.077184 | Val Loss: 0.953197 | Val NSE: -0.3095
+  Epoch  120/500 | Train: 0.043226 | Val Loss: 0.979448 | Val NSE: -0.4263
+  Epoch  140/500 | Train: 0.047039 | Val Loss: 1.030423 | Val NSE: -0.4735
+  Epoch  160/500 | Train: 0.059229 | Val Loss: 0.994590 | Val NSE: -0.3870
+  Early stopping at epoch 163
+    [default] s2025: R²=0.1445, MAPE=18.91%
+  Epoch    1/500 | Train: 0.825875 | Val Loss: 0.768915 | Val NSE: 0.1326
+  Epoch   20/500 | Train: 0.285824 | Val Loss: 0.765268 | Val NSE: 0.1169
+  Epoch   40/500 | Train: 0.187697 | Val Loss: 0.854135 | Val NSE: -0.0190
+  Epoch   60/500 | Train: 0.180961 | Val Loss: 0.852046 | Val NSE: -0.0701
+  Epoch   80/500 | Train: 0.090403 | Val Loss: 0.889456 | Val NSE: -0.3480
+  Epoch  100/500 | Train: 0.055421 | Val Loss: 0.915010 | Val NSE: -0.4788
+  Epoch  120/500 | Train: 0.062637 | Val Loss: 0.964421 | Val NSE: -0.4731
+  Epoch  140/500 | Train: 0.070892 | Val Loss: 0.972568 | Val NSE: -0.4787
+  Early stopping at epoch 158
+    [default] s0: R²=0.0775, MAPE=18.37%
+  Epoch    1/500 | Train: 0.617788 | Val Loss: 0.965600 | Val NSE: 0.0385
+  Epoch   20/500 | Train: 0.359981 | Val Loss: 0.797226 | Val NSE: -0.3311
+  Epoch   40/500 | Train: 0.220649 | Val Loss: 0.789447 | Val NSE: 0.0920
+  Epoch   60/500 | Train: 0.222280 | Val Loss: 0.837229 | Val NSE: -0.0190
+  Epoch   80/500 | Train: 0.095128 | Val Loss: 0.909570 | Val NSE: -0.4622
+  Epoch  100/500 | Train: 0.103324 | Val Loss: 0.919120 | Val NSE: -0.4750
+  Epoch  120/500 | Train: 0.112598 | Val Loss: 0.963849 | Val NSE: -0.6085
+  Epoch  140/500 | Train: 0.056819 | Val Loss: 0.955586 | Val NSE: -0.5490
+  Epoch  160/500 | Train: 0.037648 | Val Loss: 0.899707 | Val NSE: -0.4759
+  Early stopping at epoch 166
+    [default] s1: R²=0.2316, MAPE=18.00%
+  Epoch    1/500 | Train: 0.667925 | Val Loss: 0.905534 | Val NSE: -0.0353
+  Epoch   20/500 | Train: 0.240179 | Val Loss: 0.861235 | Val NSE: -0.1270
+  Epoch   40/500 | Train: 0.265504 | Val Loss: 0.943438 | Val NSE: -0.3160
+  Epoch   60/500 | Train: 0.124931 | Val Loss: 0.950465 | Val NSE: -0.2455
+  Epoch   80/500 | Train: 0.090334 | Val Loss: 1.005701 | Val NSE: -0.4242
+  Epoch  100/500 | Train: 0.070521 | Val Loss: 1.114284 | Val NSE: -0.5461
+  Epoch  120/500 | Train: 0.069200 | Val Loss: 1.063920 | Val NSE: -0.5344
+  Epoch  140/500 | Train: 0.034073 | Val Loss: 1.090067 | Val NSE: -0.7375
+  Epoch  160/500 | Train: 0.041220 | Val Loss: 1.112055 | Val NSE: -0.5072
+  Early stopping at epoch 163
+    [default] s2: R²=0.0668, MAPE=19.35%
+  Epoch    1/500 | Train: 0.758401 | Val Loss: 0.842506 | Val NSE: -0.0757
+  Epoch   20/500 | Train: 0.322633 | Val Loss: 0.862426 | Val NSE: 0.2475
+  Epoch   40/500 | Train: 0.208934 | Val Loss: 0.952927 | Val NSE: -0.4980
+  Epoch   60/500 | Train: 0.185490 | Val Loss: 0.940935 | Val NSE: -0.3413
+  Epoch   80/500 | Train: 0.137791 | Val Loss: 0.916418 | Val NSE: -0.4518
+  Epoch  100/500 | Train: 0.089758 | Val Loss: 1.010516 | Val NSE: -0.3269
+  Epoch  120/500 | Train: 0.092334 | Val Loss: 1.027426 | Val NSE: -0.6187
+  Epoch  140/500 | Train: 0.053521 | Val Loss: 1.031782 | Val NSE: -0.5016
+  Epoch  160/500 | Train: 0.053288 | Val Loss: 1.014490 | Val NSE: -0.4709
+  Early stopping at epoch 170
+    [default] s3: R²=0.0504, MAPE=20.12%
+  Epoch    1/500 | Train: 0.752964 | Val Loss: 0.953760 | Val NSE: -0.5303
+  Epoch   20/500 | Train: 0.300543 | Val Loss: 0.835069 | Val NSE: 0.1654
+  Epoch   40/500 | Train: 0.141404 | Val Loss: 0.963096 | Val NSE: -0.3836
+  Epoch   60/500 | Train: 0.161515 | Val Loss: 0.946007 | Val NSE: -0.5050
+  Epoch   80/500 | Train: 0.120807 | Val Loss: 0.931871 | Val NSE: -0.4196
+  Epoch  100/500 | Train: 0.108586 | Val Loss: 0.967948 | Val NSE: -0.4844
+  Epoch  120/500 | Train: 0.082333 | Val Loss: 0.986674 | Val NSE: -0.4073
+  Epoch  140/500 | Train: 0.050779 | Val Loss: 1.007417 | Val NSE: -0.4385
+  Early stopping at epoch 158
+    [default] s4: R²=0.1977, MAPE=18.70%
+  Epoch    1/500 | Train: 0.792926 | Val Loss: 0.839039 | Val NSE: -0.2525
+  Epoch   20/500 | Train: 0.263531 | Val Loss: 0.773639 | Val NSE: 0.2274
+  Epoch   40/500 | Train: 0.226138 | Val Loss: 0.915100 | Val NSE: -0.2665
+  Epoch   60/500 | Train: 0.291387 | Val Loss: 0.942781 | Val NSE: -0.2813
+  Epoch   80/500 | Train: 0.201330 | Val Loss: 0.972795 | Val NSE: -0.4473
+  Epoch  100/500 | Train: 0.111840 | Val Loss: 1.002642 | Val NSE: -0.6308
+  Epoch  120/500 | Train: 0.109124 | Val Loss: 1.027065 | Val NSE: -0.5248
+  Epoch  140/500 | Train: 0.063389 | Val Loss: 1.030547 | Val NSE: -0.6165
+  Epoch  160/500 | Train: 0.068520 | Val Loss: 1.017993 | Val NSE: -0.5210
+  Early stopping at epoch 164
+    [default] s5: R²=0.0369, MAPE=20.13%
+  Epoch    1/500 | Train: 0.688183 | Val Loss: 0.755602 | Val NSE: -0.0935
+  Epoch   20/500 | Train: 0.314248 | Val Loss: 0.784163 | Val NSE: 0.1494
+  Epoch   40/500 | Train: 0.189452 | Val Loss: 0.875239 | Val NSE: -0.2085
+  Epoch   60/500 | Train: 0.184589 | Val Loss: 0.862917 | Val NSE: -0.2053
+  Epoch   80/500 | Train: 0.100679 | Val Loss: 0.868522 | Val NSE: -0.3284
+  Epoch  100/500 | Train: 0.082305 | Val Loss: 0.961522 | Val NSE: -0.5991
+  Epoch  120/500 | Train: 0.063754 | Val Loss: 0.997374 | Val NSE: -0.5073
+  Epoch  140/500 | Train: 0.070001 | Val Loss: 1.013895 | Val NSE: -0.6059
+  Epoch  160/500 | Train: 0.047520 | Val Loss: 0.982573 | Val NSE: -0.3472
+  Early stopping at epoch 174
+    [default] s6: R²=-0.1677, MAPE=22.62%
+  Epoch    1/500 | Train: 0.710340 | Val Loss: 0.892472 | Val NSE: -0.1006
+  Epoch   20/500 | Train: 0.319533 | Val Loss: 0.790572 | Val NSE: 0.1268
+  Epoch   40/500 | Train: 0.149827 | Val Loss: 0.840894 | Val NSE: -0.1032
+  Epoch   60/500 | Train: 0.132019 | Val Loss: 0.944680 | Val NSE: -0.4223
+  Epoch   80/500 | Train: 0.112065 | Val Loss: 0.942534 | Val NSE: -0.3096
+  Epoch  100/500 | Train: 0.054181 | Val Loss: 0.920221 | Val NSE: -0.5231
+  Epoch  120/500 | Train: 0.056169 | Val Loss: 0.926808 | Val NSE: -0.4997
+  Epoch  140/500 | Train: 0.046344 | Val Loss: 0.987765 | Val NSE: -0.5922
+  Epoch  160/500 | Train: 0.065442 | Val Loss: 0.882905 | Val NSE: -0.3028
+  Early stopping at epoch 164
+    [default] s8: R²=0.0003, MAPE=19.86%
+  Epoch    1/500 | Train: 0.743348 | Val Loss: 0.931509 | Val NSE: -0.6983
+  Epoch   20/500 | Train: 0.289765 | Val Loss: 0.790901 | Val NSE: 0.2933
+  Epoch   40/500 | Train: 0.166562 | Val Loss: 0.888814 | Val NSE: -0.2209
+  Epoch   60/500 | Train: 0.120165 | Val Loss: 0.885593 | Val NSE: -0.1953
+  Epoch   80/500 | Train: 0.134169 | Val Loss: 0.959224 | Val NSE: -0.4021
+  Epoch  100/500 | Train: 0.063442 | Val Loss: 0.950594 | Val NSE: -0.4999
+  Epoch  120/500 | Train: 0.042683 | Val Loss: 1.002838 | Val NSE: -0.4587
+  Epoch  140/500 | Train: 0.035493 | Val Loss: 1.016432 | Val NSE: -0.1995
+  Epoch  160/500 | Train: 0.047847 | Val Loss: 1.003309 | Val NSE: -0.3865
+  Early stopping at epoch 170
+    [default] s9: R²=0.2337, MAPE=18.68%
+  Epoch    1/500 | Train: 0.626776 | Val Loss: 0.840987 | Val NSE: -0.3357
+  Epoch   20/500 | Train: 0.272077 | Val Loss: 0.784194 | Val NSE: 0.0986
+  Epoch   40/500 | Train: 0.232817 | Val Loss: 0.853244 | Val NSE: -0.0915
+  Epoch   60/500 | Train: 0.197079 | Val Loss: 0.835916 | Val NSE: -0.3443
+  Epoch   80/500 | Train: 0.141848 | Val Loss: 0.901456 | Val NSE: -0.1557
+  Epoch  100/500 | Train: 0.074971 | Val Loss: 0.952636 | Val NSE: -0.5181
+  Epoch  120/500 | Train: 0.045891 | Val Loss: 0.932379 | Val NSE: -0.3463
+  Epoch  140/500 | Train: 0.052706 | Val Loss: 0.922269 | Val NSE: -0.3541
+  Early stopping at epoch 159
+    [default] s10: R²=0.1660, MAPE=18.06%
+  Epoch    1/500 | Train: 0.820875 | Val Loss: 0.821918 | Val NSE: -0.0800
+  Epoch   20/500 | Train: 0.306055 | Val Loss: 0.771133 | Val NSE: 0.0836
+  Epoch   40/500 | Train: 0.196665 | Val Loss: 0.880012 | Val NSE: -0.2494
+  Epoch   60/500 | Train: 0.134738 | Val Loss: 0.982495 | Val NSE: -0.3396
+  Epoch   80/500 | Train: 0.217693 | Val Loss: 0.986473 | Val NSE: -0.3091
+  Epoch  100/500 | Train: 0.078564 | Val Loss: 0.968470 | Val NSE: -0.2809
+  Epoch  120/500 | Train: 0.080343 | Val Loss: 0.989891 | Val NSE: -0.3498
+  Epoch  140/500 | Train: 0.047248 | Val Loss: 0.986660 | Val NSE: -0.4294
+  Epoch  160/500 | Train: 0.037411 | Val Loss: 1.024780 | Val NSE: -0.6285
+  Early stopping at epoch 166
+    [default] s11: R²=0.1254, MAPE=19.01%
+  Epoch    1/500 | Train: 0.750249 | Val Loss: 0.914232 | Val NSE: -0.0650
+  Epoch   20/500 | Train: 0.280708 | Val Loss: 0.809201 | Val NSE: 0.0281
+  Epoch   40/500 | Train: 0.225001 | Val Loss: 0.855774 | Val NSE: -0.1875
+  Epoch   60/500 | Train: 0.177045 | Val Loss: 0.868698 | Val NSE: -0.3129
+  Epoch   80/500 | Train: 0.122545 | Val Loss: 0.882060 | Val NSE: -0.8400
+  Epoch  100/500 | Train: 0.132833 | Val Loss: 0.920885 | Val NSE: -0.4682
+  Epoch  120/500 | Train: 0.047305 | Val Loss: 0.925004 | Val NSE: -0.3717
+  Epoch  140/500 | Train: 0.065117 | Val Loss: 0.959550 | Val NSE: -0.6830
+  Epoch  160/500 | Train: 0.032166 | Val Loss: 0.980467 | Val NSE: -0.5797
+  Early stopping at epoch 164
+    [default] s12: R²=0.1443, MAPE=18.47%
+  Epoch    1/500 | Train: 0.722833 | Val Loss: 0.799499 | Val NSE: -0.1205
+  Epoch   20/500 | Train: 0.274331 | Val Loss: 0.750848 | Val NSE: 0.0763
+  Epoch   40/500 | Train: 0.183353 | Val Loss: 0.893227 | Val NSE: 0.0010
+  Epoch   60/500 | Train: 0.142118 | Val Loss: 0.860233 | Val NSE: -0.3275
+  Epoch   80/500 | Train: 0.087628 | Val Loss: 0.918233 | Val NSE: -0.4154
+  Epoch  100/500 | Train: 0.065856 | Val Loss: 0.967658 | Val NSE: -0.3775
+  Epoch  120/500 | Train: 0.059393 | Val Loss: 0.949410 | Val NSE: -0.3692
+  Epoch  140/500 | Train: 0.054538 | Val Loss: 0.956440 | Val NSE: -0.5095
+  Epoch  160/500 | Train: 0.037813 | Val Loss: 0.999617 | Val NSE: -0.4767
+  Early stopping at epoch 165
+    [default] s14: R²=0.3023, MAPE=17.11%
+  Epoch    1/500 | Train: 0.875802 | Val Loss: 0.928467 | Val NSE: -0.5690
+  Epoch   20/500 | Train: 0.319006 | Val Loss: 0.757687 | Val NSE: 0.2063
+  Epoch   40/500 | Train: 0.203666 | Val Loss: 0.896691 | Val NSE: -0.5660
+  Epoch   60/500 | Train: 0.137263 | Val Loss: 0.922761 | Val NSE: -0.1993
+  Epoch   80/500 | Train: 0.160944 | Val Loss: 0.968092 | Val NSE: -0.6008
+  Epoch  100/500 | Train: 0.084311 | Val Loss: 0.976227 | Val NSE: -0.3761
+  Epoch  120/500 | Train: 0.072923 | Val Loss: 0.967845 | Val NSE: -0.3211
+  Epoch  140/500 | Train: 0.065473 | Val Loss: 0.973739 | Val NSE: -0.5806
+  Epoch  160/500 | Train: 0.055072 | Val Loss: 0.951539 | Val NSE: -0.7450
+  Early stopping at epoch 167
+    [default] s15: R²=-0.0363, MAPE=20.99%
+  Epoch    1/500 | Train: 0.828719 | Val Loss: 0.884667 | Val NSE: -1.1825
+  Epoch   20/500 | Train: 0.307945 | Val Loss: 0.830739 | Val NSE: 0.1318
+  Epoch   40/500 | Train: 0.192107 | Val Loss: 0.886094 | Val NSE: -0.4844
+  Epoch   60/500 | Train: 0.124808 | Val Loss: 0.907653 | Val NSE: -0.3856
+  Epoch   80/500 | Train: 0.097538 | Val Loss: 0.936636 | Val NSE: -0.4767
+  Epoch  100/500 | Train: 0.066010 | Val Loss: 0.932882 | Val NSE: -0.3404
+  Epoch  120/500 | Train: 0.066611 | Val Loss: 0.947869 | Val NSE: -0.2933
+  Epoch  140/500 | Train: 0.033974 | Val Loss: 0.978022 | Val NSE: -0.4578
+  Epoch  160/500 | Train: 0.053582 | Val Loss: 1.026972 | Val NSE: -0.3887
+  Early stopping at epoch 168
+    [default] s16: R²=0.3351, MAPE=17.39%
+  Epoch    1/500 | Train: 0.542284 | Val Loss: 0.869561 | Val NSE: -0.3695
+  Epoch   20/500 | Train: 0.294085 | Val Loss: 0.763368 | Val NSE: 0.1741
+  Epoch   40/500 | Train: 0.264047 | Val Loss: 0.892863 | Val NSE: -0.3196
+  Epoch   60/500 | Train: 0.196324 | Val Loss: 0.895198 | Val NSE: -0.3423
+  Epoch   80/500 | Train: 0.101315 | Val Loss: 0.904224 | Val NSE: -0.3233
+  Epoch  100/500 | Train: 0.090332 | Val Loss: 0.907617 | Val NSE: -0.3104
+  Epoch  120/500 | Train: 0.071082 | Val Loss: 0.916871 | Val NSE: -0.4580
+  Epoch  140/500 | Train: 0.047176 | Val Loss: 0.921306 | Val NSE: -0.4861
+  Epoch  160/500 | Train: 0.038592 | Val Loss: 0.963911 | Val NSE: -0.4844
+  Early stopping at epoch 160
+    [default] s17: R²=0.0336, MAPE=19.28%
+  Epoch    1/500 | Train: 0.672673 | Val Loss: 0.853223 | Val NSE: 0.0000
+  Epoch   20/500 | Train: 0.345773 | Val Loss: 0.806087 | Val NSE: 0.2440
+  Epoch   40/500 | Train: 0.252637 | Val Loss: 0.872751 | Val NSE: -0.2832
+  Epoch   60/500 | Train: 0.159590 | Val Loss: 0.908858 | Val NSE: -0.3283
+  Epoch   80/500 | Train: 0.106877 | Val Loss: 0.919817 | Val NSE: -0.3956
+  Epoch  100/500 | Train: 0.066714 | Val Loss: 0.918542 | Val NSE: -0.7756
+  Epoch  120/500 | Train: 0.066320 | Val Loss: 0.893592 | Val NSE: -0.5158
+  Epoch  140/500 | Train: 0.052973 | Val Loss: 0.938170 | Val NSE: -0.6468
+  Epoch  160/500 | Train: 0.054682 | Val Loss: 0.916529 | Val NSE: -0.5760
+  Early stopping at epoch 164
+    [default] s18: R²=-0.0883, MAPE=20.01%
+  Epoch    1/500 | Train: 0.680626 | Val Loss: 0.925620 | Val NSE: -0.0617
+  Epoch   20/500 | Train: 0.330519 | Val Loss: 0.830064 | Val NSE: 0.1116
+  Epoch   40/500 | Train: 0.211987 | Val Loss: 0.863372 | Val NSE: -0.2126
+  Epoch   60/500 | Train: 0.122056 | Val Loss: 0.922915 | Val NSE: -0.2521
+  Epoch   80/500 | Train: 0.167786 | Val Loss: 0.949844 | Val NSE: -0.4064
+  Epoch  100/500 | Train: 0.074477 | Val Loss: 1.041002 | Val NSE: -0.2657
+  Epoch  120/500 | Train: 0.075558 | Val Loss: 1.057407 | Val NSE: -0.4217
+  Epoch  140/500 | Train: 0.062604 | Val Loss: 1.050149 | Val NSE: -0.3326
+  Epoch  160/500 | Train: 0.058337 | Val Loss: 1.077363 | Val NSE: -0.5268
+  Early stopping at epoch 163
+    [default] s19: R²=0.0878, MAPE=17.91%
+  Epoch    1/500 | Train: 0.605690 | Val Loss: 0.796356 | Val NSE: 0.0208
+  Epoch   20/500 | Train: 0.246483 | Val Loss: 0.832253 | Val NSE: 0.1833
+  Epoch   40/500 | Train: 0.248419 | Val Loss: 0.892545 | Val NSE: -0.1316
+  Epoch   60/500 | Train: 0.176984 | Val Loss: 0.994255 | Val NSE: -0.4912
+  Epoch   80/500 | Train: 0.126643 | Val Loss: 0.983935 | Val NSE: -0.3831
+  Epoch  100/500 | Train: 0.066385 | Val Loss: 0.953560 | Val NSE: -0.4174
+  Epoch  120/500 | Train: 0.059277 | Val Loss: 1.005453 | Val NSE: -0.3859
+  Epoch  140/500 | Train: 0.039589 | Val Loss: 1.013834 | Val NSE: -0.4333
+  Epoch  160/500 | Train: 0.047895 | Val Loss: 0.963688 | Val NSE: -0.5998
+  Early stopping at epoch 160
+    [default] s20: R²=0.1172, MAPE=18.79%
+  Epoch    1/500 | Train: 0.668575 | Val Loss: 0.874567 | Val NSE: 0.0236
+  Epoch   20/500 | Train: 0.338707 | Val Loss: 0.802364 | Val NSE: -0.1095
+  Epoch   40/500 | Train: 0.254630 | Val Loss: 0.878643 | Val NSE: -0.0850
+  Epoch   60/500 | Train: 0.183433 | Val Loss: 0.897243 | Val NSE: -0.1205
+  Epoch   80/500 | Train: 0.184247 | Val Loss: 0.923112 | Val NSE: -0.6839
+  Epoch  100/500 | Train: 0.066493 | Val Loss: 0.950470 | Val NSE: -0.4475
+  Epoch  120/500 | Train: 0.053339 | Val Loss: 0.939706 | Val NSE: -0.3805
+  Epoch  140/500 | Train: 0.065746 | Val Loss: 0.936102 | Val NSE: -0.4810
+  Epoch  160/500 | Train: 0.024102 | Val Loss: 0.959280 | Val NSE: -0.5091
+  Early stopping at epoch 169
+    [default] s21: R²=0.2395, MAPE=18.53%
+  Epoch    1/500 | Train: 0.792890 | Val Loss: 0.810350 | Val NSE: 0.1006
+  Epoch   20/500 | Train: 0.281667 | Val Loss: 0.794939 | Val NSE: 0.2362
+  Epoch   40/500 | Train: 0.154285 | Val Loss: 0.886837 | Val NSE: -0.1415
+  Epoch   60/500 | Train: 0.168560 | Val Loss: 0.901473 | Val NSE: -0.0830
+  Epoch   80/500 | Train: 0.091668 | Val Loss: 0.922698 | Val NSE: -0.1431
+  Epoch  100/500 | Train: 0.090283 | Val Loss: 0.985454 | Val NSE: -0.4261
+  Epoch  120/500 | Train: 0.050116 | Val Loss: 0.968901 | Val NSE: -0.2701
+  Epoch  140/500 | Train: 0.063623 | Val Loss: 0.952020 | Val NSE: -0.5181
+  Epoch  160/500 | Train: 0.044153 | Val Loss: 0.982238 | Val NSE: -0.3982
+  Early stopping at epoch 167
+    [default] s22: R²=0.0610, MAPE=19.36%
+  Epoch    1/500 | Train: 0.796969 | Val Loss: 0.890865 | Val NSE: -1.0918
+  Epoch   20/500 | Train: 0.287660 | Val Loss: 0.828093 | Val NSE: -0.0413
+  Epoch   40/500 | Train: 0.210358 | Val Loss: 0.916675 | Val NSE: -0.3943
+  Epoch   60/500 | Train: 0.143625 | Val Loss: 0.934651 | Val NSE: -0.3803
+  Epoch   80/500 | Train: 0.128906 | Val Loss: 0.942770 | Val NSE: -0.2328
+  Epoch  100/500 | Train: 0.118780 | Val Loss: 1.007169 | Val NSE: -0.6492
+  Epoch  120/500 | Train: 0.071709 | Val Loss: 0.969870 | Val NSE: -0.2981
+  Epoch  140/500 | Train: 0.057089 | Val Loss: 0.992282 | Val NSE: -0.3317
+  Epoch  160/500 | Train: 0.043268 | Val Loss: 1.020235 | Val NSE: -0.3146
+  Early stopping at epoch 171
+    [default] s23: R²=0.2504, MAPE=18.25%
+  Epoch    1/500 | Train: 0.764506 | Val Loss: 0.990162 | Val NSE: 0.0899
+  Epoch   20/500 | Train: 0.258722 | Val Loss: 0.817443 | Val NSE: -0.0757
+  Epoch   40/500 | Train: 0.150093 | Val Loss: 0.874173 | Val NSE: -0.2467
+  Epoch   60/500 | Train: 0.148969 | Val Loss: 0.895612 | Val NSE: -0.2239
+  Epoch   80/500 | Train: 0.118808 | Val Loss: 0.990501 | Val NSE: -0.4617
+  Epoch  100/500 | Train: 0.070343 | Val Loss: 1.013780 | Val NSE: -0.4140
+  Epoch  120/500 | Train: 0.083263 | Val Loss: 0.939831 | Val NSE: -0.3554
+  Epoch  140/500 | Train: 0.035378 | Val Loss: 0.935631 | Val NSE: -0.5180
+  Epoch  160/500 | Train: 0.041116 | Val Loss: 0.960202 | Val NSE: -0.6229
+  Early stopping at epoch 162
+    [default] s24: R²=0.2283, MAPE=18.71%
+  Epoch    1/500 | Train: 0.740722 | Val Loss: 0.952443 | Val NSE: -1.0607
+  Epoch   20/500 | Train: 0.309947 | Val Loss: 0.797610 | Val NSE: 0.2212
+  Epoch   40/500 | Train: 0.190839 | Val Loss: 0.894527 | Val NSE: 0.0018
+  Epoch   60/500 | Train: 0.152995 | Val Loss: 0.868995 | Val NSE: -0.1096
+  Epoch   80/500 | Train: 0.081983 | Val Loss: 0.915288 | Val NSE: -0.4816
+  Epoch  100/500 | Train: 0.069081 | Val Loss: 0.909384 | Val NSE: -0.3023
+  Epoch  120/500 | Train: 0.079792 | Val Loss: 0.883947 | Val NSE: -0.3858
+  Epoch  140/500 | Train: 0.038968 | Val Loss: 0.876244 | Val NSE: -0.2701
+  Epoch  160/500 | Train: 0.041239 | Val Loss: 0.913567 | Val NSE: -0.3101
+  Early stopping at epoch 163
+    [default] s25: R²=0.1443, MAPE=19.17%
+  Epoch    1/500 | Train: 0.674595 | Val Loss: 0.953902 | Val NSE: -0.2774
+  Epoch   20/500 | Train: 0.248523 | Val Loss: 0.825415 | Val NSE: 0.0300
+  Epoch   40/500 | Train: 0.179221 | Val Loss: 0.896708 | Val NSE: -0.1648
+  Epoch   60/500 | Train: 0.157269 | Val Loss: 0.900686 | Val NSE: -0.5701
+  Epoch   80/500 | Train: 0.156208 | Val Loss: 0.881056 | Val NSE: -0.3859
+  Epoch  100/500 | Train: 0.089481 | Val Loss: 0.905508 | Val NSE: -0.3889
+  Epoch  120/500 | Train: 0.064406 | Val Loss: 0.906154 | Val NSE: -0.4347
+  Epoch  140/500 | Train: 0.052861 | Val Loss: 0.956996 | Val NSE: -0.6416
+  Epoch  160/500 | Train: 0.053593 | Val Loss: 0.944175 | Val NSE: -0.6348
+  Early stopping at epoch 165
+    [default] s26: R²=0.0124, MAPE=20.09%
+  Epoch    1/500 | Train: 0.671713 | Val Loss: 0.829528 | Val NSE: 0.1423
+  Epoch   20/500 | Train: 0.272239 | Val Loss: 0.805568 | Val NSE: 0.1127
+  Epoch   40/500 | Train: 0.224088 | Val Loss: 0.890451 | Val NSE: 0.1064
+  Epoch   60/500 | Train: 0.190804 | Val Loss: 0.912818 | Val NSE: -0.3916
+  Epoch   80/500 | Train: 0.115521 | Val Loss: 0.915094 | Val NSE: -0.2122
+  Epoch  100/500 | Train: 0.086639 | Val Loss: 0.979682 | Val NSE: -0.3111
+  Epoch  120/500 | Train: 0.078125 | Val Loss: 0.935223 | Val NSE: -0.3119
+  Epoch  140/500 | Train: 0.060208 | Val Loss: 0.958428 | Val NSE: -0.4305
+  Epoch  160/500 | Train: 0.076626 | Val Loss: 0.952924 | Val NSE: -0.1644
+  Early stopping at epoch 160
+    [default] s27: R²=0.1891, MAPE=17.61%
+  Epoch    1/500 | Train: 0.810492 | Val Loss: 0.874317 | Val NSE: -0.1202
+  Epoch   20/500 | Train: 0.279720 | Val Loss: 0.802886 | Val NSE: -0.0556
+  Epoch   40/500 | Train: 0.237067 | Val Loss: 0.939638 | Val NSE: -0.5251
+  Epoch   60/500 | Train: 0.130463 | Val Loss: 0.981824 | Val NSE: -0.4096
+  Epoch   80/500 | Train: 0.089317 | Val Loss: 0.911571 | Val NSE: -0.5179
+  Epoch  100/500 | Train: 0.074051 | Val Loss: 0.969046 | Val NSE: -0.7241
+  Epoch  120/500 | Train: 0.034321 | Val Loss: 0.902345 | Val NSE: -0.6463
+  Epoch  140/500 | Train: 0.039629 | Val Loss: 0.897781 | Val NSE: -0.3843
+  Epoch  160/500 | Train: 0.058684 | Val Loss: 0.899771 | Val NSE: -0.4144
+  Early stopping at epoch 162
+    [default] s28: R²=0.2040, MAPE=17.07%
+  Epoch    1/500 | Train: 0.799002 | Val Loss: 0.931281 | Val NSE: -0.4040
+  Epoch   20/500 | Train: 0.282833 | Val Loss: 0.876734 | Val NSE: -0.1578
+  Epoch   40/500 | Train: 0.200627 | Val Loss: 0.933630 | Val NSE: -0.8901
+  Epoch   60/500 | Train: 0.140327 | Val Loss: 0.888991 | Val NSE: -0.3661
+  Epoch   80/500 | Train: 0.075300 | Val Loss: 0.949382 | Val NSE: -0.7410
+  Epoch  100/500 | Train: 0.099405 | Val Loss: 0.954804 | Val NSE: -0.7692
+  Epoch  120/500 | Train: 0.068704 | Val Loss: 0.993228 | Val NSE: -0.4030
+  Epoch  140/500 | Train: 0.058344 | Val Loss: 0.979554 | Val NSE: -0.4767
+  Epoch  160/500 | Train: 0.064371 | Val Loss: 0.998523 | Val NSE: -0.4180
+  Early stopping at epoch 164
+    [default] s29: R²=0.2643, MAPE=16.92%
+  Epoch    1/500 | Train: 0.754569 | Val Loss: 0.871965 | Val NSE: 0.0219
+  Epoch   20/500 | Train: 0.355993 | Val Loss: 0.777647 | Val NSE: 0.2781
+  Epoch   40/500 | Train: 0.203816 | Val Loss: 0.875699 | Val NSE: -0.3184
+  Epoch   60/500 | Train: 0.161430 | Val Loss: 0.859510 | Val NSE: -0.2294
+  Epoch   80/500 | Train: 0.165649 | Val Loss: 0.871537 | Val NSE: -0.3271
+  Epoch  100/500 | Train: 0.064539 | Val Loss: 0.952660 | Val NSE: -0.3489
+  Epoch  120/500 | Train: 0.059090 | Val Loss: 0.940055 | Val NSE: -0.5294
+  Epoch  140/500 | Train: 0.040884 | Val Loss: 0.948866 | Val NSE: -0.5115
+  Epoch  160/500 | Train: 0.038212 | Val Loss: 0.926149 | Val NSE: -0.4897
+  Early stopping at epoch 161
+    [default] s30: R²=0.1086, MAPE=18.41%
+  Epoch    1/500 | Train: 0.678208 | Val Loss: 0.943968 | Val NSE: -0.9863
+  Epoch   20/500 | Train: 0.323756 | Val Loss: 0.831466 | Val NSE: -0.1206
+  Epoch   40/500 | Train: 0.238038 | Val Loss: 0.883442 | Val NSE: -0.1601
+  Epoch   60/500 | Train: 0.107823 | Val Loss: 0.920775 | Val NSE: -0.2100
+  Epoch   80/500 | Train: 0.117752 | Val Loss: 0.877462 | Val NSE: -0.4156
+  Epoch  100/500 | Train: 0.071454 | Val Loss: 0.903812 | Val NSE: -0.6167
+  Epoch  120/500 | Train: 0.069315 | Val Loss: 0.914077 | Val NSE: -0.5603
+  Epoch  140/500 | Train: 0.049320 | Val Loss: 0.895901 | Val NSE: -0.4523
+  Epoch  160/500 | Train: 0.063993 | Val Loss: 0.907830 | Val NSE: -0.4146
+  Early stopping at epoch 168
+    [default] s31: R²=0.0979, MAPE=19.20%
+  Epoch    1/500 | Train: 0.897288 | Val Loss: 0.895739 | Val NSE: 0.0930
+  Epoch   20/500 | Train: 0.287526 | Val Loss: 0.801013 | Val NSE: -0.0444
+  Epoch   40/500 | Train: 0.181408 | Val Loss: 0.883215 | Val NSE: -0.2014
+  Epoch   60/500 | Train: 0.254524 | Val Loss: 0.897755 | Val NSE: -0.2483
+  Epoch   80/500 | Train: 0.107982 | Val Loss: 0.880635 | Val NSE: -0.1188
+  Epoch  100/500 | Train: 0.051829 | Val Loss: 0.955650 | Val NSE: -0.1832
+  Epoch  120/500 | Train: 0.076711 | Val Loss: 0.900510 | Val NSE: -0.2456
+  Epoch  140/500 | Train: 0.048175 | Val Loss: 0.934035 | Val NSE: -0.2638
+  Epoch  160/500 | Train: 0.029601 | Val Loss: 0.880468 | Val NSE: -0.1234
+  Early stopping at epoch 165
+    [default] s32: R²=0.3557, MAPE=16.35%
+  Epoch    1/500 | Train: 0.824462 | Val Loss: 0.801329 | Val NSE: -0.3599
+  Epoch   20/500 | Train: 0.291480 | Val Loss: 0.833656 | Val NSE: -0.0856
+  Epoch   40/500 | Train: 0.186613 | Val Loss: 0.897886 | Val NSE: -0.2521
+  Epoch   60/500 | Train: 0.156101 | Val Loss: 0.867831 | Val NSE: -0.2778
+  Epoch   80/500 | Train: 0.084355 | Val Loss: 0.894376 | Val NSE: -0.3811
+  Epoch  100/500 | Train: 0.084941 | Val Loss: 0.918242 | Val NSE: -0.5263
+  Epoch  120/500 | Train: 0.063642 | Val Loss: 0.905531 | Val NSE: -0.3099
+  Epoch  140/500 | Train: 0.052470 | Val Loss: 0.920532 | Val NSE: -0.2853
+  Epoch  160/500 | Train: 0.030497 | Val Loss: 0.931051 | Val NSE: -0.4628
+  Early stopping at epoch 166
+    [default] s33: R²=0.2250, MAPE=18.10%
+  Epoch    1/500 | Train: 0.669800 | Val Loss: 0.839669 | Val NSE: -0.0582
+  Epoch   20/500 | Train: 0.336212 | Val Loss: 0.840045 | Val NSE: 0.2821
+  Epoch   40/500 | Train: 0.236193 | Val Loss: 0.948027 | Val NSE: -0.1430
+  Epoch   60/500 | Train: 0.186197 | Val Loss: 0.925808 | Val NSE: -0.4786
+  Epoch   80/500 | Train: 0.096486 | Val Loss: 0.919983 | Val NSE: -0.3967
+  Epoch  100/500 | Train: 0.085248 | Val Loss: 0.940421 | Val NSE: -0.4022
+  Epoch  120/500 | Train: 0.079945 | Val Loss: 0.912173 | Val NSE: -0.4631
+  Epoch  140/500 | Train: 0.053577 | Val Loss: 0.941814 | Val NSE: -0.5950
+  Epoch  160/500 | Train: 0.050413 | Val Loss: 0.939543 | Val NSE: -0.4919
+  Early stopping at epoch 170
+    [default] s34: R²=0.2165, MAPE=18.60%
+  Epoch    1/500 | Train: 0.636372 | Val Loss: 0.764318 | Val NSE: 0.1132
+  Epoch   20/500 | Train: 0.261499 | Val Loss: 0.793771 | Val NSE: 0.0254
+  Epoch   40/500 | Train: 0.169122 | Val Loss: 0.879203 | Val NSE: -0.2850
+  Epoch   60/500 | Train: 0.189414 | Val Loss: 0.882304 | Val NSE: -0.3553
+  Epoch   80/500 | Train: 0.151573 | Val Loss: 0.863726 | Val NSE: -0.2820
+  Epoch  100/500 | Train: 0.069758 | Val Loss: 0.887276 | Val NSE: -0.4333
+  Epoch  120/500 | Train: 0.066733 | Val Loss: 0.906056 | Val NSE: -0.5095
+  Epoch  140/500 | Train: 0.082080 | Val Loss: 0.926947 | Val NSE: -0.4767
+  Epoch  160/500 | Train: 0.049089 | Val Loss: 0.878532 | Val NSE: -0.4844
+  Early stopping at epoch 163
+    [default] s35: R²=0.2017, MAPE=18.03%
+  Epoch    1/500 | Train: 0.710241 | Val Loss: 0.958081 | Val NSE: 0.0022
+  Epoch   20/500 | Train: 0.351448 | Val Loss: 0.774817 | Val NSE: 0.3203
+  Epoch   40/500 | Train: 0.254037 | Val Loss: 0.873336 | Val NSE: -0.2770
+  Epoch   60/500 | Train: 0.154996 | Val Loss: 0.850386 | Val NSE: -0.1357
+  Epoch   80/500 | Train: 0.097443 | Val Loss: 0.882662 | Val NSE: -0.3600
+  Epoch  100/500 | Train: 0.109345 | Val Loss: 0.905636 | Val NSE: -0.4244
+  Epoch  120/500 | Train: 0.059939 | Val Loss: 0.919960 | Val NSE: -0.4372
+  Epoch  140/500 | Train: 0.053367 | Val Loss: 0.894384 | Val NSE: -0.3055
+  Epoch  160/500 | Train: 0.056717 | Val Loss: 0.937531 | Val NSE: -0.2564
+  Early stopping at epoch 170
+    [default] s36: R²=0.1560, MAPE=19.29%
+  Epoch    1/500 | Train: 0.786012 | Val Loss: 0.959814 | Val NSE: -0.8536
+  Epoch   20/500 | Train: 0.307572 | Val Loss: 0.830180 | Val NSE: 0.0315
+  Epoch   40/500 | Train: 0.215878 | Val Loss: 0.917840 | Val NSE: -0.4132
+  Epoch   60/500 | Train: 0.157657 | Val Loss: 0.910664 | Val NSE: -0.4325
+  Epoch   80/500 | Train: 0.126264 | Val Loss: 0.896296 | Val NSE: -0.3260
+  Epoch  100/500 | Train: 0.081673 | Val Loss: 0.930822 | Val NSE: -0.3959
+  Epoch  120/500 | Train: 0.060903 | Val Loss: 0.959378 | Val NSE: -0.5393
+  Epoch  140/500 | Train: 0.069610 | Val Loss: 0.956083 | Val NSE: -0.5904
+  Epoch  160/500 | Train: 0.037916 | Val Loss: 0.950452 | Val NSE: -0.4319
+  Early stopping at epoch 166
+    [default] s37: R²=-0.0663, MAPE=20.31%
+  Epoch    1/500 | Train: 0.594530 | Val Loss: 0.909879 | Val NSE: 0.0663
+  Epoch   20/500 | Train: 0.343004 | Val Loss: 0.811091 | Val NSE: -0.0180
+  Epoch   40/500 | Train: 0.207522 | Val Loss: 0.875182 | Val NSE: -0.0812
+  Epoch   60/500 | Train: 0.158212 | Val Loss: 0.847503 | Val NSE: -0.1041
+  Epoch   80/500 | Train: 0.142378 | Val Loss: 0.853328 | Val NSE: 0.0155
+  Epoch  100/500 | Train: 0.081383 | Val Loss: 0.917286 | Val NSE: -0.3953
+  Epoch  120/500 | Train: 0.083471 | Val Loss: 0.895877 | Val NSE: -0.3188
+  Epoch  140/500 | Train: 0.053704 | Val Loss: 0.968064 | Val NSE: -0.5016
+  Epoch  160/500 | Train: 0.052202 | Val Loss: 0.971427 | Val NSE: -0.3876
+  Early stopping at epoch 165
+    [default] s38: R²=0.0046, MAPE=19.54%
+  Epoch    1/500 | Train: 0.942231 | Val Loss: 0.894518 | Val NSE: -0.2055
+  Epoch   20/500 | Train: 0.272566 | Val Loss: 0.809286 | Val NSE: 0.2097
+  Epoch   40/500 | Train: 0.214091 | Val Loss: 0.885813 | Val NSE: -0.4779
+  Epoch   60/500 | Train: 0.174799 | Val Loss: 0.923035 | Val NSE: -0.1503
+  Epoch   80/500 | Train: 0.098770 | Val Loss: 1.019062 | Val NSE: -0.7513
+  Epoch  100/500 | Train: 0.071390 | Val Loss: 0.994859 | Val NSE: -0.5650
+  Epoch  120/500 | Train: 0.049595 | Val Loss: 1.040775 | Val NSE: -0.6523
+  Epoch  140/500 | Train: 0.048432 | Val Loss: 1.026625 | Val NSE: -0.3383
+  Early stopping at epoch 159
+    [default] s39: R²=0.2376, MAPE=17.89%
+  Epoch    1/500 | Train: 0.899482 | Val Loss: 0.840890 | Val NSE: 0.0443
+  Epoch   20/500 | Train: 0.271789 | Val Loss: 0.812638 | Val NSE: 0.1698
+  Epoch   40/500 | Train: 0.162090 | Val Loss: 0.897589 | Val NSE: -0.1892
+  Epoch   60/500 | Train: 0.167745 | Val Loss: 0.918984 | Val NSE: -0.5126
+  Epoch   80/500 | Train: 0.115085 | Val Loss: 0.902786 | Val NSE: -0.2700
+  Epoch  100/500 | Train: 0.077875 | Val Loss: 0.922408 | Val NSE: -0.2902
+  Epoch  120/500 | Train: 0.063785 | Val Loss: 1.009101 | Val NSE: -0.6388
+  Epoch  140/500 | Train: 0.055138 | Val Loss: 1.055805 | Val NSE: -0.6751
+  Epoch  160/500 | Train: 0.036433 | Val Loss: 1.006113 | Val NSE: -0.4448
+  Early stopping at epoch 167
+    [default] s40: R²=0.1171, MAPE=19.49%
+  Epoch    1/500 | Train: 0.661103 | Val Loss: 0.803644 | Val NSE: 0.0715
+  Epoch   20/500 | Train: 0.323333 | Val Loss: 0.826014 | Val NSE: 0.0047
+  Epoch   40/500 | Train: 0.157241 | Val Loss: 0.852856 | Val NSE: -0.0116
+  Epoch   60/500 | Train: 0.147574 | Val Loss: 0.911941 | Val NSE: -0.3773
+  Epoch   80/500 | Train: 0.126419 | Val Loss: 0.927598 | Val NSE: -0.6037
+  Epoch  100/500 | Train: 0.057835 | Val Loss: 0.909719 | Val NSE: -0.5213
+  Epoch  120/500 | Train: 0.042631 | Val Loss: 0.968379 | Val NSE: -0.5460
+  Epoch  140/500 | Train: 0.037855 | Val Loss: 0.930547 | Val NSE: -0.5407
+  Epoch  160/500 | Train: 0.057247 | Val Loss: 0.931633 | Val NSE: -0.3981
+  Early stopping at epoch 161
+    [default] s41: R²=0.1176, MAPE=19.84%
+  Epoch    1/500 | Train: 0.872895 | Val Loss: 1.002879 | Val NSE: -0.2071
+  Epoch   20/500 | Train: 0.345409 | Val Loss: 0.812452 | Val NSE: 0.0543
+  Epoch   40/500 | Train: 0.137632 | Val Loss: 0.881322 | Val NSE: -0.2669
+  Epoch   60/500 | Train: 0.110950 | Val Loss: 0.916684 | Val NSE: -0.2243
+  Epoch   80/500 | Train: 0.093634 | Val Loss: 0.917861 | Val NSE: -0.3018
+  Epoch  100/500 | Train: 0.076041 | Val Loss: 0.948683 | Val NSE: -0.6820
+  Epoch  120/500 | Train: 0.067272 | Val Loss: 0.958677 | Val NSE: -0.4011
+  Epoch  140/500 | Train: 0.042764 | Val Loss: 0.958902 | Val NSE: -0.3118
+  Epoch  160/500 | Train: 0.057902 | Val Loss: 0.893831 | Val NSE: -0.4014
+  Early stopping at epoch 165
+    [default] s100: R²=0.2852, MAPE=17.05%
+  Epoch    1/500 | Train: 0.782838 | Val Loss: 0.931523 | Val NSE: -0.2813
+  Epoch   20/500 | Train: 0.266850 | Val Loss: 0.802106 | Val NSE: 0.2331
+  Epoch   40/500 | Train: 0.216695 | Val Loss: 0.865687 | Val NSE: -0.2638
+  Epoch   60/500 | Train: 0.141912 | Val Loss: 0.837985 | Val NSE: -0.2456
+  Epoch   80/500 | Train: 0.115271 | Val Loss: 0.884019 | Val NSE: -0.7089
+  Epoch  100/500 | Train: 0.081999 | Val Loss: 0.873805 | Val NSE: -0.1868
+  Epoch  120/500 | Train: 0.047893 | Val Loss: 0.894624 | Val NSE: -0.3415
+  Epoch  140/500 | Train: 0.058674 | Val Loss: 0.934999 | Val NSE: -0.3963
+  Epoch  160/500 | Train: 0.028528 | Val Loss: 0.945764 | Val NSE: -0.4882
+  Early stopping at epoch 164
+    [default] s200: R²=0.2105, MAPE=18.31%
+  Epoch    1/500 | Train: 0.617625 | Val Loss: 0.850981 | Val NSE: -0.1564
+  Epoch   20/500 | Train: 0.228681 | Val Loss: 0.810681 | Val NSE: 0.1534
+  Epoch   40/500 | Train: 0.181649 | Val Loss: 0.897940 | Val NSE: -0.2042
+  Epoch   60/500 | Train: 0.145594 | Val Loss: 0.937600 | Val NSE: -0.7306
+  Epoch   80/500 | Train: 0.117057 | Val Loss: 0.927419 | Val NSE: -0.4919
+  Epoch  100/500 | Train: 0.067148 | Val Loss: 0.945243 | Val NSE: -0.4616
+  Epoch  120/500 | Train: 0.050443 | Val Loss: 1.000830 | Val NSE: -0.5134
+  Epoch  140/500 | Train: 0.060592 | Val Loss: 0.955228 | Val NSE: -0.3733
+  Epoch  160/500 | Train: 0.028720 | Val Loss: 1.020230 | Val NSE: -0.4400
+  Early stopping at epoch 165
+    [default] s500: R²=0.2831, MAPE=17.82%
+  Epoch    1/500 | Train: 0.830848 | Val Loss: 0.865595 | Val NSE: -0.2830
+  Epoch   20/500 | Train: 0.376152 | Val Loss: 0.785714 | Val NSE: 0.1057
+  Epoch   40/500 | Train: 0.203567 | Val Loss: 0.942233 | Val NSE: -0.6173
+  Epoch   60/500 | Train: 0.208378 | Val Loss: 0.899640 | Val NSE: -0.0372
+  Epoch   80/500 | Train: 0.071401 | Val Loss: 0.907928 | Val NSE: -0.4045
+  Epoch  100/500 | Train: 0.109819 | Val Loss: 0.972123 | Val NSE: -0.5126
+  Epoch  120/500 | Train: 0.086635 | Val Loss: 0.919950 | Val NSE: -0.5351
+  Epoch  140/500 | Train: 0.037602 | Val Loss: 0.933670 | Val NSE: -0.5215
+  Epoch  160/500 | Train: 0.042547 | Val Loss: 0.982932 | Val NSE: -0.3730
+  Early stopping at epoch 162
+    [default] s1000: R²=0.1364, MAPE=18.11%
+  Epoch    1/500 | Train: 0.745571 | Val Loss: 0.894498 | Val NSE: -0.1536
+  Epoch   20/500 | Train: 0.304170 | Val Loss: 0.794918 | Val NSE: 0.0565
+  Epoch   40/500 | Train: 0.204355 | Val Loss: 0.855644 | Val NSE: -0.0971
+  Epoch   60/500 | Train: 0.200278 | Val Loss: 0.906897 | Val NSE: -0.4219
+  Epoch   80/500 | Train: 0.143470 | Val Loss: 0.863186 | Val NSE: -0.2923
+  Epoch  100/500 | Train: 0.089391 | Val Loss: 0.944928 | Val NSE: -0.5519
+  Epoch  120/500 | Train: 0.090610 | Val Loss: 0.937160 | Val NSE: -0.5177
+  Epoch  140/500 | Train: 0.063065 | Val Loss: 0.955388 | Val NSE: -0.6921
+  Epoch  160/500 | Train: 0.063299 | Val Loss: 0.970233 | Val NSE: -0.4331
+  Early stopping at epoch 161
+    [xavier] s42: R²=0.3873, MAPE=16.51%
+  Epoch    1/500 | Train: 0.786562 | Val Loss: 0.818285 | Val NSE: 0.2312
+  Epoch   20/500 | Train: 0.338813 | Val Loss: 0.800609 | Val NSE: -0.0862
+  Epoch   40/500 | Train: 0.188869 | Val Loss: 0.889521 | Val NSE: -0.4671
+  Epoch   60/500 | Train: 0.173496 | Val Loss: 0.881491 | Val NSE: -0.2117
+  Epoch   80/500 | Train: 0.139169 | Val Loss: 0.885244 | Val NSE: -0.4577
+  Epoch  100/500 | Train: 0.131930 | Val Loss: 0.949884 | Val NSE: -0.8259
+  Epoch  120/500 | Train: 0.084927 | Val Loss: 0.947739 | Val NSE: -0.9067
+  Epoch  140/500 | Train: 0.096012 | Val Loss: 0.910007 | Val NSE: -0.4303
+  Epoch  160/500 | Train: 0.056834 | Val Loss: 0.940157 | Val NSE: -0.4973
+  Early stopping at epoch 160
+    [xavier] s7: R²=0.3329, MAPE=15.73%
+  Epoch    1/500 | Train: 0.773889 | Val Loss: 0.968245 | Val NSE: 0.1861
+  Epoch   20/500 | Train: 0.328806 | Val Loss: 0.762779 | Val NSE: -0.0124
+  Epoch   40/500 | Train: 0.190409 | Val Loss: 0.819289 | Val NSE: -0.0156
+  Epoch   60/500 | Train: 0.199139 | Val Loss: 0.910712 | Val NSE: -0.1599
+  Epoch   80/500 | Train: 0.104559 | Val Loss: 0.900584 | Val NSE: -0.1790
+  Epoch  100/500 | Train: 0.089999 | Val Loss: 0.942405 | Val NSE: -0.6382
+  Epoch  120/500 | Train: 0.092289 | Val Loss: 0.983166 | Val NSE: -1.1862
+  Epoch  140/500 | Train: 0.124373 | Val Loss: 0.925502 | Val NSE: -0.4826
+  Early stopping at epoch 159
+    [xavier] s123: R²=0.1669, MAPE=18.03%
+  Epoch    1/500 | Train: 0.818420 | Val Loss: 0.812291 | Val NSE: 0.0717
+  Epoch   20/500 | Train: 0.267902 | Val Loss: 0.756502 | Val NSE: 0.1941
+  Epoch   40/500 | Train: 0.200255 | Val Loss: 0.886104 | Val NSE: -0.2139
+  Epoch   60/500 | Train: 0.145628 | Val Loss: 0.891191 | Val NSE: -0.4524
+  Epoch   80/500 | Train: 0.112440 | Val Loss: 0.927618 | Val NSE: -0.6286
+  Epoch  100/500 | Train: 0.107492 | Val Loss: 0.959335 | Val NSE: -0.7837
+  Epoch  120/500 | Train: 0.069833 | Val Loss: 0.943381 | Val NSE: -0.7426
+  Epoch  140/500 | Train: 0.052096 | Val Loss: 0.982741 | Val NSE: -0.6610
+  Epoch  160/500 | Train: 0.064123 | Val Loss: 0.950146 | Val NSE: -0.3253
+  Early stopping at epoch 164
+    [xavier] s2024: R²=0.1427, MAPE=18.83%
+  Epoch    1/500 | Train: 0.869359 | Val Loss: 0.761638 | Val NSE: -0.1019
+  Epoch   20/500 | Train: 0.300304 | Val Loss: 0.796333 | Val NSE: 0.0930
+  Epoch   40/500 | Train: 0.198972 | Val Loss: 0.862074 | Val NSE: -0.2901
+  Epoch   60/500 | Train: 0.180249 | Val Loss: 0.850931 | Val NSE: -0.2567
+  Epoch   80/500 | Train: 0.115552 | Val Loss: 0.810734 | Val NSE: -0.3120
+  Epoch  100/500 | Train: 0.137527 | Val Loss: 0.856902 | Val NSE: -0.6312
+  Epoch  120/500 | Train: 0.124685 | Val Loss: 0.844561 | Val NSE: -0.4097
+  Epoch  140/500 | Train: 0.062973 | Val Loss: 0.834011 | Val NSE: -0.2942
+  Epoch  160/500 | Train: 0.072508 | Val Loss: 0.892155 | Val NSE: -0.4677
+  Early stopping at epoch 168
+    [xavier] s99: R²=0.3030, MAPE=17.66%
+  Epoch    1/500 | Train: 0.898096 | Val Loss: 0.878609 | Val NSE: -0.0950
+  Epoch   20/500 | Train: 0.323147 | Val Loss: 0.761366 | Val NSE: -0.1713
+  Epoch   40/500 | Train: 0.185556 | Val Loss: 0.848476 | Val NSE: 0.0110
+  Epoch   60/500 | Train: 0.213488 | Val Loss: 0.914485 | Val NSE: -0.1450
+  Epoch   80/500 | Train: 0.128599 | Val Loss: 0.942133 | Val NSE: -0.3955
+  Epoch  100/500 | Train: 0.177602 | Val Loss: 0.954907 | Val NSE: -0.4412
+  Epoch  120/500 | Train: 0.086996 | Val Loss: 0.949621 | Val NSE: -0.5669
+  Epoch  140/500 | Train: 0.103817 | Val Loss: 0.957428 | Val NSE: -0.6002
+  Early stopping at epoch 158
+    [xavier] s13: R²=-0.0252, MAPE=20.24%
+  Epoch    1/500 | Train: 0.631610 | Val Loss: 0.826835 | Val NSE: -0.2529
+  Epoch   20/500 | Train: 0.343301 | Val Loss: 0.781754 | Val NSE: 0.1111
+  Epoch   40/500 | Train: 0.228259 | Val Loss: 0.934022 | Val NSE: -0.5604
+  Epoch   60/500 | Train: 0.126841 | Val Loss: 0.903919 | Val NSE: -0.5755
+  Epoch   80/500 | Train: 0.132724 | Val Loss: 0.932118 | Val NSE: -0.7324
+  Epoch  100/500 | Train: 0.089774 | Val Loss: 0.941180 | Val NSE: -0.4738
+  Epoch  120/500 | Train: 0.061910 | Val Loss: 0.962001 | Val NSE: -0.6902
+  Epoch  140/500 | Train: 0.085381 | Val Loss: 0.953141 | Val NSE: -0.3651
+  Early stopping at epoch 159
+    [xavier] s55: R²=-0.1016, MAPE=19.56%
+  Epoch    1/500 | Train: 0.575901 | Val Loss: 0.754047 | Val NSE: 0.0808
+  Epoch   20/500 | Train: 0.278825 | Val Loss: 0.799030 | Val NSE: 0.0187
+  Epoch   40/500 | Train: 0.189893 | Val Loss: 0.889414 | Val NSE: -0.4378
+  Epoch   60/500 | Train: 0.141514 | Val Loss: 0.880356 | Val NSE: -0.4022
+  Epoch   80/500 | Train: 0.124238 | Val Loss: 0.886347 | Val NSE: -0.5041
+  Epoch  100/500 | Train: 0.091245 | Val Loss: 0.889305 | Val NSE: -0.3473
+  Epoch  120/500 | Train: 0.087443 | Val Loss: 0.900964 | Val NSE: -0.6018
+  Epoch  140/500 | Train: 0.070099 | Val Loss: 0.891891 | Val NSE: -0.3735
+  Epoch  160/500 | Train: 0.045792 | Val Loss: 0.882148 | Val NSE: -0.4311
+  Early stopping at epoch 161
+    [xavier] s777: R²=0.2597, MAPE=18.25%
+  Epoch    1/500 | Train: 0.753811 | Val Loss: 0.763959 | Val NSE: 0.2280
+  Epoch   20/500 | Train: 0.305863 | Val Loss: 0.816193 | Val NSE: 0.0881
+  Epoch   40/500 | Train: 0.213149 | Val Loss: 0.850252 | Val NSE: -0.1165
+  Epoch   60/500 | Train: 0.177069 | Val Loss: 0.911666 | Val NSE: -0.3322
+  Epoch   80/500 | Train: 0.153479 | Val Loss: 0.891780 | Val NSE: -0.3774
+  Epoch  100/500 | Train: 0.101755 | Val Loss: 0.945040 | Val NSE: -0.7159
+  Epoch  120/500 | Train: 0.077000 | Val Loss: 0.933533 | Val NSE: -0.7917
+  Epoch  140/500 | Train: 0.070604 | Val Loss: 0.962490 | Val NSE: -0.7279
+  Epoch  160/500 | Train: 0.060667 | Val Loss: 1.003020 | Val NSE: -0.7048
+  Early stopping at epoch 166
+    [xavier] s314: R²=0.0782, MAPE=19.51%
+  Epoch    1/500 | Train: 0.719954 | Val Loss: 0.822236 | Val NSE: 0.1167
+  Epoch   20/500 | Train: 0.315374 | Val Loss: 0.809099 | Val NSE: 0.2100
+  Epoch   40/500 | Train: 0.198228 | Val Loss: 0.867051 | Val NSE: -0.1437
+  Epoch   60/500 | Train: 0.107965 | Val Loss: 0.902332 | Val NSE: -0.4137
+  Epoch   80/500 | Train: 0.112225 | Val Loss: 0.943046 | Val NSE: -0.5409
+  Epoch  100/500 | Train: 0.096740 | Val Loss: 0.961711 | Val NSE: -0.5392
+  Epoch  120/500 | Train: 0.106551 | Val Loss: 0.981441 | Val NSE: -0.3468
+  Epoch  140/500 | Train: 0.109697 | Val Loss: 0.962444 | Val NSE: -0.5084
+  Epoch  160/500 | Train: 0.071434 | Val Loss: 0.985616 | Val NSE: -0.7056
+  Early stopping at epoch 161
+    [xavier] s2025: R²=0.2362, MAPE=17.97%
+  Epoch    1/500 | Train: 0.694751 | Val Loss: 0.875656 | Val NSE: 0.1887
+  Epoch   20/500 | Train: 0.247714 | Val Loss: 0.857859 | Val NSE: -0.2025
+  Epoch   40/500 | Train: 0.221184 | Val Loss: 0.922761 | Val NSE: -0.2604
+  Epoch   60/500 | Train: 0.146893 | Val Loss: 0.884049 | Val NSE: -0.2426
+  Epoch   80/500 | Train: 0.082676 | Val Loss: 0.896225 | Val NSE: -0.5692
+  Epoch  100/500 | Train: 0.094744 | Val Loss: 0.912241 | Val NSE: -0.5029
+  Epoch  120/500 | Train: 0.100604 | Val Loss: 0.961439 | Val NSE: -0.6324
+  Epoch  140/500 | Train: 0.080682 | Val Loss: 0.927054 | Val NSE: -0.4653
+  Early stopping at epoch 159
+    [xavier] s0: R²=0.1722, MAPE=17.48%
+  Epoch    1/500 | Train: 0.642188 | Val Loss: 0.816353 | Val NSE: -0.4262
+  Epoch   20/500 | Train: 0.296292 | Val Loss: 0.840572 | Val NSE: 0.1891
+  Epoch   40/500 | Train: 0.182190 | Val Loss: 0.849958 | Val NSE: -0.0857
+  Epoch   60/500 | Train: 0.168491 | Val Loss: 0.862363 | Val NSE: -0.1847
+  Epoch   80/500 | Train: 0.155242 | Val Loss: 0.897893 | Val NSE: -0.3324
+  Epoch  100/500 | Train: 0.086657 | Val Loss: 0.927685 | Val NSE: -0.5218
+  Epoch  120/500 | Train: 0.055594 | Val Loss: 0.972916 | Val NSE: -0.4737
+  Epoch  140/500 | Train: 0.063418 | Val Loss: 0.997309 | Val NSE: -0.4247
+  Epoch  160/500 | Train: 0.048673 | Val Loss: 0.957289 | Val NSE: -0.2704
+  Early stopping at epoch 161
+    [xavier] s1: R²=0.3490, MAPE=16.66%
+  Epoch    1/500 | Train: 0.847381 | Val Loss: 0.883856 | Val NSE: 0.2174
+  Epoch   20/500 | Train: 0.306503 | Val Loss: 0.751363 | Val NSE: 0.1687
+  Epoch   40/500 | Train: 0.174457 | Val Loss: 0.851992 | Val NSE: 0.0090
+  Epoch   60/500 | Train: 0.189341 | Val Loss: 0.925142 | Val NSE: -0.2169
+  Epoch   80/500 | Train: 0.111798 | Val Loss: 0.980303 | Val NSE: -0.4390
+  Epoch  100/500 | Train: 0.091875 | Val Loss: 0.954722 | Val NSE: -0.3069
+  Epoch  120/500 | Train: 0.095794 | Val Loss: 0.956766 | Val NSE: -0.3209
+  Epoch  140/500 | Train: 0.084620 | Val Loss: 0.961596 | Val NSE: -0.5389
+  Epoch  160/500 | Train: 0.058149 | Val Loss: 0.990357 | Val NSE: -0.5897
+  Early stopping at epoch 163
+    [xavier] s2: R²=0.2028, MAPE=18.20%
+  Epoch    1/500 | Train: 0.706841 | Val Loss: 0.765834 | Val NSE: 0.2004
+  Epoch   20/500 | Train: 0.262611 | Val Loss: 0.786621 | Val NSE: -0.0046
+  Epoch   40/500 | Train: 0.183469 | Val Loss: 0.920108 | Val NSE: -0.1254
+  Epoch   60/500 | Train: 0.172131 | Val Loss: 0.914079 | Val NSE: -0.1617
+  Epoch   80/500 | Train: 0.125119 | Val Loss: 0.907317 | Val NSE: -0.4131
+  Epoch  100/500 | Train: 0.075219 | Val Loss: 0.873254 | Val NSE: -0.2769
+  Epoch  120/500 | Train: 0.062378 | Val Loss: 0.922662 | Val NSE: -0.6359
+  Epoch  140/500 | Train: 0.066396 | Val Loss: 0.906021 | Val NSE: -0.7696
+  Epoch  160/500 | Train: 0.080607 | Val Loss: 0.920652 | Val NSE: -0.6741
+  Early stopping at epoch 161
+    [xavier] s3: R²=0.2213, MAPE=17.61%
+  Epoch    1/500 | Train: 0.752509 | Val Loss: 0.808832 | Val NSE: 0.0851
+  Epoch   20/500 | Train: 0.299716 | Val Loss: 0.860481 | Val NSE: -0.1401
+  Epoch   40/500 | Train: 0.251800 | Val Loss: 0.878826 | Val NSE: -0.1023
+  Epoch   60/500 | Train: 0.140768 | Val Loss: 0.885560 | Val NSE: -0.6104
+  Epoch   80/500 | Train: 0.082652 | Val Loss: 0.938213 | Val NSE: -0.8994
+  Epoch  100/500 | Train: 0.110959 | Val Loss: 0.949185 | Val NSE: -0.8440
+  Epoch  120/500 | Train: 0.070176 | Val Loss: 0.978340 | Val NSE: -0.8077
+  Epoch  140/500 | Train: 0.090968 | Val Loss: 0.966191 | Val NSE: -0.5294
+  Epoch  160/500 | Train: 0.040241 | Val Loss: 0.933886 | Val NSE: -0.6564
+  Early stopping at epoch 165
+    [xavier] s4: R²=0.1248, MAPE=19.67%
+  Epoch    1/500 | Train: 0.653706 | Val Loss: 0.817849 | Val NSE: -0.2546
+  Epoch   20/500 | Train: 0.337196 | Val Loss: 0.753242 | Val NSE: 0.1636
+  Epoch   40/500 | Train: 0.235085 | Val Loss: 0.826440 | Val NSE: -0.0337
+  Epoch   60/500 | Train: 0.140724 | Val Loss: 0.892879 | Val NSE: -0.3015
+  Epoch   80/500 | Train: 0.152672 | Val Loss: 0.940939 | Val NSE: -0.4501
+  Epoch  100/500 | Train: 0.103566 | Val Loss: 0.944556 | Val NSE: -0.3935
+  Epoch  120/500 | Train: 0.062022 | Val Loss: 0.928774 | Val NSE: -0.3861
+  Epoch  140/500 | Train: 0.068671 | Val Loss: 0.991305 | Val NSE: -0.4810
+  Epoch  160/500 | Train: 0.075926 | Val Loss: 0.960842 | Val NSE: -0.6196
+  Early stopping at epoch 165
+    [xavier] s5: R²=0.4508, MAPE=15.37%
+  Epoch    1/500 | Train: 0.538962 | Val Loss: 0.759649 | Val NSE: 0.1782
+  Epoch   20/500 | Train: 0.289107 | Val Loss: 0.756009 | Val NSE: 0.2353
+  Epoch   40/500 | Train: 0.260830 | Val Loss: 0.892858 | Val NSE: -0.2497
+  Epoch   60/500 | Train: 0.140697 | Val Loss: 0.898965 | Val NSE: -0.2209
+  Epoch   80/500 | Train: 0.108383 | Val Loss: 0.897852 | Val NSE: -0.4808
+  Epoch  100/500 | Train: 0.089350 | Val Loss: 0.923072 | Val NSE: -0.5909
+  Epoch  120/500 | Train: 0.126540 | Val Loss: 0.990152 | Val NSE: -0.6435
+  Epoch  140/500 | Train: 0.051112 | Val Loss: 0.932070 | Val NSE: -0.4137
+  Epoch  160/500 | Train: 0.055671 | Val Loss: 0.966268 | Val NSE: -0.5055
+  Early stopping at epoch 166
+    [xavier] s6: R²=-0.0839, MAPE=21.48%
+  Epoch    1/500 | Train: 0.676149 | Val Loss: 0.816399 | Val NSE: 0.2225
+  Epoch   20/500 | Train: 0.335988 | Val Loss: 0.752149 | Val NSE: 0.1871
+  Epoch   40/500 | Train: 0.145680 | Val Loss: 0.899540 | Val NSE: -0.2225
+  Epoch   60/500 | Train: 0.191130 | Val Loss: 0.857459 | Val NSE: -0.3031
+  Epoch   80/500 | Train: 0.138639 | Val Loss: 0.848772 | Val NSE: -0.2609
+  Epoch  100/500 | Train: 0.105890 | Val Loss: 0.902341 | Val NSE: -0.4341
+  Epoch  120/500 | Train: 0.074269 | Val Loss: 0.976724 | Val NSE: -0.8513
+  Epoch  140/500 | Train: 0.059469 | Val Loss: 0.969526 | Val NSE: -0.6417
+  Early stopping at epoch 159
+    [xavier] s8: R²=-0.0749, MAPE=21.09%
+  Epoch    1/500 | Train: 0.821615 | Val Loss: 0.766321 | Val NSE: -0.0412
+  Epoch   20/500 | Train: 0.314696 | Val Loss: 0.756430 | Val NSE: 0.0402
+  Epoch   40/500 | Train: 0.342497 | Val Loss: 0.879770 | Val NSE: -0.1314
+  Epoch   60/500 | Train: 0.117514 | Val Loss: 0.863513 | Val NSE: -0.2181
+  Epoch   80/500 | Train: 0.197294 | Val Loss: 0.923022 | Val NSE: -0.5473
+  Epoch  100/500 | Train: 0.083958 | Val Loss: 0.923604 | Val NSE: -0.7092
+  Epoch  120/500 | Train: 0.063248 | Val Loss: 0.941911 | Val NSE: -0.4661
+  Epoch  140/500 | Train: 0.054409 | Val Loss: 0.998182 | Val NSE: -0.3157
+  Epoch  160/500 | Train: 0.048974 | Val Loss: 1.003284 | Val NSE: -0.4086
+  Early stopping at epoch 168
+    [xavier] s9: R²=0.3538, MAPE=16.48%
+  Epoch    1/500 | Train: 0.673094 | Val Loss: 0.808622 | Val NSE: 0.1078
+  Epoch   20/500 | Train: 0.293439 | Val Loss: 0.796992 | Val NSE: -0.0629
+  Epoch   40/500 | Train: 0.196986 | Val Loss: 0.844071 | Val NSE: 0.0247
+  Epoch   60/500 | Train: 0.180061 | Val Loss: 0.967541 | Val NSE: -0.5006
+  Epoch   80/500 | Train: 0.117291 | Val Loss: 0.956640 | Val NSE: -0.2684
+  Epoch  100/500 | Train: 0.129238 | Val Loss: 0.961265 | Val NSE: -0.5249
+  Epoch  120/500 | Train: 0.072325 | Val Loss: 0.980281 | Val NSE: -0.4090
+  Epoch  140/500 | Train: 0.066015 | Val Loss: 1.017169 | Val NSE: -0.7399
+  Epoch  160/500 | Train: 0.058682 | Val Loss: 1.016382 | Val NSE: -0.8163
+  Early stopping at epoch 162
+    [xavier] s10: R²=0.1898, MAPE=19.06%
+  Epoch    1/500 | Train: 0.723502 | Val Loss: 0.852798 | Val NSE: 0.2490
+  Epoch   20/500 | Train: 0.265125 | Val Loss: 0.742828 | Val NSE: 0.1437
+  Epoch   40/500 | Train: 0.181371 | Val Loss: 0.914752 | Val NSE: -0.1836
+  Epoch   60/500 | Train: 0.205951 | Val Loss: 0.895453 | Val NSE: -0.2369
+  Epoch   80/500 | Train: 0.125122 | Val Loss: 0.911538 | Val NSE: -0.3353
+  Epoch  100/500 | Train: 0.104695 | Val Loss: 1.001458 | Val NSE: -0.4491
+  Epoch  120/500 | Train: 0.068571 | Val Loss: 0.993943 | Val NSE: -0.4796
+  Epoch  140/500 | Train: 0.120594 | Val Loss: 0.978822 | Val NSE: -0.4340
+  Epoch  160/500 | Train: 0.091820 | Val Loss: 1.048724 | Val NSE: -0.6240
+  Early stopping at epoch 165
+    [xavier] s11: R²=0.1170, MAPE=19.59%
+  Epoch    1/500 | Train: 0.709476 | Val Loss: 0.960002 | Val NSE: -0.5230
+  Epoch   20/500 | Train: 0.250425 | Val Loss: 0.857018 | Val NSE: 0.1408
+  Epoch   40/500 | Train: 0.190272 | Val Loss: 0.830513 | Val NSE: -0.1303
+  Epoch   60/500 | Train: 0.129208 | Val Loss: 0.866866 | Val NSE: -0.1957
+  Epoch   80/500 | Train: 0.160379 | Val Loss: 0.892034 | Val NSE: -0.6673
+  Epoch  100/500 | Train: 0.095692 | Val Loss: 0.917294 | Val NSE: -0.6940
+  Epoch  120/500 | Train: 0.086800 | Val Loss: 0.939880 | Val NSE: -0.4550
+  Epoch  140/500 | Train: 0.054061 | Val Loss: 0.984520 | Val NSE: -0.6885
+  Epoch  160/500 | Train: 0.048129 | Val Loss: 0.990204 | Val NSE: -0.5103
+  Early stopping at epoch 165
+    [xavier] s12: R²=0.1596, MAPE=18.21%
+  Epoch    1/500 | Train: 0.704492 | Val Loss: 0.783547 | Val NSE: 0.1077
+  Epoch   20/500 | Train: 0.180366 | Val Loss: 0.762409 | Val NSE: 0.0715
+  Epoch   40/500 | Train: 0.159713 | Val Loss: 0.811262 | Val NSE: -0.1144
+  Epoch   60/500 | Train: 0.167987 | Val Loss: 0.863615 | Val NSE: -0.2195
+  Epoch   80/500 | Train: 0.145135 | Val Loss: 0.887180 | Val NSE: -0.2434
+  Epoch  100/500 | Train: 0.104668 | Val Loss: 0.922505 | Val NSE: -0.7723
+  Epoch  120/500 | Train: 0.071393 | Val Loss: 0.930500 | Val NSE: -0.6064
+  Epoch  140/500 | Train: 0.048051 | Val Loss: 0.914459 | Val NSE: -0.5559
+  Early stopping at epoch 157
+    [xavier] s14: R²=0.1792, MAPE=17.58%
+  Epoch    1/500 | Train: 0.669404 | Val Loss: 0.837362 | Val NSE: 0.1384
+  Epoch   20/500 | Train: 0.274049 | Val Loss: 0.804828 | Val NSE: -0.0770
+  Epoch   40/500 | Train: 0.281761 | Val Loss: 0.872299 | Val NSE: -0.3417
+  Epoch   60/500 | Train: 0.104982 | Val Loss: 0.867421 | Val NSE: -0.1608
+  Epoch   80/500 | Train: 0.098302 | Val Loss: 0.906987 | Val NSE: -0.4714
+  Epoch  100/500 | Train: 0.073983 | Val Loss: 0.955454 | Val NSE: -0.5754
+  Epoch  120/500 | Train: 0.075120 | Val Loss: 1.026768 | Val NSE: -0.9647
+  Epoch  140/500 | Train: 0.131129 | Val Loss: 1.020968 | Val NSE: -0.7971
+  Epoch  160/500 | Train: 0.117879 | Val Loss: 0.975908 | Val NSE: -0.6171
+  Early stopping at epoch 161
+    [xavier] s15: R²=0.3286, MAPE=16.79%
+  Epoch    1/500 | Train: 0.683481 | Val Loss: 0.885754 | Val NSE: -0.4437
+  Epoch   20/500 | Train: 0.321450 | Val Loss: 0.791128 | Val NSE: -0.2985
+  Epoch   40/500 | Train: 0.308830 | Val Loss: 0.889669 | Val NSE: -0.5715
+  Epoch   60/500 | Train: 0.156853 | Val Loss: 0.935181 | Val NSE: -0.5977
+  Epoch   80/500 | Train: 0.173880 | Val Loss: 0.888834 | Val NSE: -0.2151
+  Epoch  100/500 | Train: 0.136660 | Val Loss: 0.980954 | Val NSE: -0.8016
+  Epoch  120/500 | Train: 0.091809 | Val Loss: 0.992814 | Val NSE: -0.8952
+  Epoch  140/500 | Train: 0.066966 | Val Loss: 0.940861 | Val NSE: -0.4791
+  Epoch  160/500 | Train: 0.058205 | Val Loss: 0.933866 | Val NSE: -0.8942
+  Early stopping at epoch 163
+    [xavier] s16: R²=0.1221, MAPE=19.18%
+  Epoch    1/500 | Train: 0.888502 | Val Loss: 0.786167 | Val NSE: -0.5282
+  Epoch   20/500 | Train: 0.251214 | Val Loss: 0.852393 | Val NSE: 0.0091
+  Epoch   40/500 | Train: 0.149267 | Val Loss: 0.844673 | Val NSE: -0.0709
+  Epoch   60/500 | Train: 0.120649 | Val Loss: 0.927731 | Val NSE: -0.8105
+  Epoch   80/500 | Train: 0.133511 | Val Loss: 0.895237 | Val NSE: -0.2590
+  Epoch  100/500 | Train: 0.119501 | Val Loss: 0.929331 | Val NSE: -0.5988
+  Epoch  120/500 | Train: 0.058708 | Val Loss: 0.907559 | Val NSE: -0.4126
+  Epoch  140/500 | Train: 0.071015 | Val Loss: 0.875540 | Val NSE: -0.4045
+  Epoch  160/500 | Train: 0.054004 | Val Loss: 0.921359 | Val NSE: -0.5044
+  Early stopping at epoch 160
+    [xavier] s17: R²=0.2300, MAPE=18.13%
+  Epoch    1/500 | Train: 0.664953 | Val Loss: 0.787819 | Val NSE: 0.0131
+  Epoch   20/500 | Train: 0.263423 | Val Loss: 0.861603 | Val NSE: 0.0363
+  Epoch   40/500 | Train: 0.249080 | Val Loss: 0.905147 | Val NSE: -0.2865
+  Epoch   60/500 | Train: 0.198242 | Val Loss: 0.901916 | Val NSE: -0.0404
+  Epoch   80/500 | Train: 0.121510 | Val Loss: 0.927622 | Val NSE: -0.3651
+  Epoch  100/500 | Train: 0.089438 | Val Loss: 0.976126 | Val NSE: -0.5444
+  Epoch  120/500 | Train: 0.091676 | Val Loss: 1.044969 | Val NSE: -0.6321
+  Epoch  140/500 | Train: 0.070536 | Val Loss: 0.986680 | Val NSE: -0.5484
+  Epoch  160/500 | Train: 0.034670 | Val Loss: 1.025995 | Val NSE: -0.5072
+  Early stopping at epoch 160
+    [xavier] s18: R²=0.1638, MAPE=18.78%
+  Epoch    1/500 | Train: 0.671903 | Val Loss: 0.836174 | Val NSE: 0.1569
+  Epoch   20/500 | Train: 0.294284 | Val Loss: 0.783135 | Val NSE: 0.2041
+  Epoch   40/500 | Train: 0.203447 | Val Loss: 0.842623 | Val NSE: -0.0241
+  Epoch   60/500 | Train: 0.130631 | Val Loss: 0.944787 | Val NSE: -0.3666
+  Epoch   80/500 | Train: 0.108177 | Val Loss: 0.994050 | Val NSE: -0.8353
+  Epoch  100/500 | Train: 0.068694 | Val Loss: 0.947738 | Val NSE: -0.5404
+  Epoch  120/500 | Train: 0.066451 | Val Loss: 0.965805 | Val NSE: -0.6828
+  Epoch  140/500 | Train: 0.059040 | Val Loss: 1.013658 | Val NSE: -0.6639
+  Epoch  160/500 | Train: 0.067167 | Val Loss: 0.980126 | Val NSE: -0.4861
+  Early stopping at epoch 175
+    [xavier] s19: R²=0.2476, MAPE=18.18%
+  Epoch    1/500 | Train: 0.843367 | Val Loss: 0.811216 | Val NSE: 0.2367
+  Epoch   20/500 | Train: 0.301279 | Val Loss: 0.796199 | Val NSE: 0.0267
+  Epoch   40/500 | Train: 0.220737 | Val Loss: 0.840314 | Val NSE: -0.0238
+  Epoch   60/500 | Train: 0.153597 | Val Loss: 0.869653 | Val NSE: 0.0873
+  Epoch   80/500 | Train: 0.120531 | Val Loss: 0.972469 | Val NSE: -0.5578
+  Epoch  100/500 | Train: 0.089344 | Val Loss: 0.976405 | Val NSE: -0.5810
+  Epoch  120/500 | Train: 0.056104 | Val Loss: 0.935636 | Val NSE: -0.4525
+  Epoch  140/500 | Train: 0.051457 | Val Loss: 0.997521 | Val NSE: -0.6391
+  Epoch  160/500 | Train: 0.048170 | Val Loss: 0.989311 | Val NSE: -0.5394
+  Early stopping at epoch 161
+    [xavier] s20: R²=0.2830, MAPE=17.88%
+  Epoch    1/500 | Train: 0.782745 | Val Loss: 0.908869 | Val NSE: -0.0381
+  Epoch   20/500 | Train: 0.356098 | Val Loss: 0.818283 | Val NSE: 0.1038
+  Epoch   40/500 | Train: 0.237087 | Val Loss: 0.871135 | Val NSE: -0.0463
+  Epoch   60/500 | Train: 0.167017 | Val Loss: 0.913440 | Val NSE: -0.2493
+  Epoch   80/500 | Train: 0.120786 | Val Loss: 0.921964 | Val NSE: -0.3147
+  Epoch  100/500 | Train: 0.110553 | Val Loss: 0.918326 | Val NSE: -0.5288
+  Epoch  120/500 | Train: 0.094718 | Val Loss: 0.915657 | Val NSE: -0.4839
+  Epoch  140/500 | Train: 0.054789 | Val Loss: 0.916926 | Val NSE: -0.3328
+  Epoch  160/500 | Train: 0.108959 | Val Loss: 0.951667 | Val NSE: -0.5396
+  Early stopping at epoch 161
+    [xavier] s21: R²=0.1508, MAPE=18.20%
+  Epoch    1/500 | Train: 0.728687 | Val Loss: 0.702346 | Val NSE: 0.2300
+  Epoch   20/500 | Train: 0.361602 | Val Loss: 0.766996 | Val NSE: -0.1454
+  Epoch   40/500 | Train: 0.247380 | Val Loss: 0.849994 | Val NSE: -0.3003
+  Epoch   60/500 | Train: 0.157866 | Val Loss: 0.853697 | Val NSE: -0.2768
+  Epoch   80/500 | Train: 0.118035 | Val Loss: 0.909063 | Val NSE: -0.4660
+  Epoch  100/500 | Train: 0.102368 | Val Loss: 0.947579 | Val NSE: -0.6946
+  Epoch  120/500 | Train: 0.107316 | Val Loss: 0.917478 | Val NSE: -0.7510
+  Epoch  140/500 | Train: 0.067744 | Val Loss: 0.951880 | Val NSE: -0.5520
+  Epoch  160/500 | Train: 0.089425 | Val Loss: 0.911091 | Val NSE: -0.6758
+  Early stopping at epoch 168
+    [xavier] s22: R²=0.1549, MAPE=18.15%
+  Epoch    1/500 | Train: 0.860423 | Val Loss: 0.884493 | Val NSE: -0.8686
+  Epoch   20/500 | Train: 0.298013 | Val Loss: 0.766898 | Val NSE: 0.0751
+  Epoch   40/500 | Train: 0.207810 | Val Loss: 0.839819 | Val NSE: -0.1282
+  Epoch   60/500 | Train: 0.143021 | Val Loss: 0.896464 | Val NSE: -0.1819
+  Epoch   80/500 | Train: 0.118614 | Val Loss: 0.898940 | Val NSE: -0.4859
+  Epoch  100/500 | Train: 0.090674 | Val Loss: 0.915829 | Val NSE: -0.4251
+  Epoch  120/500 | Train: 0.072792 | Val Loss: 0.911258 | Val NSE: -0.6293
+  Epoch  140/500 | Train: 0.057757 | Val Loss: 0.906590 | Val NSE: -0.5002
+  Epoch  160/500 | Train: 0.063754 | Val Loss: 0.875972 | Val NSE: -0.2712
+  Early stopping at epoch 161
+    [xavier] s23: R²=0.0143, MAPE=19.72%
+  Epoch    1/500 | Train: 0.647087 | Val Loss: 0.885288 | Val NSE: 0.0059
+  Epoch   20/500 | Train: 0.354495 | Val Loss: 0.774249 | Val NSE: 0.1603
+  Epoch   40/500 | Train: 0.213844 | Val Loss: 0.829597 | Val NSE: -0.0902
+  Epoch   60/500 | Train: 0.157201 | Val Loss: 0.825283 | Val NSE: -0.0545
+  Epoch   80/500 | Train: 0.095084 | Val Loss: 0.916254 | Val NSE: -0.6464
+  Epoch  100/500 | Train: 0.087008 | Val Loss: 1.001725 | Val NSE: -0.8594
+  Epoch  120/500 | Train: 0.080075 | Val Loss: 0.900655 | Val NSE: -0.5945
+  Epoch  140/500 | Train: 0.057771 | Val Loss: 0.948877 | Val NSE: -0.5518
+  Epoch  160/500 | Train: 0.052449 | Val Loss: 0.981514 | Val NSE: -0.7129
+  Early stopping at epoch 169
+    [xavier] s24: R²=0.1362, MAPE=19.68%
+  Epoch    1/500 | Train: 0.629116 | Val Loss: 0.885484 | Val NSE: -0.2114
+  Epoch   20/500 | Train: 0.283745 | Val Loss: 0.804838 | Val NSE: 0.1876
+  Epoch   40/500 | Train: 0.187707 | Val Loss: 0.913676 | Val NSE: -0.4464
+  Epoch   60/500 | Train: 0.163786 | Val Loss: 0.931872 | Val NSE: -0.3507
+  Epoch   80/500 | Train: 0.099901 | Val Loss: 0.928622 | Val NSE: -0.4934
+  Epoch  100/500 | Train: 0.082704 | Val Loss: 0.950145 | Val NSE: -0.5757
+  Epoch  120/500 | Train: 0.075223 | Val Loss: 0.970221 | Val NSE: -0.8214
+  Epoch  140/500 | Train: 0.054767 | Val Loss: 0.948562 | Val NSE: -0.7899
+  Early stopping at epoch 155
+    [xavier] s25: R²=0.1962, MAPE=18.44%
+  Epoch    1/500 | Train: 0.548543 | Val Loss: 0.846369 | Val NSE: -0.4514
+  Epoch   20/500 | Train: 0.272243 | Val Loss: 0.803580 | Val NSE: -0.1214
+  Epoch   40/500 | Train: 0.252802 | Val Loss: 0.888036 | Val NSE: -0.2878
+  Epoch   60/500 | Train: 0.156865 | Val Loss: 0.951665 | Val NSE: -0.5793
+  Epoch   80/500 | Train: 0.082754 | Val Loss: 0.967873 | Val NSE: -0.5107
+  Epoch  100/500 | Train: 0.095956 | Val Loss: 0.953749 | Val NSE: -0.6919
+  Epoch  120/500 | Train: 0.093940 | Val Loss: 0.983791 | Val NSE: -0.7708
+  Epoch  140/500 | Train: 0.073079 | Val Loss: 0.960646 | Val NSE: -0.8429
+  Epoch  160/500 | Train: 0.046191 | Val Loss: 0.956368 | Val NSE: -0.5701
+  Early stopping at epoch 160
+    [xavier] s26: R²=0.2593, MAPE=17.84%
+  Epoch    1/500 | Train: 0.626570 | Val Loss: 0.987268 | Val NSE: 0.0441
+  Epoch   20/500 | Train: 0.310926 | Val Loss: 0.854930 | Val NSE: -0.3566
+  Epoch   40/500 | Train: 0.190526 | Val Loss: 0.854795 | Val NSE: -0.0870
+  Epoch   60/500 | Train: 0.174664 | Val Loss: 0.829270 | Val NSE: -0.2091
+  Epoch   80/500 | Train: 0.116721 | Val Loss: 0.850354 | Val NSE: -0.2715
+  Epoch  100/500 | Train: 0.098875 | Val Loss: 0.873981 | Val NSE: -0.4644
+  Epoch  120/500 | Train: 0.082152 | Val Loss: 0.892623 | Val NSE: -0.5354
+  Epoch  140/500 | Train: 0.067828 | Val Loss: 0.922741 | Val NSE: -0.4322
+  Epoch  160/500 | Train: 0.042799 | Val Loss: 0.953659 | Val NSE: -0.4125
+  Early stopping at epoch 163
+    [xavier] s27: R²=0.1699, MAPE=18.54%
+  Epoch    1/500 | Train: 0.660322 | Val Loss: 0.816154 | Val NSE: 0.0080
+  Epoch   20/500 | Train: 0.323601 | Val Loss: 0.712852 | Val NSE: 0.2988
+  Epoch   40/500 | Train: 0.243282 | Val Loss: 0.838016 | Val NSE: -0.1281
+  Epoch   60/500 | Train: 0.126693 | Val Loss: 0.898114 | Val NSE: -0.3938
+  Epoch   80/500 | Train: 0.132483 | Val Loss: 0.880959 | Val NSE: -0.5305
+  Epoch  100/500 | Train: 0.089803 | Val Loss: 0.908072 | Val NSE: -0.8576
+  Epoch  120/500 | Train: 0.087595 | Val Loss: 0.934499 | Val NSE: -0.5495
+  Epoch  140/500 | Train: 0.080241 | Val Loss: 0.941966 | Val NSE: -0.3147
+  Epoch  160/500 | Train: 0.059999 | Val Loss: 0.963701 | Val NSE: -0.7156
+  Early stopping at epoch 164
+    [xavier] s28: R²=0.2436, MAPE=17.51%
+  Epoch    1/500 | Train: 0.841190 | Val Loss: 0.926379 | Val NSE: 0.1644
+  Epoch   20/500 | Train: 0.262430 | Val Loss: 0.828186 | Val NSE: 0.0176
+  Epoch   40/500 | Train: 0.193206 | Val Loss: 0.906766 | Val NSE: -0.2906
+  Epoch   60/500 | Train: 0.117794 | Val Loss: 0.980021 | Val NSE: -0.5246
+  Epoch   80/500 | Train: 0.142284 | Val Loss: 1.022006 | Val NSE: -0.4094
+  Epoch  100/500 | Train: 0.090938 | Val Loss: 1.031809 | Val NSE: -0.6718
+  Epoch  120/500 | Train: 0.057673 | Val Loss: 1.024312 | Val NSE: -0.4033
+  Epoch  140/500 | Train: 0.055927 | Val Loss: 1.077488 | Val NSE: -0.5692
+  Epoch  160/500 | Train: 0.070827 | Val Loss: 1.052164 | Val NSE: -0.6071
+  Early stopping at epoch 173
+    [xavier] s29: R²=0.2006, MAPE=17.79%
+  Epoch    1/500 | Train: 0.802888 | Val Loss: 0.839934 | Val NSE: 0.1043
+  Epoch   20/500 | Train: 0.269342 | Val Loss: 0.740678 | Val NSE: 0.2576
+  Epoch   40/500 | Train: 0.182097 | Val Loss: 0.887165 | Val NSE: -0.3752
+  Epoch   60/500 | Train: 0.163519 | Val Loss: 0.853762 | Val NSE: -0.0715
+  Epoch   80/500 | Train: 0.142608 | Val Loss: 0.884177 | Val NSE: -0.3966
+  Epoch  100/500 | Train: 0.098687 | Val Loss: 0.899873 | Val NSE: -0.3029
+  Epoch  120/500 | Train: 0.091170 | Val Loss: 0.888681 | Val NSE: -0.6186
+  Epoch  140/500 | Train: 0.075949 | Val Loss: 0.938009 | Val NSE: -0.5402
+  Epoch  160/500 | Train: 0.051990 | Val Loss: 0.956431 | Val NSE: -0.3992
+  Early stopping at epoch 171
+    [xavier] s30: R²=0.0211, MAPE=20.56%
+  Epoch    1/500 | Train: 0.700605 | Val Loss: 0.801659 | Val NSE: -0.2809
+  Epoch   20/500 | Train: 0.291992 | Val Loss: 0.727164 | Val NSE: 0.2458
+  Epoch   40/500 | Train: 0.199430 | Val Loss: 0.855637 | Val NSE: -0.2268
+  Epoch   60/500 | Train: 0.201012 | Val Loss: 0.890860 | Val NSE: -0.3027
+  Epoch   80/500 | Train: 0.129263 | Val Loss: 0.930863 | Val NSE: -0.3038
+  Epoch  100/500 | Train: 0.123319 | Val Loss: 0.971636 | Val NSE: -0.4611
+  Epoch  120/500 | Train: 0.087069 | Val Loss: 0.961063 | Val NSE: -0.4851
+  Epoch  140/500 | Train: 0.084843 | Val Loss: 0.979849 | Val NSE: -0.3394
+  Epoch  160/500 | Train: 0.069266 | Val Loss: 0.975876 | Val NSE: -0.7710
+  Early stopping at epoch 162
+    [xavier] s31: R²=-0.0711, MAPE=20.33%
+  Epoch    1/500 | Train: 0.615989 | Val Loss: 0.836391 | Val NSE: 0.0920
+  Epoch   20/500 | Train: 0.374781 | Val Loss: 0.828184 | Val NSE: 0.1860
+  Epoch   40/500 | Train: 0.209193 | Val Loss: 0.867081 | Val NSE: 0.1066
+  Epoch   60/500 | Train: 0.174519 | Val Loss: 0.929202 | Val NSE: -0.6015
+  Epoch   80/500 | Train: 0.106768 | Val Loss: 0.981572 | Val NSE: -0.5848
+  Epoch  100/500 | Train: 0.082755 | Val Loss: 0.933611 | Val NSE: -0.2280
+  Epoch  120/500 | Train: 0.070044 | Val Loss: 0.984435 | Val NSE: -0.7573
+  Epoch  140/500 | Train: 0.072745 | Val Loss: 0.977439 | Val NSE: -0.6609
+  Epoch  160/500 | Train: 0.070327 | Val Loss: 1.019133 | Val NSE: -0.7212
+  Early stopping at epoch 161
+    [xavier] s32: R²=-0.0818, MAPE=21.15%
+  Epoch    1/500 | Train: 0.740989 | Val Loss: 0.793774 | Val NSE: -0.1958
+  Epoch   20/500 | Train: 0.234526 | Val Loss: 0.820789 | Val NSE: -0.0695
+  Epoch   40/500 | Train: 0.249179 | Val Loss: 0.836042 | Val NSE: -0.0016
+  Epoch   60/500 | Train: 0.157791 | Val Loss: 0.918728 | Val NSE: -0.3574
+  Epoch   80/500 | Train: 0.103316 | Val Loss: 0.992732 | Val NSE: -0.5561
+  Epoch  100/500 | Train: 0.104478 | Val Loss: 0.974200 | Val NSE: -0.6169
+  Epoch  120/500 | Train: 0.091134 | Val Loss: 0.926413 | Val NSE: -0.5033
+  Epoch  140/500 | Train: 0.076849 | Val Loss: 1.011432 | Val NSE: -0.6071
+  Early stopping at epoch 156
+    [xavier] s33: R²=0.2223, MAPE=17.33%
+  Epoch    1/500 | Train: 0.782017 | Val Loss: 0.801600 | Val NSE: 0.2674
+  Epoch   20/500 | Train: 0.372917 | Val Loss: 0.776159 | Val NSE: 0.0491
+  Epoch   40/500 | Train: 0.255164 | Val Loss: 0.861698 | Val NSE: -0.2257
+  Epoch   60/500 | Train: 0.146734 | Val Loss: 0.925933 | Val NSE: -0.2807
+  Epoch   80/500 | Train: 0.117731 | Val Loss: 0.926977 | Val NSE: -0.4997
+  Epoch  100/500 | Train: 0.091797 | Val Loss: 0.932815 | Val NSE: -0.4610
+  Epoch  120/500 | Train: 0.090313 | Val Loss: 0.906091 | Val NSE: -0.4833
+  Epoch  140/500 | Train: 0.065981 | Val Loss: 0.926978 | Val NSE: -0.5159
+  Epoch  160/500 | Train: 0.058002 | Val Loss: 0.920282 | Val NSE: -0.5950
+  Early stopping at epoch 172
+    [xavier] s34: R²=0.0473, MAPE=20.44%
+  Epoch    1/500 | Train: 0.741543 | Val Loss: 0.780841 | Val NSE: 0.2443
+  Epoch   20/500 | Train: 0.248314 | Val Loss: 0.799113 | Val NSE: 0.1691
+  Epoch   40/500 | Train: 0.249117 | Val Loss: 0.937387 | Val NSE: -0.2137
+  Epoch   60/500 | Train: 0.144815 | Val Loss: 0.895273 | Val NSE: -0.2998
+  Epoch   80/500 | Train: 0.134475 | Val Loss: 0.941072 | Val NSE: -0.3056
+  Epoch  100/500 | Train: 0.076538 | Val Loss: 0.952245 | Val NSE: -0.3776
+  Epoch  120/500 | Train: 0.064121 | Val Loss: 0.999998 | Val NSE: -0.9225
+  Epoch  140/500 | Train: 0.068522 | Val Loss: 0.997250 | Val NSE: -0.4694
+  Epoch  160/500 | Train: 0.090782 | Val Loss: 1.021858 | Val NSE: -0.5988
+  Early stopping at epoch 165
+    [xavier] s35: R²=0.2558, MAPE=17.52%
+  Epoch    1/500 | Train: 0.737177 | Val Loss: 0.764104 | Val NSE: 0.2030
+  Epoch   20/500 | Train: 0.364873 | Val Loss: 0.744092 | Val NSE: 0.3054
+  Epoch   40/500 | Train: 0.291800 | Val Loss: 0.852090 | Val NSE: -0.0550
+  Epoch   60/500 | Train: 0.188976 | Val Loss: 0.926127 | Val NSE: -0.4246
+  Epoch   80/500 | Train: 0.108262 | Val Loss: 0.930290 | Val NSE: -0.5795
+  Epoch  100/500 | Train: 0.148700 | Val Loss: 0.956673 | Val NSE: -0.5720
+  Epoch  120/500 | Train: 0.101020 | Val Loss: 1.002737 | Val NSE: -0.5907
+  Epoch  140/500 | Train: 0.056318 | Val Loss: 1.019683 | Val NSE: -0.6037
+  Epoch  160/500 | Train: 0.065373 | Val Loss: 1.025391 | Val NSE: -0.5841
+  Early stopping at epoch 160
+    [xavier] s36: R²=-0.0843, MAPE=20.09%
+  Epoch    1/500 | Train: 0.861105 | Val Loss: 0.835999 | Val NSE: -0.3690
+  Epoch   20/500 | Train: 0.287002 | Val Loss: 0.766350 | Val NSE: 0.1525
+  Epoch   40/500 | Train: 0.184836 | Val Loss: 0.876956 | Val NSE: -0.2044
+  Epoch   60/500 | Train: 0.127066 | Val Loss: 0.962501 | Val NSE: -0.4508
+  Epoch   80/500 | Train: 0.083177 | Val Loss: 0.949547 | Val NSE: -0.3732
+  Epoch  100/500 | Train: 0.073823 | Val Loss: 0.978009 | Val NSE: -0.6623
+  Epoch  120/500 | Train: 0.071752 | Val Loss: 0.950957 | Val NSE: -0.6548
+  Epoch  140/500 | Train: 0.050221 | Val Loss: 0.960623 | Val NSE: -0.6695
+  Early stopping at epoch 157
+    [xavier] s37: R²=0.0865, MAPE=19.56%
+  Epoch    1/500 | Train: 0.851770 | Val Loss: 0.940514 | Val NSE: -0.0219
+  Epoch   20/500 | Train: 0.256718 | Val Loss: 0.812479 | Val NSE: 0.0572
+  Epoch   40/500 | Train: 0.140076 | Val Loss: 0.934070 | Val NSE: -0.2026
+  Epoch   60/500 | Train: 0.116721 | Val Loss: 0.933671 | Val NSE: -0.3100
+  Epoch   80/500 | Train: 0.088239 | Val Loss: 0.948628 | Val NSE: -0.3132
+  Epoch  100/500 | Train: 0.068783 | Val Loss: 0.985115 | Val NSE: -0.2873
+  Epoch  120/500 | Train: 0.087959 | Val Loss: 0.938213 | Val NSE: -0.3791
+  Epoch  140/500 | Train: 0.104581 | Val Loss: 1.041350 | Val NSE: -0.3485
+  Epoch  160/500 | Train: 0.037454 | Val Loss: 1.037819 | Val NSE: -0.5002
+  Early stopping at epoch 161
+    [xavier] s38: R²=0.0890, MAPE=17.79%
+  Epoch    1/500 | Train: 0.631939 | Val Loss: 0.945071 | Val NSE: -0.4560
+  Epoch   20/500 | Train: 0.260992 | Val Loss: 0.805029 | Val NSE: 0.0182
+  Epoch   40/500 | Train: 0.166398 | Val Loss: 0.877623 | Val NSE: -0.3738
+  Epoch   60/500 | Train: 0.138080 | Val Loss: 0.833083 | Val NSE: -0.2430
+  Epoch   80/500 | Train: 0.096463 | Val Loss: 0.916511 | Val NSE: -0.5375
+  Epoch  100/500 | Train: 0.097293 | Val Loss: 0.978335 | Val NSE: -0.4087
+  Epoch  120/500 | Train: 0.110861 | Val Loss: 0.947884 | Val NSE: -0.6325
+  Epoch  140/500 | Train: 0.058388 | Val Loss: 0.986180 | Val NSE: -0.7219
+  Early stopping at epoch 158
+    [xavier] s39: R²=0.0643, MAPE=18.31%
+  Epoch    1/500 | Train: 0.637781 | Val Loss: 0.861470 | Val NSE: 0.0501
+  Epoch   20/500 | Train: 0.244088 | Val Loss: 0.804812 | Val NSE: -0.0254
+  Epoch   40/500 | Train: 0.305140 | Val Loss: 0.886416 | Val NSE: -0.3941
+  Epoch   60/500 | Train: 0.137523 | Val Loss: 0.863483 | Val NSE: -0.3121
+  Epoch   80/500 | Train: 0.107671 | Val Loss: 0.935215 | Val NSE: -0.6475
+  Epoch  100/500 | Train: 0.146428 | Val Loss: 0.912733 | Val NSE: -0.3565
+  Epoch  120/500 | Train: 0.087505 | Val Loss: 0.941917 | Val NSE: -0.5556
+  Epoch  140/500 | Train: 0.087816 | Val Loss: 0.998099 | Val NSE: -0.6915
+  Epoch  160/500 | Train: 0.087640 | Val Loss: 1.012182 | Val NSE: -0.5813
+  Early stopping at epoch 161
+    [xavier] s40: R²=-0.0551, MAPE=20.47%
+  Epoch    1/500 | Train: 0.707193 | Val Loss: 0.762210 | Val NSE: 0.0897
+  Epoch   20/500 | Train: 0.287045 | Val Loss: 0.771499 | Val NSE: 0.2447
+  Epoch   40/500 | Train: 0.178376 | Val Loss: 0.880730 | Val NSE: -0.3136
+  Epoch   60/500 | Train: 0.130942 | Val Loss: 0.911499 | Val NSE: -0.3674
+  Epoch   80/500 | Train: 0.132190 | Val Loss: 0.960091 | Val NSE: -0.2801
+  Epoch  100/500 | Train: 0.097054 | Val Loss: 0.927493 | Val NSE: -0.5244
+  Epoch  120/500 | Train: 0.060531 | Val Loss: 0.998321 | Val NSE: -0.9485
+  Epoch  140/500 | Train: 0.063486 | Val Loss: 0.969511 | Val NSE: -0.5177
+  Early stopping at epoch 159
+    [xavier] s41: R²=0.2415, MAPE=18.08%
+  Epoch    1/500 | Train: 0.592204 | Val Loss: 0.882145 | Val NSE: -0.0349
+  Epoch   20/500 | Train: 0.276559 | Val Loss: 0.715191 | Val NSE: 0.2814
+  Epoch   40/500 | Train: 0.197707 | Val Loss: 0.828806 | Val NSE: -0.1170
+  Epoch   60/500 | Train: 0.268540 | Val Loss: 0.890941 | Val NSE: -0.2183
+  Epoch   80/500 | Train: 0.109038 | Val Loss: 0.929274 | Val NSE: -0.4600
+  Epoch  100/500 | Train: 0.113195 | Val Loss: 0.967064 | Val NSE: -0.3300
+  Epoch  120/500 | Train: 0.098657 | Val Loss: 0.992188 | Val NSE: -0.4891
+  Epoch  140/500 | Train: 0.065904 | Val Loss: 1.042676 | Val NSE: -0.6530
+  Epoch  160/500 | Train: 0.042586 | Val Loss: 1.048471 | Val NSE: -0.5252
+  Early stopping at epoch 160
+    [xavier] s100: R²=0.1519, MAPE=18.70%
+  Epoch    1/500 | Train: 0.649070 | Val Loss: 0.862060 | Val NSE: 0.1201
+  Epoch   20/500 | Train: 0.417841 | Val Loss: 0.761572 | Val NSE: 0.2329
+  Epoch   40/500 | Train: 0.251119 | Val Loss: 0.863873 | Val NSE: -0.0700
+  Epoch   60/500 | Train: 0.161547 | Val Loss: 0.931309 | Val NSE: -0.3898
+  Epoch   80/500 | Train: 0.104050 | Val Loss: 0.885550 | Val NSE: -0.3290
+  Epoch  100/500 | Train: 0.139391 | Val Loss: 0.950883 | Val NSE: -0.6747
+  Epoch  120/500 | Train: 0.069324 | Val Loss: 0.954771 | Val NSE: -0.3737
+  Epoch  140/500 | Train: 0.078737 | Val Loss: 1.000976 | Val NSE: -0.6199
+  Epoch  160/500 | Train: 0.057529 | Val Loss: 0.981047 | Val NSE: -0.4102
+  Early stopping at epoch 174
+    [xavier] s200: R²=0.3606, MAPE=16.74%
+  Epoch    1/500 | Train: 0.692850 | Val Loss: 0.923271 | Val NSE: -0.0994
+  Epoch   20/500 | Train: 0.299078 | Val Loss: 0.769865 | Val NSE: 0.2548
+  Epoch   40/500 | Train: 0.244118 | Val Loss: 0.856200 | Val NSE: -0.0613
+  Epoch   60/500 | Train: 0.167313 | Val Loss: 0.906815 | Val NSE: -0.1073
+  Epoch   80/500 | Train: 0.097495 | Val Loss: 0.953831 | Val NSE: -0.4363
+  Epoch  100/500 | Train: 0.087361 | Val Loss: 0.903337 | Val NSE: -0.3820
+  Epoch  120/500 | Train: 0.111164 | Val Loss: 0.959751 | Val NSE: -0.6830
+  Epoch  140/500 | Train: 0.078762 | Val Loss: 0.978020 | Val NSE: -0.4345
+  Epoch  160/500 | Train: 0.050927 | Val Loss: 0.997636 | Val NSE: -0.4717
+  Early stopping at epoch 170
+    [xavier] s500: R²=0.1884, MAPE=18.04%
+  Epoch    1/500 | Train: 0.894501 | Val Loss: 0.809965 | Val NSE: 0.1969
+  Epoch   20/500 | Train: 0.279328 | Val Loss: 0.797308 | Val NSE: 0.1434
+  Epoch   40/500 | Train: 0.262315 | Val Loss: 0.897801 | Val NSE: -0.2967
+  Epoch   60/500 | Train: 0.154402 | Val Loss: 0.891015 | Val NSE: -0.4159
+  Epoch   80/500 | Train: 0.087129 | Val Loss: 0.950373 | Val NSE: -0.2052
+  Epoch  100/500 | Train: 0.082347 | Val Loss: 0.966520 | Val NSE: -0.4191
+  Epoch  120/500 | Train: 0.093982 | Val Loss: 0.982684 | Val NSE: -0.5426
+  Epoch  140/500 | Train: 0.059617 | Val Loss: 1.046041 | Val NSE: -0.4973
+  Epoch  160/500 | Train: 0.041601 | Val Loss: 1.022324 | Val NSE: -0.3824
+  Early stopping at epoch 160
+    [xavier] s1000: R²=0.1042, MAPE=20.43%
+  Epoch    1/500 | Train: 0.797089 | Val Loss: 0.898846 | Val NSE: -0.3438
+  Epoch   20/500 | Train: 0.283608 | Val Loss: 0.852913 | Val NSE: 0.0562
+  Epoch   40/500 | Train: 0.204510 | Val Loss: 0.856499 | Val NSE: 0.0265
+  Epoch   60/500 | Train: 0.182413 | Val Loss: 0.941227 | Val NSE: -0.4042
+  Epoch   80/500 | Train: 0.118721 | Val Loss: 0.914267 | Val NSE: -0.4269
+  Epoch  100/500 | Train: 0.080768 | Val Loss: 0.948592 | Val NSE: -0.3909
+  Epoch  120/500 | Train: 0.091916 | Val Loss: 0.954145 | Val NSE: -0.5885
+  Epoch  140/500 | Train: 0.057766 | Val Loss: 0.943543 | Val NSE: -0.6137
+  Epoch  160/500 | Train: 0.073554 | Val Loss: 0.981280 | Val NSE: -0.5636
+  Early stopping at epoch 167
+    [orthogonal] s42: R²=0.1457, MAPE=19.19%
+  Epoch    1/500 | Train: 0.810669 | Val Loss: 0.837110 | Val NSE: -0.1136
+  Epoch   20/500 | Train: 0.316936 | Val Loss: 0.819110 | Val NSE: 0.0413
+  Epoch   40/500 | Train: 0.174174 | Val Loss: 0.893405 | Val NSE: -0.2828
+  Epoch   60/500 | Train: 0.215317 | Val Loss: 0.898685 | Val NSE: -0.1648
+  Epoch   80/500 | Train: 0.170777 | Val Loss: 0.893674 | Val NSE: -0.3265
+  Epoch  100/500 | Train: 0.116525 | Val Loss: 0.912890 | Val NSE: -0.4500
+  Epoch  120/500 | Train: 0.078572 | Val Loss: 0.897944 | Val NSE: -0.3989
+  Epoch  140/500 | Train: 0.072400 | Val Loss: 0.916827 | Val NSE: -0.5585
+  Epoch  160/500 | Train: 0.049184 | Val Loss: 0.918379 | Val NSE: -0.5384
+  Early stopping at epoch 163
+    [orthogonal] s7: R²=0.3434, MAPE=17.35%
+  Epoch    1/500 | Train: 0.742956 | Val Loss: 0.916140 | Val NSE: 0.2007
+  Epoch   20/500 | Train: 0.294871 | Val Loss: 0.784863 | Val NSE: -0.0332
+  Epoch   40/500 | Train: 0.209346 | Val Loss: 0.840235 | Val NSE: -0.1542
+  Epoch   60/500 | Train: 0.210069 | Val Loss: 0.874279 | Val NSE: -0.2405
+  Epoch   80/500 | Train: 0.097374 | Val Loss: 0.892886 | Val NSE: -0.3521
+  Epoch  100/500 | Train: 0.110135 | Val Loss: 0.912324 | Val NSE: -0.4413
+  Epoch  120/500 | Train: 0.069629 | Val Loss: 0.973728 | Val NSE: -0.7807
+  Epoch  140/500 | Train: 0.126224 | Val Loss: 0.957846 | Val NSE: -0.5422
+  Early stopping at epoch 159
+    [orthogonal] s123: R²=0.2674, MAPE=17.29%
+  Epoch    1/500 | Train: 0.883727 | Val Loss: 0.879502 | Val NSE: 0.1927
+  Epoch   20/500 | Train: 0.269752 | Val Loss: 0.721362 | Val NSE: 0.1512
+  Epoch   40/500 | Train: 0.163174 | Val Loss: 0.850299 | Val NSE: 0.0034
+  Epoch   60/500 | Train: 0.172939 | Val Loss: 0.873603 | Val NSE: -0.2211
+  Epoch   80/500 | Train: 0.134777 | Val Loss: 0.902459 | Val NSE: -0.3133
+  Epoch  100/500 | Train: 0.098130 | Val Loss: 0.905896 | Val NSE: -0.4430
+  Epoch  120/500 | Train: 0.071391 | Val Loss: 0.900708 | Val NSE: -0.5594
+  Epoch  140/500 | Train: 0.049147 | Val Loss: 0.904551 | Val NSE: -0.4617
+  Epoch  160/500 | Train: 0.050379 | Val Loss: 0.903567 | Val NSE: -0.5882
+  Early stopping at epoch 163
+    [orthogonal] s2024: R²=0.1356, MAPE=18.96%
+  Epoch    1/500 | Train: 0.980305 | Val Loss: 0.765672 | Val NSE: 0.0725
+  Epoch   20/500 | Train: 0.323587 | Val Loss: 0.768538 | Val NSE: 0.1676
+  Epoch   40/500 | Train: 0.177088 | Val Loss: 0.860162 | Val NSE: -0.1756
+  Epoch   60/500 | Train: 0.163250 | Val Loss: 0.813912 | Val NSE: -0.1663
+  Epoch   80/500 | Train: 0.133817 | Val Loss: 0.860158 | Val NSE: -0.1947
+  Epoch  100/500 | Train: 0.106073 | Val Loss: 0.890222 | Val NSE: -0.4868
+  Epoch  120/500 | Train: 0.097437 | Val Loss: 0.998144 | Val NSE: -0.6669
+  Epoch  140/500 | Train: 0.078598 | Val Loss: 0.977609 | Val NSE: -0.4198
+  Epoch  160/500 | Train: 0.068230 | Val Loss: 0.984704 | Val NSE: -0.3135
+  Early stopping at epoch 164
+    [orthogonal] s99: R²=0.2565, MAPE=17.44%
+  Epoch    1/500 | Train: 0.840680 | Val Loss: 0.815341 | Val NSE: 0.0168
+  Epoch   20/500 | Train: 0.275673 | Val Loss: 0.799232 | Val NSE: 0.0138
+  Epoch   40/500 | Train: 0.222128 | Val Loss: 0.903603 | Val NSE: -0.0502
+  Epoch   60/500 | Train: 0.209428 | Val Loss: 0.905240 | Val NSE: -0.1882
+  Epoch   80/500 | Train: 0.130212 | Val Loss: 0.933797 | Val NSE: -0.5127
+  Epoch  100/500 | Train: 0.153318 | Val Loss: 0.926233 | Val NSE: -0.5350
+  Epoch  120/500 | Train: 0.118414 | Val Loss: 0.932946 | Val NSE: -0.4776
+  Epoch  140/500 | Train: 0.101153 | Val Loss: 0.921931 | Val NSE: -0.6047
+  Early stopping at epoch 157
+    [orthogonal] s13: R²=0.1003, MAPE=18.34%
+  Epoch    1/500 | Train: 0.672634 | Val Loss: 0.897563 | Val NSE: -0.4717
+  Epoch   20/500 | Train: 0.370892 | Val Loss: 0.789422 | Val NSE: 0.2057
+  Epoch   40/500 | Train: 0.224361 | Val Loss: 0.927070 | Val NSE: -0.4510
+  Epoch   60/500 | Train: 0.129176 | Val Loss: 0.890344 | Val NSE: -0.2905
+  Epoch   80/500 | Train: 0.097407 | Val Loss: 0.933229 | Val NSE: -0.6004
+  Epoch  100/500 | Train: 0.121441 | Val Loss: 0.962701 | Val NSE: -0.5462
+  Epoch  120/500 | Train: 0.064516 | Val Loss: 0.985955 | Val NSE: -0.6528
+  Epoch  140/500 | Train: 0.099454 | Val Loss: 0.981228 | Val NSE: -0.4781
+  Epoch  160/500 | Train: 0.049073 | Val Loss: 0.946581 | Val NSE: -0.5215
+  Early stopping at epoch 162
+    [orthogonal] s55: R²=0.0514, MAPE=19.35%
+  Epoch    1/500 | Train: 0.587469 | Val Loss: 0.830514 | Val NSE: -0.0902
+  Epoch   20/500 | Train: 0.315773 | Val Loss: 0.784912 | Val NSE: 0.1049
+  Epoch   40/500 | Train: 0.217186 | Val Loss: 0.866719 | Val NSE: -0.0798
+  Epoch   60/500 | Train: 0.124836 | Val Loss: 0.903184 | Val NSE: -0.3109
+  Epoch   80/500 | Train: 0.151764 | Val Loss: 0.927915 | Val NSE: -0.3422
+  Epoch  100/500 | Train: 0.116493 | Val Loss: 0.964187 | Val NSE: -0.3547
+  Epoch  120/500 | Train: 0.073944 | Val Loss: 0.953936 | Val NSE: -0.7339
+  Epoch  140/500 | Train: 0.066939 | Val Loss: 0.978403 | Val NSE: -0.5526
+  Early stopping at epoch 158
+    [orthogonal] s777: R²=0.1246, MAPE=18.36%
+  Epoch    1/500 | Train: 0.706737 | Val Loss: 0.754459 | Val NSE: 0.2100
+  Epoch   20/500 | Train: 0.303180 | Val Loss: 0.839149 | Val NSE: 0.1242
+  Epoch   40/500 | Train: 0.221401 | Val Loss: 0.887921 | Val NSE: -0.1843
+  Epoch   60/500 | Train: 0.162554 | Val Loss: 0.915889 | Val NSE: -0.5000
+  Epoch   80/500 | Train: 0.176707 | Val Loss: 0.910583 | Val NSE: -0.4479
+  Epoch  100/500 | Train: 0.095137 | Val Loss: 0.974544 | Val NSE: -0.5874
+  Epoch  120/500 | Train: 0.066378 | Val Loss: 0.978848 | Val NSE: -0.4109
+  Epoch  140/500 | Train: 0.075979 | Val Loss: 1.035032 | Val NSE: -0.5041
+  Epoch  160/500 | Train: 0.046370 | Val Loss: 1.065497 | Val NSE: -0.7119
+  Early stopping at epoch 162
+    [orthogonal] s314: R²=0.0605, MAPE=19.91%
+  Epoch    1/500 | Train: 0.687351 | Val Loss: 0.838353 | Val NSE: 0.0869
+  Epoch   20/500 | Train: 0.273537 | Val Loss: 0.875591 | Val NSE: -0.0052
+  Epoch   40/500 | Train: 0.193794 | Val Loss: 0.900703 | Val NSE: -0.0552
+  Epoch   60/500 | Train: 0.130852 | Val Loss: 0.937617 | Val NSE: -0.3677
+  Epoch   80/500 | Train: 0.138940 | Val Loss: 0.955758 | Val NSE: -0.6756
+  Epoch  100/500 | Train: 0.084248 | Val Loss: 0.953499 | Val NSE: -0.5255
+  Epoch  120/500 | Train: 0.090958 | Val Loss: 1.003336 | Val NSE: -0.5237
+  Epoch  140/500 | Train: 0.104014 | Val Loss: 1.016156 | Val NSE: -0.5027
+  Early stopping at epoch 158
+    [orthogonal] s2025: R²=0.2436, MAPE=17.47%
+  Epoch    1/500 | Train: 0.724279 | Val Loss: 0.935096 | Val NSE: 0.2127
+  Epoch   20/500 | Train: 0.239837 | Val Loss: 0.855660 | Val NSE: -0.2314
+  Epoch   40/500 | Train: 0.209563 | Val Loss: 0.870785 | Val NSE: -0.2388
+  Epoch   60/500 | Train: 0.171203 | Val Loss: 0.884953 | Val NSE: -0.4801
+  Epoch   80/500 | Train: 0.118855 | Val Loss: 0.895364 | Val NSE: -0.4142
+  Epoch  100/500 | Train: 0.110189 | Val Loss: 0.919879 | Val NSE: -0.4402
+  Epoch  120/500 | Train: 0.082374 | Val Loss: 0.978893 | Val NSE: -0.4312
+  Epoch  140/500 | Train: 0.056403 | Val Loss: 1.022887 | Val NSE: -0.6514
+  Epoch  160/500 | Train: 0.043692 | Val Loss: 1.034138 | Val NSE: -0.5398
+  Early stopping at epoch 163
+    [orthogonal] s0: R²=0.2825, MAPE=17.97%
+  Epoch    1/500 | Train: 0.712683 | Val Loss: 0.834697 | Val NSE: -0.3475
+  Epoch   20/500 | Train: 0.314636 | Val Loss: 0.777980 | Val NSE: 0.1988
+  Epoch   40/500 | Train: 0.193074 | Val Loss: 0.873084 | Val NSE: -0.1048
+  Epoch   60/500 | Train: 0.173290 | Val Loss: 0.907216 | Val NSE: -0.3577
+  Epoch   80/500 | Train: 0.138596 | Val Loss: 0.915693 | Val NSE: -0.2661
+  Epoch  100/500 | Train: 0.098714 | Val Loss: 0.982634 | Val NSE: -0.3613
+  Epoch  120/500 | Train: 0.066767 | Val Loss: 1.006430 | Val NSE: -0.4098
+  Epoch  140/500 | Train: 0.102487 | Val Loss: 1.049107 | Val NSE: -0.6015
+  Epoch  160/500 | Train: 0.045109 | Val Loss: 1.037155 | Val NSE: -0.3896
+  Early stopping at epoch 163
+    [orthogonal] s1: R²=0.3815, MAPE=16.45%
+  Epoch    1/500 | Train: 0.833536 | Val Loss: 0.928891 | Val NSE: 0.1763
+  Epoch   20/500 | Train: 0.355468 | Val Loss: 0.759486 | Val NSE: 0.2208
+  Epoch   40/500 | Train: 0.228609 | Val Loss: 0.876894 | Val NSE: -0.1150
+  Epoch   60/500 | Train: 0.187269 | Val Loss: 0.882715 | Val NSE: -0.1365
+  Epoch   80/500 | Train: 0.140823 | Val Loss: 0.885689 | Val NSE: -0.1876
+  Epoch  100/500 | Train: 0.103653 | Val Loss: 0.964357 | Val NSE: -0.3307
+  Epoch  120/500 | Train: 0.085645 | Val Loss: 0.982403 | Val NSE: -0.3064
+  Epoch  140/500 | Train: 0.087629 | Val Loss: 0.992113 | Val NSE: -0.4922
+  Epoch  160/500 | Train: 0.061939 | Val Loss: 1.025655 | Val NSE: -0.3443
+  Early stopping at epoch 164
+    [orthogonal] s2: R²=0.0830, MAPE=19.07%
+  Epoch    1/500 | Train: 0.721198 | Val Loss: 0.870299 | Val NSE: -0.0691
+  Epoch   20/500 | Train: 0.324292 | Val Loss: 0.777187 | Val NSE: 0.0323
+  Epoch   40/500 | Train: 0.192588 | Val Loss: 0.833680 | Val NSE: 0.0738
+  Epoch   60/500 | Train: 0.191738 | Val Loss: 0.892626 | Val NSE: -0.2498
+  Epoch   80/500 | Train: 0.135319 | Val Loss: 0.892638 | Val NSE: -0.3882
+  Epoch  100/500 | Train: 0.071095 | Val Loss: 0.887077 | Val NSE: -0.2128
+  Epoch  120/500 | Train: 0.070496 | Val Loss: 0.925123 | Val NSE: -0.4826
+  Epoch  140/500 | Train: 0.054435 | Val Loss: 0.950858 | Val NSE: -0.4297
+  Epoch  160/500 | Train: 0.072005 | Val Loss: 0.959238 | Val NSE: -0.4458
+  Early stopping at epoch 173
+    [orthogonal] s3: R²=0.0192, MAPE=20.49%
+  Epoch    1/500 | Train: 0.752760 | Val Loss: 0.854487 | Val NSE: -0.6799
+  Epoch   20/500 | Train: 0.280750 | Val Loss: 0.832910 | Val NSE: -0.1667
+  Epoch   40/500 | Train: 0.240783 | Val Loss: 0.900283 | Val NSE: -0.0866
+  Epoch   60/500 | Train: 0.171624 | Val Loss: 0.860140 | Val NSE: -0.4579
+  Epoch   80/500 | Train: 0.120740 | Val Loss: 0.894255 | Val NSE: -0.5228
+  Epoch  100/500 | Train: 0.110510 | Val Loss: 0.909839 | Val NSE: -0.7748
+  Epoch  120/500 | Train: 0.061460 | Val Loss: 0.895597 | Val NSE: -0.4049
+  Epoch  140/500 | Train: 0.074767 | Val Loss: 0.947682 | Val NSE: -0.5058
+  Epoch  160/500 | Train: 0.031129 | Val Loss: 0.908928 | Val NSE: -0.3200
+  Early stopping at epoch 165
+    [orthogonal] s4: R²=0.1352, MAPE=19.24%
+  Epoch    1/500 | Train: 0.676651 | Val Loss: 0.819275 | Val NSE: -0.1933
+  Epoch   20/500 | Train: 0.288130 | Val Loss: 0.748946 | Val NSE: 0.1945
+  Epoch   40/500 | Train: 0.253277 | Val Loss: 0.823975 | Val NSE: 0.1052
+  Epoch   60/500 | Train: 0.152212 | Val Loss: 0.909774 | Val NSE: -0.5232
+  Epoch   80/500 | Train: 0.172149 | Val Loss: 0.908210 | Val NSE: -0.5064
+  Epoch  100/500 | Train: 0.101763 | Val Loss: 0.954105 | Val NSE: -0.2574
+  Epoch  120/500 | Train: 0.081111 | Val Loss: 0.926864 | Val NSE: -0.2394
+  Epoch  140/500 | Train: 0.057128 | Val Loss: 0.951127 | Val NSE: -0.4709
+  Epoch  160/500 | Train: 0.064077 | Val Loss: 0.941935 | Val NSE: -0.4410
+  Early stopping at epoch 166
+    [orthogonal] s5: R²=0.1066, MAPE=18.82%
+  Epoch    1/500 | Train: 0.554208 | Val Loss: 0.770515 | Val NSE: 0.1421
+  Epoch   20/500 | Train: 0.314718 | Val Loss: 0.765063 | Val NSE: 0.2079
+  Epoch   40/500 | Train: 0.236123 | Val Loss: 0.878820 | Val NSE: -0.3074
+  Epoch   60/500 | Train: 0.133881 | Val Loss: 0.864799 | Val NSE: -0.3509
+  Epoch   80/500 | Train: 0.135598 | Val Loss: 0.871812 | Val NSE: -0.3618
+  Epoch  100/500 | Train: 0.079699 | Val Loss: 0.886639 | Val NSE: -0.2085
+  Epoch  120/500 | Train: 0.067593 | Val Loss: 0.929418 | Val NSE: -0.4426
+  Epoch  140/500 | Train: 0.050055 | Val Loss: 0.928077 | Val NSE: -0.4661
+  Epoch  160/500 | Train: 0.049568 | Val Loss: 0.938498 | Val NSE: -0.5173
+  Early stopping at epoch 166
+    [orthogonal] s6: R²=0.3070, MAPE=17.32%
+  Epoch    1/500 | Train: 0.726959 | Val Loss: 0.836830 | Val NSE: 0.1239
+  Epoch   20/500 | Train: 0.326533 | Val Loss: 0.780406 | Val NSE: 0.1203
+  Epoch   40/500 | Train: 0.177588 | Val Loss: 0.882118 | Val NSE: -0.1172
+  Epoch   60/500 | Train: 0.163722 | Val Loss: 0.908742 | Val NSE: -0.2726
+  Epoch   80/500 | Train: 0.137742 | Val Loss: 0.967771 | Val NSE: -0.3118
+  Epoch  100/500 | Train: 0.094057 | Val Loss: 0.959127 | Val NSE: -0.3782
+  Epoch  120/500 | Train: 0.070596 | Val Loss: 0.998829 | Val NSE: -0.6531
+  Epoch  140/500 | Train: 0.052046 | Val Loss: 1.018348 | Val NSE: -0.5902
+  Early stopping at epoch 159
+    [orthogonal] s8: R²=0.1034, MAPE=18.88%
+  Epoch    1/500 | Train: 0.823260 | Val Loss: 0.829455 | Val NSE: -0.0616
+  Epoch   20/500 | Train: 0.303482 | Val Loss: 0.755235 | Val NSE: 0.2688
+  Epoch   40/500 | Train: 0.306807 | Val Loss: 0.887598 | Val NSE: -0.2209
+  Epoch   60/500 | Train: 0.133270 | Val Loss: 0.861354 | Val NSE: -0.3651
+  Epoch   80/500 | Train: 0.200255 | Val Loss: 0.889118 | Val NSE: -0.5448
+  Epoch  100/500 | Train: 0.082868 | Val Loss: 0.895324 | Val NSE: -0.5644
+  Epoch  120/500 | Train: 0.063302 | Val Loss: 0.932177 | Val NSE: -0.4901
+  Epoch  140/500 | Train: 0.049868 | Val Loss: 0.959878 | Val NSE: -0.5005
+  Epoch  160/500 | Train: 0.034602 | Val Loss: 0.949867 | Val NSE: -0.4351
+  Early stopping at epoch 167
+    [orthogonal] s9: R²=0.2351, MAPE=18.32%
+  Epoch    1/500 | Train: 0.675525 | Val Loss: 0.860966 | Val NSE: 0.0586
+  Epoch   20/500 | Train: 0.315767 | Val Loss: 0.760137 | Val NSE: 0.1209
+  Epoch   40/500 | Train: 0.181300 | Val Loss: 0.927615 | Val NSE: -0.3680
+  Epoch   60/500 | Train: 0.177587 | Val Loss: 0.891503 | Val NSE: -0.0482
+  Epoch   80/500 | Train: 0.111574 | Val Loss: 0.936815 | Val NSE: -0.3619
+  Epoch  100/500 | Train: 0.119072 | Val Loss: 0.959025 | Val NSE: -0.3310
+  Epoch  120/500 | Train: 0.061767 | Val Loss: 1.001661 | Val NSE: -0.7061
+  Epoch  140/500 | Train: 0.054033 | Val Loss: 1.024478 | Val NSE: -0.5724
+  Epoch  160/500 | Train: 0.051340 | Val Loss: 0.991259 | Val NSE: -0.6019
+  Early stopping at epoch 167
+    [orthogonal] s10: R²=0.3305, MAPE=17.31%
+  Epoch    1/500 | Train: 0.678950 | Val Loss: 0.908382 | Val NSE: 0.2317
+  Epoch   20/500 | Train: 0.273030 | Val Loss: 0.738226 | Val NSE: 0.1766
+  Epoch   40/500 | Train: 0.166046 | Val Loss: 0.836003 | Val NSE: -0.0438
+  Epoch   60/500 | Train: 0.222131 | Val Loss: 0.895535 | Val NSE: -0.4025
+  Epoch   80/500 | Train: 0.161529 | Val Loss: 0.839307 | Val NSE: -0.2268
+  Epoch  100/500 | Train: 0.124916 | Val Loss: 0.885555 | Val NSE: -0.4637
+  Epoch  120/500 | Train: 0.067758 | Val Loss: 0.936275 | Val NSE: -0.5572
+  Epoch  140/500 | Train: 0.069441 | Val Loss: 0.968825 | Val NSE: -0.4085
+  Epoch  160/500 | Train: 0.062612 | Val Loss: 0.970384 | Val NSE: -0.5662
+  Early stopping at epoch 161
+    [orthogonal] s11: R²=0.2063, MAPE=17.50%
+  Epoch    1/500 | Train: 0.712382 | Val Loss: 0.922506 | Val NSE: -0.0622
+  Epoch   20/500 | Train: 0.269433 | Val Loss: 0.821988 | Val NSE: 0.1210
+  Epoch   40/500 | Train: 0.200679 | Val Loss: 0.886515 | Val NSE: -0.3601
+  Epoch   60/500 | Train: 0.154360 | Val Loss: 0.910979 | Val NSE: -0.3827
+  Epoch   80/500 | Train: 0.192471 | Val Loss: 0.939944 | Val NSE: -0.5313
+  Epoch  100/500 | Train: 0.144048 | Val Loss: 0.938985 | Val NSE: -0.5685
+  Epoch  120/500 | Train: 0.081378 | Val Loss: 1.005947 | Val NSE: -0.4788
+  Epoch  140/500 | Train: 0.060278 | Val Loss: 0.952197 | Val NSE: -0.5856
+  Epoch  160/500 | Train: 0.041112 | Val Loss: 0.948212 | Val NSE: -0.5220
+  Early stopping at epoch 162
+    [orthogonal] s12: R²=0.0799, MAPE=18.74%
+  Epoch    1/500 | Train: 0.746668 | Val Loss: 0.788326 | Val NSE: 0.1027
+  Epoch   20/500 | Train: 0.197550 | Val Loss: 0.764502 | Val NSE: 0.1474
+  Epoch   40/500 | Train: 0.148338 | Val Loss: 0.835539 | Val NSE: -0.0770
+  Epoch   60/500 | Train: 0.142227 | Val Loss: 0.908787 | Val NSE: -0.4475
+  Epoch   80/500 | Train: 0.108791 | Val Loss: 0.929331 | Val NSE: -0.3640
+  Epoch  100/500 | Train: 0.108908 | Val Loss: 0.938771 | Val NSE: -0.8983
+  Epoch  120/500 | Train: 0.066524 | Val Loss: 0.977064 | Val NSE: -0.6865
+  Epoch  140/500 | Train: 0.053484 | Val Loss: 0.933643 | Val NSE: -0.4788
+  Early stopping at epoch 158
+    [orthogonal] s14: R²=-0.0151, MAPE=18.68%
+  Epoch    1/500 | Train: 0.714762 | Val Loss: 0.818242 | Val NSE: 0.0802
+  Epoch   20/500 | Train: 0.268909 | Val Loss: 0.820574 | Val NSE: 0.1796
+  Epoch   40/500 | Train: 0.268901 | Val Loss: 0.890736 | Val NSE: -0.3628
+  Epoch   60/500 | Train: 0.100956 | Val Loss: 0.901757 | Val NSE: -0.2833
+  Epoch   80/500 | Train: 0.080093 | Val Loss: 0.931538 | Val NSE: -0.6816
+  Epoch  100/500 | Train: 0.073246 | Val Loss: 0.939400 | Val NSE: -0.4630
+  Epoch  120/500 | Train: 0.083952 | Val Loss: 0.961691 | Val NSE: -0.7608
+  Epoch  140/500 | Train: 0.138167 | Val Loss: 1.033710 | Val NSE: -0.7213
+  Epoch  160/500 | Train: 0.082521 | Val Loss: 0.948230 | Val NSE: -0.5607
+  Early stopping at epoch 161
+    [orthogonal] s15: R²=0.2924, MAPE=17.16%
+  Epoch    1/500 | Train: 0.744493 | Val Loss: 0.969409 | Val NSE: -0.1494
+  Epoch   20/500 | Train: 0.343550 | Val Loss: 0.793587 | Val NSE: 0.1019
+  Epoch   40/500 | Train: 0.301927 | Val Loss: 0.902344 | Val NSE: -0.3876
+  Epoch   60/500 | Train: 0.143001 | Val Loss: 0.933629 | Val NSE: -0.3693
+  Epoch   80/500 | Train: 0.178151 | Val Loss: 0.901317 | Val NSE: -0.1189
+  Epoch  100/500 | Train: 0.095579 | Val Loss: 0.907245 | Val NSE: -0.4377
+  Epoch  120/500 | Train: 0.074914 | Val Loss: 0.923973 | Val NSE: -0.5535
+  Epoch  140/500 | Train: 0.058342 | Val Loss: 0.927871 | Val NSE: -0.4439
+  Epoch  160/500 | Train: 0.050480 | Val Loss: 0.950038 | Val NSE: -0.6911
+  Early stopping at epoch 162
+    [orthogonal] s16: R²=0.3221, MAPE=16.96%
+  Epoch    1/500 | Train: 0.807386 | Val Loss: 0.882186 | Val NSE: -0.2951
+  Epoch   20/500 | Train: 0.284989 | Val Loss: 0.819209 | Val NSE: 0.0911
+  Epoch   40/500 | Train: 0.160766 | Val Loss: 0.849721 | Val NSE: -0.0126
+  Epoch   60/500 | Train: 0.146581 | Val Loss: 0.887030 | Val NSE: -0.5819
+  Epoch   80/500 | Train: 0.146788 | Val Loss: 0.865297 | Val NSE: -0.4363
+  Epoch  100/500 | Train: 0.121351 | Val Loss: 0.849283 | Val NSE: -0.2743
+  Epoch  120/500 | Train: 0.055459 | Val Loss: 0.870060 | Val NSE: -0.3608
+  Epoch  140/500 | Train: 0.070032 | Val Loss: 0.813409 | Val NSE: -0.2845
+  Epoch  160/500 | Train: 0.046302 | Val Loss: 0.909385 | Val NSE: -0.3680
+  Early stopping at epoch 161
+    [orthogonal] s17: R²=0.2610, MAPE=18.15%
+  Epoch    1/500 | Train: 0.712957 | Val Loss: 0.899919 | Val NSE: 0.0128
+  Epoch   20/500 | Train: 0.278488 | Val Loss: 0.829596 | Val NSE: 0.0929
+  Epoch   40/500 | Train: 0.228886 | Val Loss: 0.936457 | Val NSE: -0.3935
+  Epoch   60/500 | Train: 0.166553 | Val Loss: 0.980535 | Val NSE: -0.4835
+  Epoch   80/500 | Train: 0.132713 | Val Loss: 0.960119 | Val NSE: -0.7359
+  Epoch  100/500 | Train: 0.094080 | Val Loss: 0.987609 | Val NSE: -0.7998
+  Epoch  120/500 | Train: 0.083121 | Val Loss: 0.997296 | Val NSE: -0.5193
+  Epoch  140/500 | Train: 0.093193 | Val Loss: 1.004008 | Val NSE: -0.6078
+  Epoch  160/500 | Train: 0.046841 | Val Loss: 1.032138 | Val NSE: -0.5689
+  Early stopping at epoch 160
+    [orthogonal] s18: R²=-0.0283, MAPE=20.36%
+  Epoch    1/500 | Train: 0.598975 | Val Loss: 0.985747 | Val NSE: 0.1261
+  Epoch   20/500 | Train: 0.303446 | Val Loss: 0.726294 | Val NSE: 0.1698
+  Epoch   40/500 | Train: 0.221447 | Val Loss: 0.829848 | Val NSE: -0.0473
+  Epoch   60/500 | Train: 0.152286 | Val Loss: 0.899066 | Val NSE: -0.3279
+  Epoch   80/500 | Train: 0.150156 | Val Loss: 0.938111 | Val NSE: -0.5880
+  Epoch  100/500 | Train: 0.084204 | Val Loss: 0.944917 | Val NSE: -0.4701
+  Epoch  120/500 | Train: 0.061772 | Val Loss: 0.944761 | Val NSE: -0.4751
+  Epoch  140/500 | Train: 0.055087 | Val Loss: 0.982487 | Val NSE: -0.4480
+  Early stopping at epoch 159
+    [orthogonal] s19: R²=0.0417, MAPE=20.12%
+  Epoch    1/500 | Train: 0.893690 | Val Loss: 0.839257 | Val NSE: 0.1263
+  Epoch   20/500 | Train: 0.339317 | Val Loss: 0.774272 | Val NSE: -0.0951
+  Epoch   40/500 | Train: 0.267814 | Val Loss: 0.849409 | Val NSE: -0.1125
+  Epoch   60/500 | Train: 0.188574 | Val Loss: 0.919856 | Val NSE: -0.1704
+  Epoch   80/500 | Train: 0.127914 | Val Loss: 0.946219 | Val NSE: -0.6395
+  Epoch  100/500 | Train: 0.104003 | Val Loss: 0.955731 | Val NSE: -0.5525
+  Epoch  120/500 | Train: 0.077266 | Val Loss: 0.918516 | Val NSE: -0.5835
+  Epoch  140/500 | Train: 0.056371 | Val Loss: 0.976601 | Val NSE: -0.4968
+  Epoch  160/500 | Train: 0.057035 | Val Loss: 0.979306 | Val NSE: -0.6882
+  Early stopping at epoch 166
+    [orthogonal] s20: R²=0.0625, MAPE=19.08%
+  Epoch    1/500 | Train: 0.717021 | Val Loss: 0.916432 | Val NSE: 0.0604
+  Epoch   20/500 | Train: 0.330662 | Val Loss: 0.799413 | Val NSE: 0.2017
+  Epoch   40/500 | Train: 0.208064 | Val Loss: 0.878142 | Val NSE: -0.1990
+  Epoch   60/500 | Train: 0.148049 | Val Loss: 0.890037 | Val NSE: -0.2861
+  Epoch   80/500 | Train: 0.110071 | Val Loss: 0.880051 | Val NSE: -0.2319
+  Epoch  100/500 | Train: 0.105547 | Val Loss: 0.931876 | Val NSE: -0.4445
+  Epoch  120/500 | Train: 0.087758 | Val Loss: 0.938044 | Val NSE: -0.3705
+  Epoch  140/500 | Train: 0.051218 | Val Loss: 0.926980 | Val NSE: -0.2360
+  Epoch  160/500 | Train: 0.126752 | Val Loss: 1.000368 | Val NSE: -0.6322
+  Early stopping at epoch 163
+    [orthogonal] s21: R²=0.1278, MAPE=18.06%
+  Epoch    1/500 | Train: 0.738808 | Val Loss: 0.764394 | Val NSE: 0.1974
+  Epoch   20/500 | Train: 0.331494 | Val Loss: 0.748044 | Val NSE: 0.1561
+  Epoch   40/500 | Train: 0.256696 | Val Loss: 0.803192 | Val NSE: -0.1487
+  Epoch   60/500 | Train: 0.230504 | Val Loss: 0.863764 | Val NSE: -0.3148
+  Epoch   80/500 | Train: 0.166681 | Val Loss: 0.849763 | Val NSE: -0.1387
+  Epoch  100/500 | Train: 0.147548 | Val Loss: 0.916730 | Val NSE: -0.7788
+  Epoch  120/500 | Train: 0.097044 | Val Loss: 0.905009 | Val NSE: -0.6293
+  Epoch  140/500 | Train: 0.059704 | Val Loss: 0.908515 | Val NSE: -0.4077
+  Epoch  160/500 | Train: 0.074444 | Val Loss: 0.922545 | Val NSE: -0.5121
+  Early stopping at epoch 168
+    [orthogonal] s22: R²=0.0825, MAPE=19.48%
+  Epoch    1/500 | Train: 0.920370 | Val Loss: 0.908742 | Val NSE: -1.0093
+  Epoch   20/500 | Train: 0.309177 | Val Loss: 0.786560 | Val NSE: 0.1819
+  Epoch   40/500 | Train: 0.251738 | Val Loss: 0.840802 | Val NSE: -0.0397
+  Epoch   60/500 | Train: 0.166949 | Val Loss: 0.860708 | Val NSE: -0.2098
+  Epoch   80/500 | Train: 0.100183 | Val Loss: 0.888264 | Val NSE: -0.3344
+  Epoch  100/500 | Train: 0.097607 | Val Loss: 0.945665 | Val NSE: -0.8087
+  Epoch  120/500 | Train: 0.074905 | Val Loss: 0.923618 | Val NSE: -0.4511
+  Epoch  140/500 | Train: 0.077045 | Val Loss: 0.934035 | Val NSE: -0.6225
+  Epoch  160/500 | Train: 0.058141 | Val Loss: 0.946533 | Val NSE: -0.5185
+  Early stopping at epoch 161
+    [orthogonal] s23: R²=0.2204, MAPE=17.26%
+  Epoch    1/500 | Train: 0.589020 | Val Loss: 0.867121 | Val NSE: 0.0381
+  Epoch   20/500 | Train: 0.377488 | Val Loss: 0.746248 | Val NSE: 0.2017
+  Epoch   40/500 | Train: 0.218705 | Val Loss: 0.828482 | Val NSE: -0.0154
+  Epoch   60/500 | Train: 0.141219 | Val Loss: 0.886252 | Val NSE: -0.1841
+  Epoch   80/500 | Train: 0.111411 | Val Loss: 0.895840 | Val NSE: -0.4678
+  Epoch  100/500 | Train: 0.075347 | Val Loss: 0.938867 | Val NSE: -0.5863
+  Epoch  120/500 | Train: 0.077130 | Val Loss: 0.898020 | Val NSE: -0.4754
+  Epoch  140/500 | Train: 0.061733 | Val Loss: 0.888634 | Val NSE: -0.4878
+  Epoch  160/500 | Train: 0.046635 | Val Loss: 0.922801 | Val NSE: -0.6127
+  Early stopping at epoch 166
+    [orthogonal] s24: R²=0.2236, MAPE=17.99%
+  Epoch    1/500 | Train: 0.643052 | Val Loss: 0.871401 | Val NSE: -0.2389
+  Epoch   20/500 | Train: 0.271153 | Val Loss: 0.813206 | Val NSE: 0.1064
+  Epoch   40/500 | Train: 0.166921 | Val Loss: 0.889023 | Val NSE: -0.2038
+  Epoch   60/500 | Train: 0.204430 | Val Loss: 0.877138 | Val NSE: -0.2048
+  Epoch   80/500 | Train: 0.107086 | Val Loss: 0.887227 | Val NSE: -0.3931
+  Epoch  100/500 | Train: 0.074190 | Val Loss: 0.935289 | Val NSE: -0.5229
+  Epoch  120/500 | Train: 0.084183 | Val Loss: 0.966461 | Val NSE: -0.8060
+  Epoch  140/500 | Train: 0.061170 | Val Loss: 0.964757 | Val NSE: -0.7273
+  Early stopping at epoch 157
+    [orthogonal] s25: R²=0.2395, MAPE=17.01%
+  Epoch    1/500 | Train: 0.609836 | Val Loss: 0.852825 | Val NSE: -0.1007
+  Epoch   20/500 | Train: 0.305027 | Val Loss: 0.802669 | Val NSE: 0.1357
+  Epoch   40/500 | Train: 0.198684 | Val Loss: 0.913645 | Val NSE: -0.1764
+  Epoch   60/500 | Train: 0.180554 | Val Loss: 0.933488 | Val NSE: -0.4027
+  Epoch   80/500 | Train: 0.081874 | Val Loss: 0.946748 | Val NSE: -0.5260
+  Epoch  100/500 | Train: 0.090432 | Val Loss: 0.960100 | Val NSE: -0.6589
+  Epoch  120/500 | Train: 0.115319 | Val Loss: 0.954556 | Val NSE: -0.6351
+  Epoch  140/500 | Train: 0.082163 | Val Loss: 0.996017 | Val NSE: -1.0166
+  Epoch  160/500 | Train: 0.068645 | Val Loss: 0.935309 | Val NSE: -0.5233
+  Early stopping at epoch 167
+    [orthogonal] s26: R²=0.1016, MAPE=19.26%
+  Epoch    1/500 | Train: 0.632137 | Val Loss: 0.975387 | Val NSE: 0.1917
+  Epoch   20/500 | Train: 0.280097 | Val Loss: 0.799861 | Val NSE: -0.1085
+  Epoch   40/500 | Train: 0.224083 | Val Loss: 0.922239 | Val NSE: -0.3531
+  Epoch   60/500 | Train: 0.169807 | Val Loss: 0.883297 | Val NSE: -0.2522
+  Epoch   80/500 | Train: 0.104203 | Val Loss: 0.863429 | Val NSE: -0.3530
+  Epoch  100/500 | Train: 0.094838 | Val Loss: 0.918339 | Val NSE: -0.4664
+  Epoch  120/500 | Train: 0.049217 | Val Loss: 0.901117 | Val NSE: -0.3543
+  Epoch  140/500 | Train: 0.078705 | Val Loss: 0.974671 | Val NSE: -0.4002
+  Epoch  160/500 | Train: 0.040370 | Val Loss: 1.009825 | Val NSE: -0.4740
+  Early stopping at epoch 163
+    [orthogonal] s27: R²=0.1955, MAPE=18.77%
+  Epoch    1/500 | Train: 0.679302 | Val Loss: 0.860918 | Val NSE: -0.0424
+  Epoch   20/500 | Train: 0.298657 | Val Loss: 0.710775 | Val NSE: 0.3009
+  Epoch   40/500 | Train: 0.234202 | Val Loss: 0.843028 | Val NSE: -0.2256
+  Epoch   60/500 | Train: 0.139685 | Val Loss: 0.879394 | Val NSE: -0.3545
+  Epoch   80/500 | Train: 0.118383 | Val Loss: 0.889710 | Val NSE: -0.4362
+  Epoch  100/500 | Train: 0.081199 | Val Loss: 0.901717 | Val NSE: -0.8146
+  Epoch  120/500 | Train: 0.101815 | Val Loss: 0.904292 | Val NSE: -0.5164
+  Epoch  140/500 | Train: 0.099287 | Val Loss: 0.925816 | Val NSE: -0.3923
+  Epoch  160/500 | Train: 0.047402 | Val Loss: 0.927618 | Val NSE: -0.5356
+  Early stopping at epoch 164
+    [orthogonal] s28: R²=0.2278, MAPE=17.66%
+  Epoch    1/500 | Train: 0.805522 | Val Loss: 0.976880 | Val NSE: 0.1946
+  Epoch   20/500 | Train: 0.262712 | Val Loss: 0.774833 | Val NSE: 0.0447
+  Epoch   40/500 | Train: 0.183561 | Val Loss: 0.877968 | Val NSE: -0.3764
+  Epoch   60/500 | Train: 0.143880 | Val Loss: 0.889993 | Val NSE: -0.4785
+  Epoch   80/500 | Train: 0.112944 | Val Loss: 0.872902 | Val NSE: -0.2136
+  Epoch  100/500 | Train: 0.109989 | Val Loss: 0.905985 | Val NSE: -0.4330
+  Epoch  120/500 | Train: 0.059189 | Val Loss: 0.946683 | Val NSE: -0.5247
+  Epoch  140/500 | Train: 0.055876 | Val Loss: 0.999422 | Val NSE: -0.4046
+  Epoch  160/500 | Train: 0.059897 | Val Loss: 1.004035 | Val NSE: -0.6701
+  Early stopping at epoch 164
+    [orthogonal] s29: R²=0.2371, MAPE=17.94%
+  Epoch    1/500 | Train: 0.878336 | Val Loss: 0.790292 | Val NSE: -0.0769
+  Epoch   20/500 | Train: 0.280768 | Val Loss: 0.816195 | Val NSE: 0.2198
+  Epoch   40/500 | Train: 0.216825 | Val Loss: 0.914328 | Val NSE: -0.4679
+  Epoch   60/500 | Train: 0.149735 | Val Loss: 0.894704 | Val NSE: -0.2681
+  Epoch   80/500 | Train: 0.128793 | Val Loss: 0.936984 | Val NSE: -0.4546
+  Epoch  100/500 | Train: 0.086992 | Val Loss: 0.970390 | Val NSE: -0.4788
+  Epoch  120/500 | Train: 0.080693 | Val Loss: 1.064021 | Val NSE: -0.8106
+  Epoch  140/500 | Train: 0.074473 | Val Loss: 1.055374 | Val NSE: -0.6967
+  Epoch  160/500 | Train: 0.055737 | Val Loss: 0.952821 | Val NSE: -0.4846
+  Early stopping at epoch 165
+    [orthogonal] s30: R²=0.1259, MAPE=18.98%
+  Epoch    1/500 | Train: 0.781859 | Val Loss: 0.872192 | Val NSE: -0.4202
+  Epoch   20/500 | Train: 0.308212 | Val Loss: 0.741878 | Val NSE: 0.2552
+  Epoch   40/500 | Train: 0.217318 | Val Loss: 0.841595 | Val NSE: -0.0932
+  Epoch   60/500 | Train: 0.209899 | Val Loss: 0.881293 | Val NSE: -0.3846
+  Epoch   80/500 | Train: 0.111386 | Val Loss: 0.912549 | Val NSE: -0.1978
+  Epoch  100/500 | Train: 0.094532 | Val Loss: 0.933307 | Val NSE: -0.2256
+  Epoch  120/500 | Train: 0.070999 | Val Loss: 0.973198 | Val NSE: -0.5251
+  Epoch  140/500 | Train: 0.081679 | Val Loss: 0.956728 | Val NSE: -0.3536
+  Epoch  160/500 | Train: 0.124438 | Val Loss: 0.989536 | Val NSE: -0.5939
+  Early stopping at epoch 162
+    [orthogonal] s31: R²=0.2331, MAPE=17.69%
+  Epoch    1/500 | Train: 0.628210 | Val Loss: 0.851510 | Val NSE: 0.1349
+  Epoch   20/500 | Train: 0.388018 | Val Loss: 0.824290 | Val NSE: 0.0706
+  Epoch   40/500 | Train: 0.193682 | Val Loss: 0.836793 | Val NSE: 0.0060
+  Epoch   60/500 | Train: 0.146497 | Val Loss: 0.983322 | Val NSE: -0.6207
+  Epoch   80/500 | Train: 0.109124 | Val Loss: 1.025532 | Val NSE: -0.8010
+  Epoch  100/500 | Train: 0.093833 | Val Loss: 1.007911 | Val NSE: -0.3837
+  Epoch  120/500 | Train: 0.080400 | Val Loss: 1.059297 | Val NSE: -0.6081
+  Epoch  140/500 | Train: 0.057931 | Val Loss: 1.086087 | Val NSE: -0.6884
+  Epoch  160/500 | Train: 0.061834 | Val Loss: 1.071022 | Val NSE: -0.8216
+  Early stopping at epoch 165
+    [orthogonal] s32: R²=0.1122, MAPE=19.19%
+  Epoch    1/500 | Train: 0.983079 | Val Loss: 0.850922 | Val NSE: 0.1112
+  Epoch   20/500 | Train: 0.239553 | Val Loss: 0.841653 | Val NSE: -0.0361
+  Epoch   40/500 | Train: 0.230912 | Val Loss: 0.858874 | Val NSE: -0.1186
+  Epoch   60/500 | Train: 0.162365 | Val Loss: 0.862488 | Val NSE: -0.1723
+  Epoch   80/500 | Train: 0.120073 | Val Loss: 0.922226 | Val NSE: -0.3401
+  Epoch  100/500 | Train: 0.116393 | Val Loss: 0.947503 | Val NSE: -0.3200
+  Epoch  120/500 | Train: 0.091730 | Val Loss: 0.910706 | Val NSE: -0.3438
+  Epoch  140/500 | Train: 0.086700 | Val Loss: 0.989109 | Val NSE: -0.4597
+  Epoch  160/500 | Train: 0.061502 | Val Loss: 0.944575 | Val NSE: -0.3943
+  Early stopping at epoch 166
+    [orthogonal] s33: R²=0.1063, MAPE=19.65%
+  Epoch    1/500 | Train: 0.761896 | Val Loss: 0.799338 | Val NSE: 0.1674
+  Epoch   20/500 | Train: 0.386854 | Val Loss: 0.770371 | Val NSE: 0.0328
+  Epoch   40/500 | Train: 0.258839 | Val Loss: 0.892403 | Val NSE: -0.2787
+  Epoch   60/500 | Train: 0.136096 | Val Loss: 0.892859 | Val NSE: -0.2608
+  Epoch   80/500 | Train: 0.117149 | Val Loss: 0.878147 | Val NSE: -0.3624
+  Epoch  100/500 | Train: 0.110428 | Val Loss: 0.895891 | Val NSE: -0.2813
+  Epoch  120/500 | Train: 0.077708 | Val Loss: 0.910229 | Val NSE: -0.5649
+  Epoch  140/500 | Train: 0.070371 | Val Loss: 0.939666 | Val NSE: -0.5424
+  Early stopping at epoch 159
+    [orthogonal] s34: R²=0.0873, MAPE=18.62%
+  Epoch    1/500 | Train: 0.736323 | Val Loss: 0.804382 | Val NSE: 0.0631
+  Epoch   20/500 | Train: 0.258997 | Val Loss: 0.791986 | Val NSE: 0.2364
+  Epoch   40/500 | Train: 0.254784 | Val Loss: 0.912865 | Val NSE: -0.3200
+  Epoch   60/500 | Train: 0.164978 | Val Loss: 0.887513 | Val NSE: -0.1635
+  Epoch   80/500 | Train: 0.134165 | Val Loss: 0.890328 | Val NSE: -0.3617
+  Epoch  100/500 | Train: 0.077299 | Val Loss: 0.934513 | Val NSE: -0.3418
+  Epoch  120/500 | Train: 0.054521 | Val Loss: 0.946258 | Val NSE: -0.8154
+  Epoch  140/500 | Train: 0.067718 | Val Loss: 0.968946 | Val NSE: -0.4442
+  Epoch  160/500 | Train: 0.059800 | Val Loss: 0.997634 | Val NSE: -0.5181
+  Early stopping at epoch 163
+    [orthogonal] s35: R²=0.1178, MAPE=19.43%
+  Epoch    1/500 | Train: 0.721962 | Val Loss: 0.737513 | Val NSE: 0.1592
+  Epoch   20/500 | Train: 0.349952 | Val Loss: 0.742744 | Val NSE: 0.2607
+  Epoch   40/500 | Train: 0.274740 | Val Loss: 0.897403 | Val NSE: -0.0213
+  Epoch   60/500 | Train: 0.202769 | Val Loss: 0.968673 | Val NSE: -0.4592
+  Epoch   80/500 | Train: 0.120193 | Val Loss: 0.937191 | Val NSE: -0.5016
+  Epoch  100/500 | Train: 0.126997 | Val Loss: 0.989654 | Val NSE: -0.5891
+  Epoch  120/500 | Train: 0.076513 | Val Loss: 0.955061 | Val NSE: -0.5232
+  Epoch  140/500 | Train: 0.056908 | Val Loss: 1.005700 | Val NSE: -0.7113
+  Epoch  160/500 | Train: 0.063121 | Val Loss: 1.032731 | Val NSE: -0.6404
+  Early stopping at epoch 162
+    [orthogonal] s36: R²=-0.0222, MAPE=19.99%
+  Epoch    1/500 | Train: 0.926317 | Val Loss: 0.844698 | Val NSE: -0.4802
+  Epoch   20/500 | Train: 0.305989 | Val Loss: 0.759650 | Val NSE: 0.2464
+  Epoch   40/500 | Train: 0.189272 | Val Loss: 0.870927 | Val NSE: -0.0614
+  Epoch   60/500 | Train: 0.144782 | Val Loss: 0.948587 | Val NSE: -0.2211
+  Epoch   80/500 | Train: 0.074655 | Val Loss: 0.923989 | Val NSE: -0.3546
+  Epoch  100/500 | Train: 0.078941 | Val Loss: 0.964368 | Val NSE: -0.6387
+  Epoch  120/500 | Train: 0.088521 | Val Loss: 0.982138 | Val NSE: -0.6784
+  Epoch  140/500 | Train: 0.051679 | Val Loss: 0.992241 | Val NSE: -0.7360
+  Epoch  160/500 | Train: 0.063738 | Val Loss: 0.988340 | Val NSE: -0.5924
+  Early stopping at epoch 163
+    [orthogonal] s37: R²=0.2745, MAPE=17.07%
+  Epoch    1/500 | Train: 0.856157 | Val Loss: 0.809781 | Val NSE: 0.2291
+  Epoch   20/500 | Train: 0.310067 | Val Loss: 0.730523 | Val NSE: 0.2117
+  Epoch   40/500 | Train: 0.136811 | Val Loss: 0.870915 | Val NSE: -0.2225
+  Epoch   60/500 | Train: 0.110855 | Val Loss: 0.962033 | Val NSE: -0.2464
+  Epoch   80/500 | Train: 0.086143 | Val Loss: 0.987698 | Val NSE: -0.3535
+  Epoch  100/500 | Train: 0.073371 | Val Loss: 1.035274 | Val NSE: -0.4086
+  Epoch  120/500 | Train: 0.073828 | Val Loss: 1.015198 | Val NSE: -0.5382
+  Epoch  140/500 | Train: 0.077862 | Val Loss: 1.026657 | Val NSE: -0.4847
+  Epoch  160/500 | Train: 0.040788 | Val Loss: 1.018863 | Val NSE: -0.4803
+  Early stopping at epoch 163
+    [orthogonal] s38: R²=0.1586, MAPE=17.11%
+  Epoch    1/500 | Train: 0.672118 | Val Loss: 0.932627 | Val NSE: -0.6042
+  Epoch   20/500 | Train: 0.263834 | Val Loss: 0.831543 | Val NSE: 0.0019
+  Epoch   40/500 | Train: 0.192722 | Val Loss: 0.894887 | Val NSE: -0.3902
+  Epoch   60/500 | Train: 0.153083 | Val Loss: 0.835508 | Val NSE: -0.1841
+  Epoch   80/500 | Train: 0.092564 | Val Loss: 0.871389 | Val NSE: -0.3798
+  Epoch  100/500 | Train: 0.101553 | Val Loss: 0.920059 | Val NSE: -0.4873
+  Epoch  120/500 | Train: 0.088101 | Val Loss: 0.916964 | Val NSE: -0.5245
+  Epoch  140/500 | Train: 0.077141 | Val Loss: 0.929580 | Val NSE: -0.5292
+  Epoch  160/500 | Train: 0.061551 | Val Loss: 0.926507 | Val NSE: -0.4667
+  Early stopping at epoch 166
+    [orthogonal] s39: R²=0.1788, MAPE=19.02%
+  Epoch    1/500 | Train: 0.609120 | Val Loss: 0.871202 | Val NSE: 0.1183
+  Epoch   20/500 | Train: 0.299260 | Val Loss: 0.757377 | Val NSE: -0.0536
+  Epoch   40/500 | Train: 0.283422 | Val Loss: 0.845913 | Val NSE: -0.0860
+  Epoch   60/500 | Train: 0.128067 | Val Loss: 0.788558 | Val NSE: 0.0293
+  Epoch   80/500 | Train: 0.135023 | Val Loss: 0.896531 | Val NSE: -0.4210
+  Epoch  100/500 | Train: 0.085090 | Val Loss: 0.885235 | Val NSE: -0.3251
+  Epoch  120/500 | Train: 0.077915 | Val Loss: 0.899044 | Val NSE: -0.3323
+  Epoch  140/500 | Train: 0.076557 | Val Loss: 0.918557 | Val NSE: -0.6167
+  Epoch  160/500 | Train: 0.099702 | Val Loss: 0.938653 | Val NSE: -0.5109
+  Early stopping at epoch 168
+    [orthogonal] s40: R²=-0.0243, MAPE=20.53%
+  Epoch    1/500 | Train: 0.725462 | Val Loss: 0.852755 | Val NSE: 0.0299
+  Epoch   20/500 | Train: 0.283000 | Val Loss: 0.778707 | Val NSE: 0.2203
+  Epoch   40/500 | Train: 0.174583 | Val Loss: 0.840287 | Val NSE: 0.0041
+  Epoch   60/500 | Train: 0.147955 | Val Loss: 0.863598 | Val NSE: -0.1861
+  Epoch   80/500 | Train: 0.134053 | Val Loss: 0.897457 | Val NSE: -0.1537
+  Epoch  100/500 | Train: 0.115460 | Val Loss: 0.866106 | Val NSE: -0.2663
+  Epoch  120/500 | Train: 0.054676 | Val Loss: 0.976497 | Val NSE: -0.6655
+  Epoch  140/500 | Train: 0.066034 | Val Loss: 0.969543 | Val NSE: -0.5010
+  Early stopping at epoch 159
+    [orthogonal] s41: R²=0.2093, MAPE=18.43%
+  Epoch    1/500 | Train: 0.556358 | Val Loss: 0.869088 | Val NSE: -0.2732
+  Epoch   20/500 | Train: 0.294320 | Val Loss: 0.725923 | Val NSE: 0.2661
+  Epoch   40/500 | Train: 0.217311 | Val Loss: 0.802395 | Val NSE: -0.0328
+  Epoch   60/500 | Train: 0.228582 | Val Loss: 0.889233 | Val NSE: -0.5639
+  Epoch   80/500 | Train: 0.114220 | Val Loss: 0.879781 | Val NSE: -0.5746
+  Epoch  100/500 | Train: 0.116730 | Val Loss: 0.927477 | Val NSE: -0.5343
+  Epoch  120/500 | Train: 0.067080 | Val Loss: 0.983848 | Val NSE: -0.2330
+  Epoch  140/500 | Train: 0.071940 | Val Loss: 0.977296 | Val NSE: -0.5819
+  Epoch  160/500 | Train: 0.052448 | Val Loss: 1.030985 | Val NSE: -0.6746
+  Early stopping at epoch 169
+    [orthogonal] s100: R²=0.1909, MAPE=18.71%
+  Epoch    1/500 | Train: 0.618601 | Val Loss: 0.891561 | Val NSE: 0.1018
+  Epoch   20/500 | Train: 0.430074 | Val Loss: 0.812196 | Val NSE: 0.0404
+  Epoch   40/500 | Train: 0.222358 | Val Loss: 0.897113 | Val NSE: -0.4452
+  Epoch   60/500 | Train: 0.188323 | Val Loss: 0.886643 | Val NSE: -0.1200
+  Epoch   80/500 | Train: 0.091575 | Val Loss: 0.932106 | Val NSE: -0.6190
+  Epoch  100/500 | Train: 0.137742 | Val Loss: 0.938727 | Val NSE: -0.5762
+  Epoch  120/500 | Train: 0.065003 | Val Loss: 0.945903 | Val NSE: -0.4627
+  Epoch  140/500 | Train: 0.051192 | Val Loss: 0.997075 | Val NSE: -0.6110
+  Epoch  160/500 | Train: 0.030283 | Val Loss: 1.000091 | Val NSE: -0.8720
+  Early stopping at epoch 168
+    [orthogonal] s200: R²=0.2528, MAPE=17.50%
+  Epoch    1/500 | Train: 0.713195 | Val Loss: 0.917970 | Val NSE: 0.1593
+  Epoch   20/500 | Train: 0.312521 | Val Loss: 0.779199 | Val NSE: 0.3118
+  Epoch   40/500 | Train: 0.274526 | Val Loss: 0.891151 | Val NSE: -0.1967
+  Epoch   60/500 | Train: 0.160141 | Val Loss: 0.910715 | Val NSE: -0.1191
+  Epoch   80/500 | Train: 0.103119 | Val Loss: 0.936407 | Val NSE: -0.5182
+  Epoch  100/500 | Train: 0.072634 | Val Loss: 0.937023 | Val NSE: -0.2820
+  Epoch  120/500 | Train: 0.083156 | Val Loss: 0.990623 | Val NSE: -0.5770
+  Epoch  140/500 | Train: 0.073559 | Val Loss: 1.046717 | Val NSE: -0.6330
+  Epoch  160/500 | Train: 0.047441 | Val Loss: 1.059531 | Val NSE: -0.4210
+  Early stopping at epoch 170
+    [orthogonal] s500: R²=0.2046, MAPE=18.44%
+  Epoch    1/500 | Train: 0.784977 | Val Loss: 0.850252 | Val NSE: 0.1130
+  Epoch   20/500 | Train: 0.297466 | Val Loss: 0.772135 | Val NSE: 0.2276
+  Epoch   40/500 | Train: 0.233584 | Val Loss: 0.925790 | Val NSE: -0.4436
+  Epoch   60/500 | Train: 0.213224 | Val Loss: 0.928139 | Val NSE: -0.4851
+  Epoch   80/500 | Train: 0.096175 | Val Loss: 0.967716 | Val NSE: -0.4349
+  Epoch  100/500 | Train: 0.091332 | Val Loss: 0.982682 | Val NSE: -0.3971
+  Epoch  120/500 | Train: 0.101963 | Val Loss: 1.027393 | Val NSE: -0.7879
+  Epoch  140/500 | Train: 0.077921 | Val Loss: 0.989491 | Val NSE: -0.5712
+  Epoch  160/500 | Train: 0.046558 | Val Loss: 1.022989 | Val NSE: -0.5990
+  Early stopping at epoch 167
+    [orthogonal] s1000: R²=0.2344, MAPE=18.71%
+  Epoch    1/500 | Train: 0.801853 | Val Loss: 0.927323 | Val NSE: -0.1252
+  Epoch   20/500 | Train: 0.271033 | Val Loss: 0.864291 | Val NSE: -0.1652
+  Epoch   40/500 | Train: 0.145967 | Val Loss: 0.919924 | Val NSE: -0.3305
+  Epoch   60/500 | Train: 0.110448 | Val Loss: 0.920920 | Val NSE: -0.3490
+  Epoch   80/500 | Train: 0.071743 | Val Loss: 0.951135 | Val NSE: -0.3943
+  Epoch  100/500 | Train: 0.065391 | Val Loss: 0.910868 | Val NSE: -0.4227
+  Epoch  120/500 | Train: 0.043710 | Val Loss: 0.925569 | Val NSE: -0.5652
+  Epoch  140/500 | Train: 0.046068 | Val Loss: 0.896991 | Val NSE: -0.5302
+  Early stopping at epoch 158
+    [lecun] s42: R²=0.2597, MAPE=17.37%
+  Epoch    1/500 | Train: 0.801996 | Val Loss: 0.786361 | Val NSE: 0.1574
+  Epoch   20/500 | Train: 0.322795 | Val Loss: 0.819289 | Val NSE: -0.0524
+  Epoch   40/500 | Train: 0.138665 | Val Loss: 0.902049 | Val NSE: -0.4298
+  Epoch   60/500 | Train: 0.128580 | Val Loss: 0.916394 | Val NSE: -0.2586
+  Epoch   80/500 | Train: 0.082781 | Val Loss: 0.888264 | Val NSE: -0.5588
+  Epoch  100/500 | Train: 0.088063 | Val Loss: 0.971628 | Val NSE: -0.4871
+  Epoch  120/500 | Train: 0.052657 | Val Loss: 0.936772 | Val NSE: -0.4077
+  Epoch  140/500 | Train: 0.051933 | Val Loss: 0.939484 | Val NSE: -0.4912
+  Early stopping at epoch 156
+    [lecun] s7: R²=0.3048, MAPE=16.09%
+  Epoch    1/500 | Train: 0.737015 | Val Loss: 0.698952 | Val NSE: 0.1346
+  Epoch   20/500 | Train: 0.249212 | Val Loss: 0.854874 | Val NSE: 0.1736
+  Epoch   40/500 | Train: 0.126870 | Val Loss: 0.806614 | Val NSE: -0.1200
+  Epoch   60/500 | Train: 0.108805 | Val Loss: 0.919565 | Val NSE: -0.2883
+  Epoch   80/500 | Train: 0.064024 | Val Loss: 0.901383 | Val NSE: -0.2364
+  Epoch  100/500 | Train: 0.048692 | Val Loss: 0.917710 | Val NSE: -0.3529
+  Epoch  120/500 | Train: 0.061592 | Val Loss: 0.943366 | Val NSE: -0.7255
+  Epoch  140/500 | Train: 0.071830 | Val Loss: 0.915410 | Val NSE: -0.5050
+  Epoch  160/500 | Train: 0.040767 | Val Loss: 0.929161 | Val NSE: -0.3256
+  Early stopping at epoch 164
+    [lecun] s123: R²=0.1890, MAPE=18.14%
+  Epoch    1/500 | Train: 0.922051 | Val Loss: 0.899181 | Val NSE: 0.2792
+  Epoch   20/500 | Train: 0.219298 | Val Loss: 0.814467 | Val NSE: -0.0815
+  Epoch   40/500 | Train: 0.125185 | Val Loss: 0.877085 | Val NSE: -0.4992
+  Epoch   60/500 | Train: 0.087110 | Val Loss: 0.894384 | Val NSE: -0.5316
+  Epoch   80/500 | Train: 0.053045 | Val Loss: 0.944240 | Val NSE: -0.5080
+  Epoch  100/500 | Train: 0.068937 | Val Loss: 0.931198 | Val NSE: -0.5707
+  Epoch  120/500 | Train: 0.052464 | Val Loss: 0.910161 | Val NSE: -0.6477
+  Epoch  140/500 | Train: 0.054852 | Val Loss: 0.920969 | Val NSE: -0.7148
+  Early stopping at epoch 151
+    [lecun] s2024: R²=0.0159, MAPE=19.15%
+  Epoch    1/500 | Train: 0.714574 | Val Loss: 0.823159 | Val NSE: -0.1075
+  Epoch   20/500 | Train: 0.273130 | Val Loss: 0.800862 | Val NSE: -0.2000
+  Epoch   40/500 | Train: 0.184910 | Val Loss: 0.813534 | Val NSE: -0.1456
+  Epoch   60/500 | Train: 0.096577 | Val Loss: 0.782154 | Val NSE: -0.2782
+  Epoch   80/500 | Train: 0.064596 | Val Loss: 0.854377 | Val NSE: -0.4265
+  Epoch  100/500 | Train: 0.079680 | Val Loss: 0.880501 | Val NSE: -0.7552
+  Epoch  120/500 | Train: 0.035826 | Val Loss: 0.783455 | Val NSE: -0.3588
+  Epoch  140/500 | Train: 0.036246 | Val Loss: 0.806738 | Val NSE: -0.4595
+  Epoch  160/500 | Train: 0.037823 | Val Loss: 0.823767 | Val NSE: -0.4770
+  Early stopping at epoch 163
+    [lecun] s99: R²=0.2761, MAPE=17.43%
+  Epoch    1/500 | Train: 0.917687 | Val Loss: 0.738118 | Val NSE: 0.0470
+  Epoch   20/500 | Train: 0.208685 | Val Loss: 0.794335 | Val NSE: 0.0388
+  Epoch   40/500 | Train: 0.117395 | Val Loss: 0.923494 | Val NSE: -0.1618
+  Epoch   60/500 | Train: 0.121495 | Val Loss: 0.966845 | Val NSE: -0.1913
+  Epoch   80/500 | Train: 0.082930 | Val Loss: 0.913301 | Val NSE: -0.4004
+  Epoch  100/500 | Train: 0.084157 | Val Loss: 0.914396 | Val NSE: -0.3411
+  Epoch  120/500 | Train: 0.107824 | Val Loss: 0.928293 | Val NSE: -0.3550
+  Epoch  140/500 | Train: 0.058075 | Val Loss: 0.930742 | Val NSE: -0.3785
+  Early stopping at epoch 158
+    [lecun] s13: R²=0.0935, MAPE=17.38%
+  Epoch    1/500 | Train: 0.671052 | Val Loss: 0.728198 | Val NSE: -0.4219
+  Epoch   20/500 | Train: 0.330100 | Val Loss: 0.793798 | Val NSE: 0.0650
+  Epoch   40/500 | Train: 0.136356 | Val Loss: 0.889246 | Val NSE: -0.1015
+  Epoch   60/500 | Train: 0.073987 | Val Loss: 0.908779 | Val NSE: -0.1994
+  Epoch   80/500 | Train: 0.094209 | Val Loss: 0.935710 | Val NSE: -0.4887
+  Epoch  100/500 | Train: 0.068803 | Val Loss: 0.970616 | Val NSE: -0.3425
+  Epoch  120/500 | Train: 0.061700 | Val Loss: 0.974099 | Val NSE: -0.3433
+  Epoch  140/500 | Train: 0.050889 | Val Loss: 0.946076 | Val NSE: -0.3866
+  Early stopping at epoch 159
+    [lecun] s55: R²=0.1276, MAPE=16.61%
+  Epoch    1/500 | Train: 0.600452 | Val Loss: 0.683537 | Val NSE: 0.1700
+  Epoch   20/500 | Train: 0.242014 | Val Loss: 0.745534 | Val NSE: 0.0981
+  Epoch   40/500 | Train: 0.129542 | Val Loss: 0.845242 | Val NSE: -0.4428
+  Epoch   60/500 | Train: 0.101544 | Val Loss: 0.776665 | Val NSE: -0.2231
+  Epoch   80/500 | Train: 0.104200 | Val Loss: 0.763680 | Val NSE: -0.3297
+  Epoch  100/500 | Train: 0.083741 | Val Loss: 0.792534 | Val NSE: -0.2842
+  Epoch  120/500 | Train: 0.078024 | Val Loss: 0.835410 | Val NSE: -0.3860
+  Epoch  140/500 | Train: 0.058309 | Val Loss: 0.826259 | Val NSE: -0.2618
+  Epoch  160/500 | Train: 0.041676 | Val Loss: 0.831984 | Val NSE: -0.5506
+  Early stopping at epoch 161
+    [lecun] s777: R²=0.4497, MAPE=15.61%
+  Epoch    1/500 | Train: 0.770149 | Val Loss: 0.683146 | Val NSE: 0.0814
+  Epoch   20/500 | Train: 0.243941 | Val Loss: 0.788531 | Val NSE: 0.0161
+  Epoch   40/500 | Train: 0.177927 | Val Loss: 0.833067 | Val NSE: -0.3626
+  Epoch   60/500 | Train: 0.092123 | Val Loss: 0.905709 | Val NSE: -0.6589
+  Epoch   80/500 | Train: 0.081431 | Val Loss: 0.910086 | Val NSE: -0.5596
+  Epoch  100/500 | Train: 0.044081 | Val Loss: 0.922686 | Val NSE: -0.6027
+  Epoch  120/500 | Train: 0.045621 | Val Loss: 0.907696 | Val NSE: -0.5870
+  Epoch  140/500 | Train: 0.052988 | Val Loss: 0.916324 | Val NSE: -0.4836
+  Early stopping at epoch 156
+    [lecun] s314: R²=0.2236, MAPE=17.26%
+  Epoch    1/500 | Train: 0.704417 | Val Loss: 0.752891 | Val NSE: -0.0148
+  Epoch   20/500 | Train: 0.218325 | Val Loss: 0.928987 | Val NSE: -0.4251
+  Epoch   40/500 | Train: 0.125361 | Val Loss: 0.940573 | Val NSE: -0.1877
+  Epoch   60/500 | Train: 0.063276 | Val Loss: 0.945668 | Val NSE: -0.5226
+  Epoch   80/500 | Train: 0.060792 | Val Loss: 0.973431 | Val NSE: -0.5124
+  Epoch  100/500 | Train: 0.041396 | Val Loss: 0.959682 | Val NSE: -0.3648
+  Epoch  120/500 | Train: 0.046225 | Val Loss: 0.945998 | Val NSE: -0.5921
+  Epoch  140/500 | Train: 0.101115 | Val Loss: 0.954807 | Val NSE: -0.5106
+  Early stopping at epoch 157
+    [lecun] s2025: R²=0.1781, MAPE=17.88%
+  Epoch    1/500 | Train: 0.835412 | Val Loss: 0.787193 | Val NSE: 0.0704
+  Epoch   20/500 | Train: 0.221229 | Val Loss: 0.764240 | Val NSE: -0.3177
+  Epoch   40/500 | Train: 0.140272 | Val Loss: 0.877817 | Val NSE: -0.7234
+  Epoch   60/500 | Train: 0.097159 | Val Loss: 0.894542 | Val NSE: -0.4836
+  Epoch   80/500 | Train: 0.059292 | Val Loss: 0.877111 | Val NSE: -0.7124
+  Epoch  100/500 | Train: 0.058977 | Val Loss: 0.856296 | Val NSE: -0.5401
+  Epoch  120/500 | Train: 0.053319 | Val Loss: 0.867474 | Val NSE: -0.6356
+  Epoch  140/500 | Train: 0.046486 | Val Loss: 0.890209 | Val NSE: -0.6707
+  Epoch  160/500 | Train: 0.025749 | Val Loss: 0.884795 | Val NSE: -0.5713
+  Early stopping at epoch 163
+    [lecun] s0: R²=0.3028, MAPE=17.17%
+  Epoch    1/500 | Train: 0.809277 | Val Loss: 0.819571 | Val NSE: -0.5490
+  Epoch   20/500 | Train: 0.206114 | Val Loss: 0.810525 | Val NSE: 0.1465
+  Epoch   40/500 | Train: 0.125250 | Val Loss: 0.867897 | Val NSE: -0.1479
+  Epoch   60/500 | Train: 0.113713 | Val Loss: 0.858045 | Val NSE: -0.2181
+  Epoch   80/500 | Train: 0.087290 | Val Loss: 0.869813 | Val NSE: -0.3406
+  Epoch  100/500 | Train: 0.062872 | Val Loss: 0.946961 | Val NSE: -0.4008
+  Epoch  120/500 | Train: 0.041702 | Val Loss: 0.960557 | Val NSE: -0.6622
+  Epoch  140/500 | Train: 0.063474 | Val Loss: 0.960771 | Val NSE: -0.4049
+  Epoch  160/500 | Train: 0.050970 | Val Loss: 0.939034 | Val NSE: -0.3937
+  Early stopping at epoch 161
+    [lecun] s1: R²=0.3388, MAPE=15.14%
+  Epoch    1/500 | Train: 0.863328 | Val Loss: 0.776319 | Val NSE: 0.1807
+  Epoch   20/500 | Train: 0.269135 | Val Loss: 0.764514 | Val NSE: -0.1092
+  Epoch   40/500 | Train: 0.147157 | Val Loss: 0.780157 | Val NSE: -0.1359
+  Epoch   60/500 | Train: 0.104657 | Val Loss: 0.833459 | Val NSE: -0.1388
+  Epoch   80/500 | Train: 0.081024 | Val Loss: 0.921002 | Val NSE: -0.5420
+  Epoch  100/500 | Train: 0.058690 | Val Loss: 0.941996 | Val NSE: -0.5398
+  Epoch  120/500 | Train: 0.044619 | Val Loss: 0.916826 | Val NSE: -0.3363
+  Epoch  140/500 | Train: 0.061939 | Val Loss: 0.962285 | Val NSE: -0.4751
+  Early stopping at epoch 152
+    [lecun] s2: R²=-0.0290, MAPE=19.76%
+  Epoch    1/500 | Train: 0.860574 | Val Loss: 0.683286 | Val NSE: 0.2201
+  Epoch   20/500 | Train: 0.229284 | Val Loss: 0.795198 | Val NSE: 0.0079
+  Epoch   40/500 | Train: 0.153876 | Val Loss: 0.839489 | Val NSE: 0.0248
+  Epoch   60/500 | Train: 0.128766 | Val Loss: 0.866979 | Val NSE: -0.1377
+  Epoch   80/500 | Train: 0.088772 | Val Loss: 0.872936 | Val NSE: -0.4096
+  Epoch  100/500 | Train: 0.049002 | Val Loss: 0.912531 | Val NSE: -0.3126
+  Epoch  120/500 | Train: 0.035458 | Val Loss: 0.953771 | Val NSE: -0.3651
+  Epoch  140/500 | Train: 0.041944 | Val Loss: 0.899944 | Val NSE: -0.3786
+  Epoch  160/500 | Train: 0.044922 | Val Loss: 0.954587 | Val NSE: -0.5082
+  Early stopping at epoch 161
+    [lecun] s3: R²=0.3416, MAPE=16.11%
+  Epoch    1/500 | Train: 0.805169 | Val Loss: 0.869740 | Val NSE: -0.7367
+  Epoch   20/500 | Train: 0.221222 | Val Loss: 0.877587 | Val NSE: -0.1213
+  Epoch   40/500 | Train: 0.205368 | Val Loss: 0.896137 | Val NSE: -0.2240
+  Epoch   60/500 | Train: 0.105020 | Val Loss: 0.898634 | Val NSE: -0.6715
+  Epoch   80/500 | Train: 0.072891 | Val Loss: 0.980620 | Val NSE: -1.0274
+  Epoch  100/500 | Train: 0.077410 | Val Loss: 0.966288 | Val NSE: -0.7888
+  Epoch  120/500 | Train: 0.050180 | Val Loss: 0.977621 | Val NSE: -0.6849
+  Epoch  140/500 | Train: 0.034960 | Val Loss: 1.016358 | Val NSE: -0.5558
+  Epoch  160/500 | Train: 0.021872 | Val Loss: 0.987572 | Val NSE: -0.5525
+  Early stopping at epoch 161
+    [lecun] s4: R²=0.2729, MAPE=17.17%
+  Epoch    1/500 | Train: 0.625228 | Val Loss: 0.775870 | Val NSE: -0.5665
+  Epoch   20/500 | Train: 0.290326 | Val Loss: 0.755735 | Val NSE: 0.2244
+  Epoch   40/500 | Train: 0.163956 | Val Loss: 0.838707 | Val NSE: -0.0905
+  Epoch   60/500 | Train: 0.097623 | Val Loss: 0.930043 | Val NSE: -0.4554
+  Epoch   80/500 | Train: 0.080634 | Val Loss: 0.958310 | Val NSE: -0.4764
+  Epoch  100/500 | Train: 0.053316 | Val Loss: 1.014249 | Val NSE: -0.5871
+  Epoch  120/500 | Train: 0.028532 | Val Loss: 0.938686 | Val NSE: -0.2845
+  Epoch  140/500 | Train: 0.044955 | Val Loss: 0.985592 | Val NSE: -0.2683
+  Early stopping at epoch 159
+    [lecun] s5: R²=0.4531, MAPE=14.51%
+  Epoch    1/500 | Train: 0.626659 | Val Loss: 0.688290 | Val NSE: 0.0580
+  Epoch   20/500 | Train: 0.235110 | Val Loss: 0.839056 | Val NSE: 0.0092
+  Epoch   40/500 | Train: 0.209178 | Val Loss: 0.883704 | Val NSE: -0.0958
+  Epoch   60/500 | Train: 0.079671 | Val Loss: 0.897936 | Val NSE: -0.3434
+  Epoch   80/500 | Train: 0.067038 | Val Loss: 0.909299 | Val NSE: -0.4413
+  Epoch  100/500 | Train: 0.077406 | Val Loss: 0.903846 | Val NSE: -0.4402
+  Epoch  120/500 | Train: 0.064627 | Val Loss: 0.948809 | Val NSE: -0.6114
+  Epoch  140/500 | Train: 0.045463 | Val Loss: 0.948174 | Val NSE: -0.4695
+  Epoch  160/500 | Train: 0.038319 | Val Loss: 0.943054 | Val NSE: -0.3221
+  Early stopping at epoch 163
+    [lecun] s6: R²=0.3680, MAPE=16.06%
+  Epoch    1/500 | Train: 0.721637 | Val Loss: 0.726047 | Val NSE: 0.1750
+  Epoch   20/500 | Train: 0.263660 | Val Loss: 0.810968 | Val NSE: 0.0479
+  Epoch   40/500 | Train: 0.120118 | Val Loss: 0.948208 | Val NSE: -0.5658
+  Epoch   60/500 | Train: 0.099439 | Val Loss: 0.957126 | Val NSE: -0.4246
+  Epoch   80/500 | Train: 0.066816 | Val Loss: 0.979511 | Val NSE: -0.6423
+  Epoch  100/500 | Train: 0.038201 | Val Loss: 0.967552 | Val NSE: -0.5412
+  Epoch  120/500 | Train: 0.044784 | Val Loss: 0.994501 | Val NSE: -0.3826
+  Epoch  140/500 | Train: 0.039246 | Val Loss: 1.014025 | Val NSE: -0.6389
+  Early stopping at epoch 159
+    [lecun] s8: R²=0.0539, MAPE=19.46%
+  Epoch    1/500 | Train: 0.804747 | Val Loss: 0.660876 | Val NSE: -0.3257
+  Epoch   20/500 | Train: 0.194414 | Val Loss: 0.743916 | Val NSE: 0.2293
+  Epoch   40/500 | Train: 0.229672 | Val Loss: 0.892433 | Val NSE: -0.2512
+  Epoch   60/500 | Train: 0.087200 | Val Loss: 0.753269 | Val NSE: -0.2994
+  Epoch   80/500 | Train: 0.115685 | Val Loss: 0.839211 | Val NSE: -0.5072
+  Epoch  100/500 | Train: 0.037441 | Val Loss: 0.833403 | Val NSE: -0.4377
+  Epoch  120/500 | Train: 0.045922 | Val Loss: 0.967525 | Val NSE: -0.4663
+  Epoch  140/500 | Train: 0.054230 | Val Loss: 0.929059 | Val NSE: -0.4015
+  Early stopping at epoch 158
+    [lecun] s9: R²=0.3540, MAPE=15.90%
+  Epoch    1/500 | Train: 0.644222 | Val Loss: 0.779860 | Val NSE: 0.0441
+  Epoch   20/500 | Train: 0.233868 | Val Loss: 0.814187 | Val NSE: -0.2219
+  Epoch   40/500 | Train: 0.124892 | Val Loss: 0.836173 | Val NSE: -0.2913
+  Epoch   60/500 | Train: 0.105958 | Val Loss: 0.948954 | Val NSE: -0.5471
+  Epoch   80/500 | Train: 0.067748 | Val Loss: 0.929146 | Val NSE: -0.5074
+  Epoch  100/500 | Train: 0.053086 | Val Loss: 1.019559 | Val NSE: -0.5563
+  Epoch  120/500 | Train: 0.039204 | Val Loss: 0.994523 | Val NSE: -0.5071
+  Epoch  140/500 | Train: 0.044904 | Val Loss: 0.957917 | Val NSE: -0.6073
+  Epoch  160/500 | Train: 0.029982 | Val Loss: 0.982945 | Val NSE: -0.6209
+  Early stopping at epoch 162
+    [lecun] s10: R²=0.3797, MAPE=15.86%
+  Epoch    1/500 | Train: 0.720852 | Val Loss: 0.728192 | Val NSE: 0.1904
+  Epoch   20/500 | Train: 0.187821 | Val Loss: 0.821987 | Val NSE: 0.1476
+  Epoch   40/500 | Train: 0.111838 | Val Loss: 0.881495 | Val NSE: -0.2259
+  Epoch   60/500 | Train: 0.150228 | Val Loss: 0.880528 | Val NSE: -0.4351
+  Epoch   80/500 | Train: 0.100519 | Val Loss: 0.941273 | Val NSE: -0.5196
+  Epoch  100/500 | Train: 0.077587 | Val Loss: 0.906322 | Val NSE: -0.3936
+  Epoch  120/500 | Train: 0.055335 | Val Loss: 0.925237 | Val NSE: -0.4421
+  Epoch  140/500 | Train: 0.084277 | Val Loss: 0.945234 | Val NSE: -0.3928
+  Epoch  160/500 | Train: 0.050062 | Val Loss: 0.911578 | Val NSE: -0.4463
+  Early stopping at epoch 161
+    [lecun] s11: R²=0.3294, MAPE=16.33%
+  Epoch    1/500 | Train: 0.751901 | Val Loss: 0.972838 | Val NSE: -0.3806
+  Epoch   20/500 | Train: 0.250032 | Val Loss: 0.890256 | Val NSE: -0.1231
+  Epoch   40/500 | Train: 0.156083 | Val Loss: 0.903808 | Val NSE: -0.3716
+  Epoch   60/500 | Train: 0.079986 | Val Loss: 0.892159 | Val NSE: -0.3438
+  Epoch   80/500 | Train: 0.126449 | Val Loss: 0.911800 | Val NSE: -0.6534
+  Epoch  100/500 | Train: 0.061032 | Val Loss: 0.934717 | Val NSE: -0.7935
+  Epoch  120/500 | Train: 0.049975 | Val Loss: 0.919747 | Val NSE: -0.5259
+  Epoch  140/500 | Train: 0.029982 | Val Loss: 0.924968 | Val NSE: -0.5881
+  Epoch  160/500 | Train: 0.029386 | Val Loss: 0.899870 | Val NSE: -0.3563
+  Early stopping at epoch 166
+    [lecun] s12: R²=0.2702, MAPE=14.54%
+  Epoch    1/500 | Train: 0.863567 | Val Loss: 0.773179 | Val NSE: 0.1617
+  Epoch   20/500 | Train: 0.154060 | Val Loss: 0.828862 | Val NSE: 0.1866
+  Epoch   40/500 | Train: 0.095060 | Val Loss: 0.788001 | Val NSE: -0.1263
+  Epoch   60/500 | Train: 0.071566 | Val Loss: 0.830633 | Val NSE: -0.2508
+  Epoch   80/500 | Train: 0.063015 | Val Loss: 0.804958 | Val NSE: -0.2058
+  Epoch  100/500 | Train: 0.076049 | Val Loss: 0.812268 | Val NSE: -0.3345
+  Epoch  120/500 | Train: 0.035140 | Val Loss: 0.821305 | Val NSE: -0.2943
+  Epoch  140/500 | Train: 0.043419 | Val Loss: 0.853581 | Val NSE: -0.2283
+  Early stopping at epoch 157
+    [lecun] s14: R²=0.3450, MAPE=16.17%
+  Epoch    1/500 | Train: 0.749265 | Val Loss: 0.824337 | Val NSE: 0.1945
+  Epoch   20/500 | Train: 0.232334 | Val Loss: 0.833729 | Val NSE: 0.1012
+  Epoch   40/500 | Train: 0.196385 | Val Loss: 0.871987 | Val NSE: -0.1477
+  Epoch   60/500 | Train: 0.077090 | Val Loss: 0.901708 | Val NSE: -0.2826
+  Epoch   80/500 | Train: 0.050114 | Val Loss: 0.919518 | Val NSE: -0.3274
+  Epoch  100/500 | Train: 0.049366 | Val Loss: 0.927623 | Val NSE: -0.3667
+  Epoch  120/500 | Train: 0.039810 | Val Loss: 0.915973 | Val NSE: -0.3619
+  Epoch  140/500 | Train: 0.066905 | Val Loss: 0.915247 | Val NSE: -0.3729
+  Early stopping at epoch 158
+    [lecun] s15: R²=0.3612, MAPE=15.48%
+  Epoch    1/500 | Train: 0.662822 | Val Loss: 0.904276 | Val NSE: -0.7569
+  Epoch   20/500 | Train: 0.315609 | Val Loss: 0.798804 | Val NSE: -0.0598
+  Epoch   40/500 | Train: 0.278409 | Val Loss: 0.930231 | Val NSE: -0.6704
+  Epoch   60/500 | Train: 0.087172 | Val Loss: 0.982241 | Val NSE: -0.5934
+  Epoch   80/500 | Train: 0.086563 | Val Loss: 0.978108 | Val NSE: -0.4902
+  Epoch  100/500 | Train: 0.095084 | Val Loss: 1.054412 | Val NSE: -0.7030
+  Epoch  120/500 | Train: 0.048771 | Val Loss: 1.044966 | Val NSE: -0.9028
+  Epoch  140/500 | Train: 0.037638 | Val Loss: 1.046958 | Val NSE: -0.6792
+  Epoch  160/500 | Train: 0.044427 | Val Loss: 1.023792 | Val NSE: -0.6262
+  Early stopping at epoch 163
+    [lecun] s16: R²=0.1564, MAPE=18.28%
+  Epoch    1/500 | Train: 0.734678 | Val Loss: 0.820210 | Val NSE: -0.4855
+  Epoch   20/500 | Train: 0.214353 | Val Loss: 0.799432 | Val NSE: -0.0684
+  Epoch   40/500 | Train: 0.113358 | Val Loss: 0.811462 | Val NSE: -0.1438
+  Epoch   60/500 | Train: 0.094353 | Val Loss: 0.853519 | Val NSE: -0.6073
+  Epoch   80/500 | Train: 0.065377 | Val Loss: 0.878185 | Val NSE: -0.4386
+  Epoch  100/500 | Train: 0.072887 | Val Loss: 0.868551 | Val NSE: -0.4362
+  Epoch  120/500 | Train: 0.032580 | Val Loss: 0.916542 | Val NSE: -0.5443
+  Epoch  140/500 | Train: 0.073547 | Val Loss: 0.855070 | Val NSE: -0.3775
+  Early stopping at epoch 157
+    [lecun] s17: R²=0.2531, MAPE=17.99%
+  Epoch    1/500 | Train: 0.691110 | Val Loss: 0.751039 | Val NSE: 0.0236
+  Epoch   20/500 | Train: 0.238640 | Val Loss: 0.826066 | Val NSE: 0.1680
+  Epoch   40/500 | Train: 0.147066 | Val Loss: 0.908260 | Val NSE: -0.2171
+  Epoch   60/500 | Train: 0.098122 | Val Loss: 0.920798 | Val NSE: -0.2663
+  Epoch   80/500 | Train: 0.062787 | Val Loss: 0.934328 | Val NSE: -0.2301
+  Epoch  100/500 | Train: 0.050834 | Val Loss: 0.935079 | Val NSE: -0.2150
+  Epoch  120/500 | Train: 0.070355 | Val Loss: 0.963337 | Val NSE: -0.4435
+  Epoch  140/500 | Train: 0.053332 | Val Loss: 0.980264 | Val NSE: -0.2360
+  Epoch  160/500 | Train: 0.022823 | Val Loss: 0.967761 | Val NSE: -0.2685
+  Early stopping at epoch 160
+    [lecun] s18: R²=0.3670, MAPE=15.56%
+  Epoch    1/500 | Train: 0.730297 | Val Loss: 0.844699 | Val NSE: 0.0874
+  Epoch   20/500 | Train: 0.214359 | Val Loss: 0.829172 | Val NSE: 0.1310
+  Epoch   40/500 | Train: 0.119372 | Val Loss: 0.892768 | Val NSE: -0.1295
+  Epoch   60/500 | Train: 0.085081 | Val Loss: 0.944974 | Val NSE: -0.4156
+  Epoch   80/500 | Train: 0.086104 | Val Loss: 0.963900 | Val NSE: -0.3947
+  Epoch  100/500 | Train: 0.066798 | Val Loss: 0.970918 | Val NSE: -0.4009
+  Epoch  120/500 | Train: 0.058856 | Val Loss: 0.938147 | Val NSE: -0.3839
+  Epoch  140/500 | Train: 0.036275 | Val Loss: 0.960858 | Val NSE: -0.4328
+  Early stopping at epoch 159
+    [lecun] s19: R²=0.1691, MAPE=19.06%
+  Epoch    1/500 | Train: 0.833590 | Val Loss: 0.636540 | Val NSE: 0.2157
+  Epoch   20/500 | Train: 0.212976 | Val Loss: 0.835780 | Val NSE: 0.0188
+  Epoch   40/500 | Train: 0.144758 | Val Loss: 0.869498 | Val NSE: -0.2630
+  Epoch   60/500 | Train: 0.080046 | Val Loss: 0.922184 | Val NSE: -0.2841
+  Epoch   80/500 | Train: 0.040891 | Val Loss: 0.897634 | Val NSE: -0.4409
+  Epoch  100/500 | Train: 0.052098 | Val Loss: 1.013960 | Val NSE: -0.4319
+  Epoch  120/500 | Train: 0.036066 | Val Loss: 0.960904 | Val NSE: -0.1823
+  Epoch  140/500 | Train: 0.048838 | Val Loss: 0.997460 | Val NSE: -0.2625
+  Early stopping at epoch 152
+    [lecun] s20: R²=0.1387, MAPE=15.70%
+  Epoch    1/500 | Train: 0.716462 | Val Loss: 0.789814 | Val NSE: 0.1725
+  Epoch   20/500 | Train: 0.247725 | Val Loss: 0.770657 | Val NSE: 0.0178
+  Epoch   40/500 | Train: 0.192584 | Val Loss: 0.886358 | Val NSE: -0.1657
+  Epoch   60/500 | Train: 0.129461 | Val Loss: 0.888662 | Val NSE: -0.3433
+  Epoch   80/500 | Train: 0.079350 | Val Loss: 0.945897 | Val NSE: -0.2519
+  Epoch  100/500 | Train: 0.077560 | Val Loss: 0.956794 | Val NSE: -0.3488
+  Epoch  120/500 | Train: 0.066183 | Val Loss: 0.970986 | Val NSE: -0.3714
+  Epoch  140/500 | Train: 0.044413 | Val Loss: 0.965725 | Val NSE: -0.2610
+  Epoch  160/500 | Train: 0.080288 | Val Loss: 0.968053 | Val NSE: -0.3186
+  Early stopping at epoch 161
+    [lecun] s21: R²=0.2538, MAPE=17.46%
+  Epoch    1/500 | Train: 0.834482 | Val Loss: 0.708772 | Val NSE: 0.1961
+  Epoch   20/500 | Train: 0.300844 | Val Loss: 0.830049 | Val NSE: 0.0053
+  Epoch   40/500 | Train: 0.238870 | Val Loss: 0.878047 | Val NSE: -0.1603
+  Epoch   60/500 | Train: 0.114830 | Val Loss: 0.920696 | Val NSE: -0.3462
+  Epoch   80/500 | Train: 0.053722 | Val Loss: 0.937741 | Val NSE: -0.4682
+  Epoch  100/500 | Train: 0.084193 | Val Loss: 0.866890 | Val NSE: -0.3776
+  Epoch  120/500 | Train: 0.043594 | Val Loss: 0.973407 | Val NSE: -0.7496
+  Epoch  140/500 | Train: 0.044446 | Val Loss: 0.954477 | Val NSE: -0.5135
+  Early stopping at epoch 151
+    [lecun] s22: R²=-0.3274, MAPE=20.48%
+  Epoch    1/500 | Train: 0.992832 | Val Loss: 0.968340 | Val NSE: -1.3029
+  Epoch   20/500 | Train: 0.295919 | Val Loss: 0.769160 | Val NSE: 0.0420
+  Epoch   40/500 | Train: 0.175597 | Val Loss: 0.776860 | Val NSE: -0.1126
+  Epoch   60/500 | Train: 0.101277 | Val Loss: 0.868649 | Val NSE: -0.2357
+  Epoch   80/500 | Train: 0.105631 | Val Loss: 0.864182 | Val NSE: -0.3258
+  Epoch  100/500 | Train: 0.066796 | Val Loss: 0.871987 | Val NSE: -0.3351
+  Epoch  120/500 | Train: 0.065225 | Val Loss: 0.856016 | Val NSE: -0.4782
+  Epoch  140/500 | Train: 0.044181 | Val Loss: 0.881567 | Val NSE: -0.5144
+  Epoch  160/500 | Train: 0.037475 | Val Loss: 0.840568 | Val NSE: -0.2943
+  Early stopping at epoch 161
+    [lecun] s23: R²=0.1419, MAPE=18.27%
+  Epoch    1/500 | Train: 0.619819 | Val Loss: 0.779987 | Val NSE: 0.0247
+  Epoch   20/500 | Train: 0.255027 | Val Loss: 0.813097 | Val NSE: 0.1297
+  Epoch   40/500 | Train: 0.180250 | Val Loss: 0.851613 | Val NSE: -0.2828
+  Epoch   60/500 | Train: 0.121058 | Val Loss: 0.886073 | Val NSE: -0.1220
+  Epoch   80/500 | Train: 0.073565 | Val Loss: 0.989106 | Val NSE: -0.9489
+  Epoch  100/500 | Train: 0.051445 | Val Loss: 1.010499 | Val NSE: -0.9733
+  Epoch  120/500 | Train: 0.054741 | Val Loss: 1.011123 | Val NSE: -0.7968
+  Epoch  140/500 | Train: 0.036795 | Val Loss: 1.047749 | Val NSE: -0.5126
+  Epoch  160/500 | Train: 0.037870 | Val Loss: 1.071552 | Val NSE: -0.5105
+  Early stopping at epoch 167
+    [lecun] s24: R²=-0.0750, MAPE=20.63%
+  Epoch    1/500 | Train: 0.593361 | Val Loss: 0.835630 | Val NSE: -0.5087
+  Epoch   20/500 | Train: 0.231904 | Val Loss: 0.831126 | Val NSE: -0.0528
+  Epoch   40/500 | Train: 0.130567 | Val Loss: 0.935558 | Val NSE: -0.4257
+  Epoch   60/500 | Train: 0.125904 | Val Loss: 0.978649 | Val NSE: -0.6063
+  Epoch   80/500 | Train: 0.059685 | Val Loss: 0.969065 | Val NSE: -0.7323
+  Epoch  100/500 | Train: 0.054698 | Val Loss: 0.974040 | Val NSE: -0.7423
+  Epoch  120/500 | Train: 0.039762 | Val Loss: 0.964518 | Val NSE: -0.5759
+  Epoch  140/500 | Train: 0.026856 | Val Loss: 0.972586 | Val NSE: -0.5714
+  Early stopping at epoch 157
+    [lecun] s25: R²=0.3247, MAPE=16.20%
+  Epoch    1/500 | Train: 0.565542 | Val Loss: 0.790615 | Val NSE: -0.3076
+  Epoch   20/500 | Train: 0.222120 | Val Loss: 0.785544 | Val NSE: -0.0667
+  Epoch   40/500 | Train: 0.172279 | Val Loss: 0.904381 | Val NSE: -0.5425
+  Epoch   60/500 | Train: 0.096048 | Val Loss: 0.866370 | Val NSE: -0.6090
+  Epoch   80/500 | Train: 0.055323 | Val Loss: 0.937073 | Val NSE: -0.5303
+  Epoch  100/500 | Train: 0.055025 | Val Loss: 0.914526 | Val NSE: -0.4957
+  Epoch  120/500 | Train: 0.063484 | Val Loss: 0.983272 | Val NSE: -0.4874
+  Epoch  140/500 | Train: 0.040241 | Val Loss: 0.942730 | Val NSE: -0.4127
+  Early stopping at epoch 157
+    [lecun] s26: R²=0.2629, MAPE=16.49%
+  Epoch    1/500 | Train: 0.646886 | Val Loss: 1.003827 | Val NSE: -0.3127
+  Epoch   20/500 | Train: 0.267189 | Val Loss: 0.927355 | Val NSE: -0.3608
+  Epoch   40/500 | Train: 0.170795 | Val Loss: 0.911043 | Val NSE: -0.5775
+  Epoch   60/500 | Train: 0.087646 | Val Loss: 0.873045 | Val NSE: -0.2563
+  Epoch   80/500 | Train: 0.084353 | Val Loss: 0.886474 | Val NSE: -0.4342
+  Epoch  100/500 | Train: 0.057482 | Val Loss: 0.940159 | Val NSE: -0.6090
+  Epoch  120/500 | Train: 0.050797 | Val Loss: 0.889986 | Val NSE: -0.6059
+  Epoch  140/500 | Train: 0.075700 | Val Loss: 0.916883 | Val NSE: -0.5094
+  Early stopping at epoch 159
+    [lecun] s27: R²=0.1415, MAPE=17.96%
+  Epoch    1/500 | Train: 0.698054 | Val Loss: 0.799317 | Val NSE: -0.0283
+  Epoch   20/500 | Train: 0.258142 | Val Loss: 0.754749 | Val NSE: 0.2706
+  Epoch   40/500 | Train: 0.159325 | Val Loss: 0.846185 | Val NSE: -0.1948
+  Epoch   60/500 | Train: 0.084607 | Val Loss: 0.879706 | Val NSE: -0.1995
+  Epoch   80/500 | Train: 0.075335 | Val Loss: 0.929507 | Val NSE: -0.6414
+  Epoch  100/500 | Train: 0.062650 | Val Loss: 0.938313 | Val NSE: -0.5874
+  Epoch  120/500 | Train: 0.065661 | Val Loss: 0.941996 | Val NSE: -0.5838
+  Epoch  140/500 | Train: 0.062734 | Val Loss: 0.971285 | Val NSE: -0.3625
+  Early stopping at epoch 158
+    [lecun] s28: R²=0.3910, MAPE=14.70%
+  Epoch    1/500 | Train: 0.826675 | Val Loss: 0.895171 | Val NSE: 0.1845
+  Epoch   20/500 | Train: 0.199135 | Val Loss: 0.774213 | Val NSE: 0.0481
+  Epoch   40/500 | Train: 0.140236 | Val Loss: 0.942664 | Val NSE: -0.1311
+  Epoch   60/500 | Train: 0.082797 | Val Loss: 1.043155 | Val NSE: -0.2596
+  Epoch   80/500 | Train: 0.075270 | Val Loss: 1.018360 | Val NSE: -0.2634
+  Epoch  100/500 | Train: 0.061815 | Val Loss: 1.016359 | Val NSE: -0.3640
+  Epoch  120/500 | Train: 0.047995 | Val Loss: 1.035687 | Val NSE: -0.5937
+  Epoch  140/500 | Train: 0.032982 | Val Loss: 1.067589 | Val NSE: -0.5673
+  Epoch  160/500 | Train: 0.047993 | Val Loss: 1.046667 | Val NSE: -0.4360
+  Early stopping at epoch 165
+    [lecun] s29: R²=0.2796, MAPE=15.66%
+  Epoch    1/500 | Train: 0.805006 | Val Loss: 0.845253 | Val NSE: 0.1382
+  Epoch   20/500 | Train: 0.208177 | Val Loss: 0.826182 | Val NSE: -0.1511
+  Epoch   40/500 | Train: 0.146866 | Val Loss: 0.869728 | Val NSE: -0.4181
+  Epoch   60/500 | Train: 0.091454 | Val Loss: 0.845980 | Val NSE: -0.4280
+  Epoch   80/500 | Train: 0.076320 | Val Loss: 0.865823 | Val NSE: -0.4329
+  Epoch  100/500 | Train: 0.057624 | Val Loss: 0.912512 | Val NSE: -0.3993
+  Epoch  120/500 | Train: 0.055611 | Val Loss: 0.922556 | Val NSE: -0.5026
+  Epoch  140/500 | Train: 0.048570 | Val Loss: 0.927147 | Val NSE: -0.2965
+  Early stopping at epoch 157
+    [lecun] s30: R²=0.3854, MAPE=14.88%
+  Epoch    1/500 | Train: 0.704856 | Val Loss: 0.811521 | Val NSE: -0.2541
+  Epoch   20/500 | Train: 0.223036 | Val Loss: 0.849998 | Val NSE: -0.1123
+  Epoch   40/500 | Train: 0.143343 | Val Loss: 0.899147 | Val NSE: -0.4092
+  Epoch   60/500 | Train: 0.125188 | Val Loss: 0.896386 | Val NSE: -0.5264
+  Epoch   80/500 | Train: 0.071609 | Val Loss: 0.922692 | Val NSE: -0.5105
+  Epoch  100/500 | Train: 0.071289 | Val Loss: 0.916535 | Val NSE: -0.4042
+  Epoch  120/500 | Train: 0.043426 | Val Loss: 0.923846 | Val NSE: -0.4866
+  Epoch  140/500 | Train: 0.057305 | Val Loss: 0.938086 | Val NSE: -0.4191
+  Early stopping at epoch 156
+    [lecun] s31: R²=0.1915, MAPE=19.57%
+  Epoch    1/500 | Train: 0.556791 | Val Loss: 0.685876 | Val NSE: 0.2531
+  Epoch   20/500 | Train: 0.301853 | Val Loss: 0.825981 | Val NSE: 0.1675
+  Epoch   40/500 | Train: 0.136032 | Val Loss: 0.846336 | Val NSE: -0.0827
+  Epoch   60/500 | Train: 0.088271 | Val Loss: 0.881256 | Val NSE: -0.1859
+  Epoch   80/500 | Train: 0.072287 | Val Loss: 0.858857 | Val NSE: -0.3876
+  Epoch  100/500 | Train: 0.058681 | Val Loss: 0.884127 | Val NSE: -0.3234
+  Epoch  120/500 | Train: 0.060087 | Val Loss: 0.886783 | Val NSE: -0.3824
+  Epoch  140/500 | Train: 0.042834 | Val Loss: 0.868717 | Val NSE: -0.0915
+  Epoch  160/500 | Train: 0.029531 | Val Loss: 0.912847 | Val NSE: -0.3499
+  Early stopping at epoch 165
+    [lecun] s32: R²=-0.0020, MAPE=20.50%
+  Epoch    1/500 | Train: 0.765524 | Val Loss: 0.714391 | Val NSE: -0.0086
+  Epoch   20/500 | Train: 0.208898 | Val Loss: 0.835526 | Val NSE: -0.3037
+  Epoch   40/500 | Train: 0.174359 | Val Loss: 0.881382 | Val NSE: -0.4096
+  Epoch   60/500 | Train: 0.114417 | Val Loss: 0.926563 | Val NSE: -0.6382
+  Epoch   80/500 | Train: 0.070055 | Val Loss: 0.882107 | Val NSE: -0.3802
+  Epoch  100/500 | Train: 0.077660 | Val Loss: 0.897032 | Val NSE: -0.6342
+  Epoch  120/500 | Train: 0.058454 | Val Loss: 0.831442 | Val NSE: -0.2769
+  Epoch  140/500 | Train: 0.053147 | Val Loss: 0.891092 | Val NSE: -0.5135
+  Early stopping at epoch 156
+    [lecun] s33: R²=0.3110, MAPE=16.87%
+  Epoch    1/500 | Train: 0.724565 | Val Loss: 0.772437 | Val NSE: 0.1369
+  Epoch   20/500 | Train: 0.291717 | Val Loss: 0.771282 | Val NSE: -0.0479
+  Epoch   40/500 | Train: 0.154737 | Val Loss: 0.833265 | Val NSE: -0.1524
+  Epoch   60/500 | Train: 0.110185 | Val Loss: 0.878633 | Val NSE: -0.2666
+  Epoch   80/500 | Train: 0.078519 | Val Loss: 0.886364 | Val NSE: -0.2876
+  Epoch  100/500 | Train: 0.049898 | Val Loss: 0.913895 | Val NSE: -0.4776
+  Epoch  120/500 | Train: 0.064164 | Val Loss: 0.894317 | Val NSE: -0.4272
+  Epoch  140/500 | Train: 0.047432 | Val Loss: 0.913869 | Val NSE: -0.2895
+  Epoch  160/500 | Train: 0.052563 | Val Loss: 0.963760 | Val NSE: -0.4298
+  Early stopping at epoch 161
+    [lecun] s34: R²=0.3830, MAPE=16.01%
+  Epoch    1/500 | Train: 0.725941 | Val Loss: 0.739033 | Val NSE: 0.1853
+  Epoch   20/500 | Train: 0.191084 | Val Loss: 0.859155 | Val NSE: 0.0355
+  Epoch   40/500 | Train: 0.180296 | Val Loss: 0.923688 | Val NSE: -0.2157
+  Epoch   60/500 | Train: 0.085441 | Val Loss: 0.951132 | Val NSE: -0.5085
+  Epoch   80/500 | Train: 0.069857 | Val Loss: 0.936172 | Val NSE: -0.4949
+  Epoch  100/500 | Train: 0.048332 | Val Loss: 0.956805 | Val NSE: -0.6502
+  Epoch  120/500 | Train: 0.049164 | Val Loss: 0.993431 | Val NSE: -0.6913
+  Epoch  140/500 | Train: 0.050195 | Val Loss: 0.907771 | Val NSE: -0.3622
+  Early stopping at epoch 159
+    [lecun] s35: R²=0.1885, MAPE=18.05%
+  Epoch    1/500 | Train: 0.679724 | Val Loss: 0.649457 | Val NSE: 0.1868
+  Epoch   20/500 | Train: 0.328847 | Val Loss: 0.800172 | Val NSE: 0.1200
+  Epoch   40/500 | Train: 0.181281 | Val Loss: 0.872263 | Val NSE: -0.1940
+  Epoch   60/500 | Train: 0.100530 | Val Loss: 0.960955 | Val NSE: -0.5845
+  Epoch   80/500 | Train: 0.066035 | Val Loss: 0.980685 | Val NSE: -0.2719
+  Epoch  100/500 | Train: 0.084362 | Val Loss: 0.980599 | Val NSE: -0.3507
+  Epoch  120/500 | Train: 0.055013 | Val Loss: 1.003999 | Val NSE: -0.4524
+  Epoch  140/500 | Train: 0.042698 | Val Loss: 1.028123 | Val NSE: -0.6257
+  Early stopping at epoch 159
+    [lecun] s36: R²=0.0763, MAPE=19.95%
+  Epoch    1/500 | Train: 0.847079 | Val Loss: 0.780725 | Val NSE: 0.0846
+  Epoch   20/500 | Train: 0.225848 | Val Loss: 0.833338 | Val NSE: -0.0679
+  Epoch   40/500 | Train: 0.123900 | Val Loss: 0.917101 | Val NSE: -0.4955
+  Epoch   60/500 | Train: 0.074568 | Val Loss: 0.957159 | Val NSE: -0.5830
+  Epoch   80/500 | Train: 0.049111 | Val Loss: 0.921628 | Val NSE: -0.3148
+  Epoch  100/500 | Train: 0.076806 | Val Loss: 0.905806 | Val NSE: -0.4752
+  Epoch  120/500 | Train: 0.053185 | Val Loss: 0.927260 | Val NSE: -0.6105
+  Epoch  140/500 | Train: 0.027133 | Val Loss: 0.940830 | Val NSE: -0.6117
+  Early stopping at epoch 157
+    [lecun] s37: R²=0.0890, MAPE=18.49%
+  Epoch    1/500 | Train: 0.796574 | Val Loss: 0.854567 | Val NSE: 0.0189
+  Epoch   20/500 | Train: 0.188487 | Val Loss: 0.836955 | Val NSE: -0.2941
+  Epoch   40/500 | Train: 0.086114 | Val Loss: 0.817555 | Val NSE: -0.2725
+  Epoch   60/500 | Train: 0.079669 | Val Loss: 0.848399 | Val NSE: -0.4489
+  Epoch   80/500 | Train: 0.045396 | Val Loss: 0.924835 | Val NSE: -0.7103
+  Epoch  100/500 | Train: 0.047991 | Val Loss: 0.912087 | Val NSE: -0.4659
+  Epoch  120/500 | Train: 0.064657 | Val Loss: 0.952145 | Val NSE: -0.6710
+  Epoch  140/500 | Train: 0.067793 | Val Loss: 0.955725 | Val NSE: -0.3389
+  Early stopping at epoch 154
+    [lecun] s38: R²=0.0960, MAPE=17.08%
+  Epoch    1/500 | Train: 0.644685 | Val Loss: 0.934674 | Val NSE: -0.6117
+  Epoch   20/500 | Train: 0.197265 | Val Loss: 0.859623 | Val NSE: -0.3933
+  Epoch   40/500 | Train: 0.126914 | Val Loss: 0.818256 | Val NSE: -0.5358
+  Epoch   60/500 | Train: 0.093537 | Val Loss: 0.822625 | Val NSE: -0.8066
+  Epoch   80/500 | Train: 0.072545 | Val Loss: 0.847744 | Val NSE: -0.5157
+  Epoch  100/500 | Train: 0.076647 | Val Loss: 0.841928 | Val NSE: -0.4806
+  Epoch  120/500 | Train: 0.078278 | Val Loss: 0.824701 | Val NSE: -0.6887
+  Epoch  140/500 | Train: 0.044632 | Val Loss: 0.824580 | Val NSE: -0.5494
+  Early stopping at epoch 159
+    [lecun] s39: R²=0.2934, MAPE=17.35%
+  Epoch    1/500 | Train: 0.616971 | Val Loss: 0.713044 | Val NSE: 0.1142
+  Epoch   20/500 | Train: 0.173761 | Val Loss: 0.797996 | Val NSE: -0.1202
+  Epoch   40/500 | Train: 0.189477 | Val Loss: 0.762823 | Val NSE: -0.3318
+  Epoch   60/500 | Train: 0.088631 | Val Loss: 0.729776 | Val NSE: -0.0662
+  Epoch   80/500 | Train: 0.080926 | Val Loss: 0.864634 | Val NSE: -0.5345
+  Epoch  100/500 | Train: 0.066231 | Val Loss: 0.793248 | Val NSE: -0.5786
+  Epoch  120/500 | Train: 0.047488 | Val Loss: 0.776827 | Val NSE: -0.3536
+  Epoch  140/500 | Train: 0.038289 | Val Loss: 0.846004 | Val NSE: -0.5823
+  Early stopping at epoch 154
+    [lecun] s40: R²=0.1576, MAPE=18.81%
+  Epoch    1/500 | Train: 0.772664 | Val Loss: 0.727572 | Val NSE: 0.0031
+  Epoch   20/500 | Train: 0.199807 | Val Loss: 0.885119 | Val NSE: -0.0820
+  Epoch   40/500 | Train: 0.107837 | Val Loss: 0.915999 | Val NSE: -0.1339
+  Epoch   60/500 | Train: 0.057385 | Val Loss: 0.991503 | Val NSE: -0.6794
+  Epoch   80/500 | Train: 0.061555 | Val Loss: 0.971664 | Val NSE: -0.6676
+  Epoch  100/500 | Train: 0.040483 | Val Loss: 0.997987 | Val NSE: -0.7266
+  Epoch  120/500 | Train: 0.027036 | Val Loss: 0.974877 | Val NSE: -0.5151
+  Epoch  140/500 | Train: 0.033838 | Val Loss: 0.981077 | Val NSE: -0.6230
+  Early stopping at epoch 159
+    [lecun] s41: R²=0.2076, MAPE=17.95%
+  Epoch    1/500 | Train: 0.636786 | Val Loss: 0.787046 | Val NSE: 0.0034
+  Epoch   20/500 | Train: 0.217794 | Val Loss: 0.806475 | Val NSE: 0.1545
+  Epoch   40/500 | Train: 0.161374 | Val Loss: 0.849608 | Val NSE: -0.2329
+  Epoch   60/500 | Train: 0.179275 | Val Loss: 0.883658 | Val NSE: -0.5503
+  Epoch   80/500 | Train: 0.062023 | Val Loss: 0.960915 | Val NSE: -0.9809
+  Epoch  100/500 | Train: 0.075864 | Val Loss: 0.928576 | Val NSE: -0.8285
+  Epoch  120/500 | Train: 0.053380 | Val Loss: 0.941090 | Val NSE: -0.5085
+  Epoch  140/500 | Train: 0.036314 | Val Loss: 0.891060 | Val NSE: -0.6598
+  Epoch  160/500 | Train: 0.032962 | Val Loss: 0.887787 | Val NSE: -0.3800
+  Early stopping at epoch 161
+    [lecun] s100: R²=0.2210, MAPE=17.35%
+  Epoch    1/500 | Train: 0.749662 | Val Loss: 0.867174 | Val NSE: -0.0168
+  Epoch   20/500 | Train: 0.302073 | Val Loss: 0.843286 | Val NSE: 0.1625
+  Epoch   40/500 | Train: 0.204735 | Val Loss: 0.852973 | Val NSE: 0.0147
+  Epoch   60/500 | Train: 0.086893 | Val Loss: 0.912901 | Val NSE: -0.3226
+  Epoch   80/500 | Train: 0.045600 | Val Loss: 0.974584 | Val NSE: -0.3057
+  Epoch  100/500 | Train: 0.085654 | Val Loss: 0.977526 | Val NSE: -0.5923
+  Epoch  120/500 | Train: 0.057184 | Val Loss: 0.993332 | Val NSE: -0.2787
+  Epoch  140/500 | Train: 0.062788 | Val Loss: 0.973399 | Val NSE: -0.4943
+  Epoch  160/500 | Train: 0.031057 | Val Loss: 0.960554 | Val NSE: -0.4471
+  Early stopping at epoch 161
+    [lecun] s200: R²=0.1007, MAPE=18.11%
+  Epoch    1/500 | Train: 0.713362 | Val Loss: 0.877359 | Val NSE: -0.0566
+  Epoch   20/500 | Train: 0.214853 | Val Loss: 0.900200 | Val NSE: -0.0189
+  Epoch   40/500 | Train: 0.164342 | Val Loss: 0.871997 | Val NSE: -0.1318
+  Epoch   60/500 | Train: 0.058696 | Val Loss: 0.920847 | Val NSE: -0.3696
+  Epoch   80/500 | Train: 0.046543 | Val Loss: 0.939456 | Val NSE: -0.3661
+  Epoch  100/500 | Train: 0.055186 | Val Loss: 0.925507 | Val NSE: -0.5028
+  Epoch  120/500 | Train: 0.070209 | Val Loss: 0.923674 | Val NSE: -0.3488
+  Epoch  140/500 | Train: 0.059186 | Val Loss: 1.002114 | Val NSE: -0.4744
+  Early stopping at epoch 155
+    [lecun] s500: R²=0.2259, MAPE=17.18%
+  Epoch    1/500 | Train: 0.943720 | Val Loss: 0.787744 | Val NSE: 0.0244
+  Epoch   20/500 | Train: 0.187996 | Val Loss: 0.876318 | Val NSE: -0.1752
+  Epoch   40/500 | Train: 0.114918 | Val Loss: 0.913509 | Val NSE: -0.4333
+  Epoch   60/500 | Train: 0.113477 | Val Loss: 0.930669 | Val NSE: -0.5356
+  Epoch   80/500 | Train: 0.054023 | Val Loss: 0.898724 | Val NSE: -0.5110
+  Epoch  100/500 | Train: 0.054332 | Val Loss: 0.890294 | Val NSE: -0.4215
+  Epoch  120/500 | Train: 0.086583 | Val Loss: 0.968183 | Val NSE: -0.5694
+  Epoch  140/500 | Train: 0.065204 | Val Loss: 0.955538 | Val NSE: -0.4844
+  Epoch  160/500 | Train: 0.037861 | Val Loss: 0.938673 | Val NSE: -0.2390
+  Early stopping at epoch 160
+    [lecun] s1000: R²=0.1112, MAPE=20.14%
+  90% PI (CPTC): val_coverage=0.842, avg_width=23222.4 kg
+
+  >>> Best: [lecun] seed=5  R²=0.4531 <<<
+  >>> Ensemble top-20: R²=0.4047, MAPE=15.71% <<<
+
+=======================================================
+  INVERNADERO 3 - MÉTRICAS (Test: T17, h=5 semanas)
+=======================================================
+  RMSE (kg)      :  6097.7168
+  R²             :     0.4531
+  NSE            :     0.4531
+  PBIAS (%)      :    12.8081
+  MAPE (%)       :    14.5083
+=======================================================
+  >>> MAPE:    14.5083% <<<
+=======================================================
+Results plot saved to /Users/josuetapiahernandez/Documents/JATA/Huerta_Prediction/.claude/worktrees/pure-lstm-comparison/Models/results/cnn_rnn_inv3_lstm_results.png
+
+  Top-25 R²: mean=0.3746, std=0.0344
+
+Best model → results/best_cnn_rnn_inv3_lstm.pt
+Metrics    → results/cnn_rnn_inv3_lstm_metrics.csv
+Predictions → results/cnn_rnn_inv3_lstm_predictions.npz

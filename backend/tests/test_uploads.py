@@ -28,6 +28,75 @@ def _no_lock(mock_supa):
     mock_supa.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = []
 
 
+def _weekly_dates(n: int, start: str = "2026-03-02") -> list[str]:
+    return [d.strftime("%Y-%m-%d") for d in pd.date_range(start=start, periods=n, freq="7D")]
+
+
+def _sensor_rows(n: int, start: str = "2026-03-02") -> pd.DataFrame:
+    return pd.DataFrame([{
+        "fecha": d, "temp_prom_int": 22.1, "temp_min_int": 18.0,
+        "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
+        "deficit_humedad": 3.2, "deficit_presion_vapor": 0.8, "humedad_abs_int": 11.5,
+    } for d in _weekly_dates(n, start)])
+
+
+def _riego_rows(n: int, start: str = "2026-03-02") -> pd.DataFrame:
+    return pd.DataFrame([{
+        "fecha": d, "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
+    } for d in _weekly_dates(n, start)])
+
+
+def _exterior_rows(n: int, start: str = "2026-03-02") -> pd.DataFrame:
+    return pd.DataFrame([{
+        "fecha": d, "temp_prom_ext": 20.0, "temp_max_ext": 26.0, "temp_min_ext": 15.0,
+        "hr_prom_ext": 70.0, "rad_sum": 1800.0, "rad_max": 850.0, "dh_ext": 5.0,
+        "humedad_abs_ext": 9.5,
+    } for d in _weekly_dates(n, start)])
+
+
+def _phenology_rows(n: int, start: str = "2026-03-02") -> pd.DataFrame:
+    return pd.DataFrame([{
+        "fecha": d, "zona": 1, "planta": 1, "racimos_puestos": 1,
+        "flores_racimo_abiertas": 1, "racimos_en_planta": 1, "cantidad_tomates": 1,
+        "racimo_en_cosecha": 1, "tomates_maduros": 1, "diametro_fruto_cm": 1.0,
+        "crecimiento_planta_cm": 1.0,
+    } for d in _weekly_dates(n, start)])
+
+
+def _first_submission(mock_supa, per_inv: bool = True):
+    if per_inv:
+        mock_supa.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
+    else:
+        mock_supa.table.return_value.select.return_value.limit.return_value.execute.return_value.data = []
+
+
+def _prior_submission(mock_supa, per_inv: bool = True):
+    existing_row = [{"fecha": "2020-01-01"}]
+    if per_inv:
+        mock_supa.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = existing_row
+    else:
+        mock_supa.table.return_value.select.return_value.limit.return_value.execute.return_value.data = existing_row
+
+
+def _matched_dates(mock_supa, dates: list[str], per_inv: bool = True, date_col: str = "fecha"):
+    data = [{date_col: d} for d in dates]
+    if per_inv:
+        mock_supa.table.return_value.select.return_value.in_.return_value.eq.return_value.execute.return_value.data = data
+    else:
+        mock_supa.table.return_value.select.return_value.in_.return_value.execute.return_value.data = data
+
+
+def test_upload_sensores_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa)
+    df = _sensor_rows(3)  # inv3 requires 9 distinct weeks on first submission
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "semanas" in r.text
+
+
 def test_upload_requires_auth(api_client):
     df = pd.DataFrame([{"fecha": "2026-07-01", "kg_reales": 100}])
     files = {"file": ("prod.xlsx", _xlsx_bytes(df), "application/octet-stream")}

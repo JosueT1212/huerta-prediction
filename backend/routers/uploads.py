@@ -36,6 +36,17 @@ PER_INV_TYPES = {"sensores", "riego", "fenologia", "produccion"}
 
 EXTERIORES_GH_ID = 0  # sentinel: exteriores has no real invernadero (0 is never a real id)
 
+# Sourced from Models/hp_inv3.yaml / Models/hp_inv4.yaml (seq_len) and
+# Models/cnn_rnn_yield.py (HORIZON = 5) — copied as constants here rather
+# than loaded at runtime, to keep the upload path free of the
+# torch/joblib/pipeline-loading dependency chain that backend/engine.py and
+# scripts/live_inference.py carry.
+HORIZON = 5
+SEQ_LEN_BY_INV = {3: 4, 4: 2}
+MIN_WEEKS_FIRST_BY_INV = {inv: SEQ_LEN_BY_INV[inv] + HORIZON for inv in SEQ_LEN_BY_INV}
+MIN_WEEKS_FIRST_EXTERIORES = max(MIN_WEEKS_FIRST_BY_INV.values())
+MIN_NEW_DAYS_SUBSEQUENT = 7
+
 
 def _require_form_type(form_type: str) -> list[str]:
     cols = FORM_TYPES.get(form_type)
@@ -139,6 +150,55 @@ def _ingest_rows(df: pd.DataFrame, form_type: str, greenhouse_id: int | None):
     return rows_inserted, rows_updated, rows_skipped, skipped_reasons
 
 
+def _date_col_for(form_type: str) -> str:
+    return "week_date" if form_type == "fenologia" else "fecha"
+
+
+def _check_window_coverage(
+    form_type: str, greenhouse_id: int | None, table: str, date_col: str, df: pd.DataFrame
+) -> None:
+    if form_type not in ("sensores", "riego", "exteriores", "fenologia"):
+        return
+
+    existence_query = service_client.table(table).select(date_col)
+    if greenhouse_id is not None:
+        existence_query = existence_query.eq("greenhouse_id", greenhouse_id)
+    existing = existence_query.limit(1).execute()
+
+    dates = pd.to_datetime(df["fecha"])
+
+    if not existing.data:
+        if form_type == "exteriores":
+            required = MIN_WEEKS_FIRST_EXTERIORES
+        else:
+            required = MIN_WEEKS_FIRST_BY_INV.get(greenhouse_id)
+            if required is None:
+                return
+        iso = dates.dt.isocalendar()
+        n_weeks = iso[["year", "week"]].drop_duplicates().shape[0]
+        if n_weeks < required:
+            raise HTTPException(
+                422,
+                f"Not sufficient data for first submission: se requieren al menos "
+                f"{required} semanas de datos, el archivo cubre {n_weeks} semana(s).",
+            )
+        return
+
+    date_strs = sorted({_date_str(d) for d in dates})
+    subsequent_query = service_client.table(table).select(date_col).in_(date_col, date_strs)
+    if greenhouse_id is not None:
+        subsequent_query = subsequent_query.eq("greenhouse_id", greenhouse_id)
+    matched = subsequent_query.execute()
+    existing_dates = {row[date_col] for row in matched.data}
+    new_days = len(set(date_strs) - existing_dates)
+    if new_days < MIN_NEW_DAYS_SUBSEQUENT:
+        raise HTTPException(
+            422,
+            f"Not sufficient data: se requieren al menos {MIN_NEW_DAYS_SUBSEQUENT} "
+            f"días nuevos de datos, el archivo aporta {new_days} día(s) nuevo(s).",
+        )
+
+
 @router.post("/uploads/{inv}/{form_type}")
 async def upload_excel(
     inv: int,
@@ -153,6 +213,7 @@ async def upload_excel(
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)
+    _check_window_coverage(form_type, inv, _table_for(form_type), _date_col_for(form_type), df)
     rows_inserted, rows_updated, rows_skipped, skipped_reasons = _ingest_rows(df, form_type, inv)
 
     if rows_inserted + rows_updated > 0:
@@ -215,6 +276,7 @@ async def upload_exteriores(
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)
+    _check_window_coverage("exteriores", None, "exterior_readings", "fecha", df)
     rows_inserted, rows_updated, rows_skipped, skipped_reasons = _ingest_rows(df, "exteriores", None)
 
     if rows_inserted + rows_updated > 0:

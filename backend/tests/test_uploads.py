@@ -341,6 +341,19 @@ def test_upload_sensores_subsequent_excludes_already_present_dates(api_client, m
     assert body["rows_inserted"] == 8
 
 
+def test_upload_sensores_subsequent_rejects_when_overlap_reduces_new_days_below_threshold(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _prior_submission(mock_supa)
+    dates = _weekly_dates(8)
+    _matched_dates(mock_supa, dates[:4])  # 4 of 8 uploaded dates already exist -> only 4 new days
+    df = _sensor_rows(8)
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "días nuevos" in r.text
+
+
 def test_upload_fenologia_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)

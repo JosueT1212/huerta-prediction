@@ -302,3 +302,77 @@ def test_exteriores_lock_status_uses_sentinel(api_client, mock_supa):
     assert r.status_code == 200
     assert r.json() == {"locked": False, "next_allowed_at": None}
     mock_supa.table.return_value.select.return_value.eq.assert_any_call("greenhouse_id", 0)
+
+
+def test_upload_sensores_subsequent_rejects_insufficient_new_days(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _prior_submission(mock_supa)
+    _matched_dates(mock_supa, [])  # none of the uploaded dates are already in the DB
+    df = _sensor_rows(3)  # 3 new days < 7 required
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "días nuevos" in r.text
+
+
+def test_upload_exteriores_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa, per_inv=False)
+    df = _exterior_rows(5)  # exteriores requires 9 distinct weeks
+    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/exteriores", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "semanas" in r.text
+
+
+def test_upload_sensores_subsequent_excludes_already_present_dates(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _prior_submission(mock_supa)
+    dates = _weekly_dates(8)
+    _matched_dates(mock_supa, [dates[0]])  # 1 of the 8 uploaded dates already exists
+    df = _sensor_rows(8)  # 8 uploaded - 1 already-present = 7 new days, exactly the minimum
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 8
+
+
+def test_upload_fenologia_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa)
+    df = _phenology_rows(3)  # inv3 requires 9 distinct weeks on first submission
+    files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
+    assert r.status_code == 422
+    assert "semanas" in r.text
+
+
+def test_upload_fenologia_subsequent_uses_week_date_column(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _prior_submission(mock_supa)
+    dates = _weekly_dates(8)
+    _matched_dates(mock_supa, [dates[0]], date_col="week_date")  # 1 of 8 already present
+    df = _phenology_rows(8)  # 8 uploaded - 1 already-present = 7 new days, exactly the minimum
+    files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 8
+
+
+def test_upload_sensores_unmapped_inv_skips_window_check(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa)
+    df = _sensor_rows(1)  # inv 99 isn't in SEQ_LEN_BY_INV -> check is skipped, not a 500
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/99/sensores", headers=headers, files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 1

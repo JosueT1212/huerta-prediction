@@ -400,8 +400,8 @@ def main():
             ramp_weeks=HP.get('ramp_weeks', 4),
         )
     else:
-        plot_results_per_greenhouse({INV_ID: best_result}, horizon=HORIZON,
-                                    intervals={INV_ID: (lower, upper)})
+        plot_results_per_greenhouse({f'{INV_ID}_lstm': best_result}, horizon=HORIZON,
+                                    intervals={f'{INV_ID}_lstm': (lower, upper)})
 
     # Top-25 R² statistics
     all_r2s = sorted([r[0] for r in top_runs], reverse=True)
@@ -638,8 +638,8 @@ def main():
             ramp_weeks=HP.get('ramp_weeks', 4),
         )
     else:
-        plot_results_per_greenhouse({INV_ID: best_result}, horizon=HORIZON,
-                                    intervals={INV_ID: (lower, upper)})
+        plot_results_per_greenhouse({f'{INV_ID}_lstm': best_result}, horizon=HORIZON,
+                                    intervals={f'{INV_ID}_lstm': (lower, upper)})
 
     # Top-25 R² statistics
     all_r2s = sorted([r[0] for r in top_runs], reverse=True)

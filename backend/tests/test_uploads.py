@@ -137,17 +137,14 @@ def test_upload_rejects_missing_columns(api_client, mock_supa):
 def test_upload_sensores_upserts_and_touches_lock(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    df = pd.DataFrame([{
-        "fecha": "2026-07-01", "temp_prom_int": 22.1, "temp_min_int": 18.0,
-        "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
-        "deficit_humedad": 3.2, "deficit_presion_vapor": 0.8, "humedad_abs_int": 11.5,
-    }])
+    _first_submission(mock_supa)
+    df = _sensor_rows(9)  # inv3 requires 9 distinct weeks on first submission
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_in_file"] == 1
-    assert body["rows_inserted"] == 1
+    assert body["rows_in_file"] == 9
+    assert body["rows_inserted"] == 9
     mock_supa.table.assert_any_call("sensor_readings_wide")
     mock_supa.table.assert_any_call("submission_locks")
 
@@ -172,12 +169,10 @@ def test_upload_produccion_skips_unmatched_week_and_does_not_lock(api_client, mo
 def test_upload_fenologia_rejects_non_numeric_zona(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    df = pd.DataFrame([{
-        "fecha": "2026-07-01", "zona": "abc", "planta": 1,
-        "racimos_puestos": 1, "flores_racimo_abiertas": 1,
-        "racimos_en_planta": 1, "cantidad_tomates": 1, "racimo_en_cosecha": 1,
-        "tomates_maduros": 1, "diametro_fruto_cm": 1.0, "crecimiento_planta_cm": 1.0,
-    }])
+    _first_submission(mock_supa)
+    df = _phenology_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df["zona"] = df["zona"].astype(object)
+    df.loc[df.index[-1], "zona"] = "abc"
     files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
     assert r.status_code == 422
@@ -187,16 +182,14 @@ def test_upload_fenologia_rejects_non_numeric_zona(api_client, mock_supa):
 def test_upload_sensores_handles_blank_optional_cell(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    df = pd.DataFrame([{
-        "fecha": "2026-07-01", "temp_prom_int": 22.1, "temp_min_int": 18.0,
-        "temp_max_int": 27.0, "hr_prom_int": 65.0, "co2_ppm": 410.0,
-        "deficit_humedad": 3.2, "deficit_presion_vapor": 0.8, "humedad_abs_int": None,
-    }])
+    _first_submission(mock_supa)
+    df = _sensor_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df.loc[df.index[-1], "humedad_abs_int"] = None
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_inserted"] == 1
+    assert body["rows_inserted"] == 9
 
 
 def test_history_requires_auth(api_client):
@@ -230,14 +223,13 @@ def test_lock_status_endpoint_returns_status(api_client, mock_supa):
 def test_upload_riego_upserts_and_touches_lock(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    df = pd.DataFrame([{
-        "fecha": "2026-07-01", "riego_total": 120.0, "ph_promedio": 6.1, "ce_promedio": 2.3,
-    }])
+    _first_submission(mock_supa)
+    df = _riego_rows(9)  # inv3 requires 9 distinct weeks on first submission
     files = {"file": ("riego.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/riego", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_inserted"] == 1
+    assert body["rows_inserted"] == 9
     mock_supa.table.assert_any_call("riego_readings")
     mock_supa.table.assert_any_call("submission_locks")
 
@@ -270,16 +262,13 @@ def test_upload_exteriores_requires_auth(api_client):
 def test_upload_exteriores_upserts_without_greenhouse_id(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    df = pd.DataFrame([{
-        "fecha": "2026-07-01", "temp_prom_ext": 20.0, "temp_max_ext": 26.0,
-        "temp_min_ext": 15.0, "hr_prom_ext": 70.0, "rad_sum": 1800.0,
-        "rad_max": 850.0, "dh_ext": 5.0, "humedad_abs_ext": 9.5,
-    }])
+    _first_submission(mock_supa, per_inv=False)
+    df = _exterior_rows(9)  # exteriores requires 9 distinct weeks on first submission
     files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/exteriores", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_inserted"] == 1
+    assert body["rows_inserted"] == 9
     mock_supa.table.assert_any_call("exterior_readings")
     # verify no greenhouse_id key was sent for the exterior_readings upsert
     upsert_call = next(

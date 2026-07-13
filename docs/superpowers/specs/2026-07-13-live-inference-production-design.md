@@ -161,9 +161,20 @@ T13–T17 slider (kg/m² hero chart, PI bands, KPI cards) documented in
 `demo/CLAUDE.md` §5. None of that is touched by this spec.
 
 `/live-predictions/{inv}` (GET/PATCH, `backend/routers/predictions.py`)
-already exists, already reads/writes the `predictions` table directly, and
-already updates weekly once `live_inference.py` runs both greenhouses — it
-just isn't wired into any dashboard view yet. This section adds that UI.
+already exists and already reads/writes the `predictions` table directly.
+The dashboard already has live-prediction JS wired to it
+(`refreshLiveData()`, `renderForecastSection()`, `renderMenuBadge()`,
+`extendSliderWithLive()` — `demo/Demo Dashboard.html` lines ~3050–3139) —
+but today `extendSliderWithLive()` appends each new live week directly onto
+the same `rawInv[inv]` arrays that feed the T17 slider/chart, blending live
+data into the historical replay with no season boundary.
+
+This spec **removes that blending**: `extendSliderWithLive()` (and its
+call in `refreshLiveData()`) is deleted. Live data moves into its own T18
+tab instead of extending the T17 arrays. `renderForecastSection()` and
+`renderMenuBadge()` are kept and retargeted at the new T18 tab's containers
+instead of the old `forecast-cards-{inv}` / `menu-live-badge-{inv}` spots
+(which lived directly on the T17 view) — see below.
 
 **Season tracking.** `predictions` gets a `season` column:
 
@@ -178,20 +189,22 @@ constant change plus a new `transplant_dates` row — no other code changes
 required.
 
 **Dashboard.** Each greenhouse view (`view-inv3`, `view-inv4`) gets season
-tabs above the existing content:
+tabs wrapping the existing content:
 
 - **"T17" tab** (default) — exactly the existing slider/chart/kg-m²-hero
-  content, unchanged.
-- **"T18" tab** (new) — simple table/cards fed by
-  `GET /live-predictions/{inv}?season=T18`: `predicted_for`, `kg_predicted`,
-  `kg_actual` (or "—" if null), one row per week, growing weekly. A
-  "Registrar producción real" button per row missing `kg_actual` opens a
-  small form → `PATCH /live-predictions/{inv}/{id}`. No slider, no PI bands
-  — there are only ever a handful of rows.
+  content and markup, unchanged, minus the two elements that move to the
+  T18 tab (see below).
+- **"T18" tab** (new) — the relocated `forecast-cards-{inv}` (upcoming
+  predictions) and `menu-live-badge-{inv}` pieces, now fed by
+  `GET /live-predictions/{inv}?season=T18` instead of `?limit=20`: a card per
+  row showing `predicted_for`, `kg_predicted`, and `kg_actual` ("—" if null),
+  growing weekly. A "Registrar producción real" button per row missing
+  `kg_actual` opens a small form → `PATCH /live-predictions/{inv}/{id}`. No
+  slider, no PI bands — there are only ever a handful of rows.
 
 `GET /live-predictions/{inv}` gets an optional `season` query param
-(defaults to returning all seasons, dashboard always passes `T18` explicitly
-for this new tab).
+(defaults to returning all seasons if omitted; dashboard always passes
+`T18` explicitly for this tab).
 
 Right after go-live, the T18 tab is nearly empty (one row per week as
 `live_inference.py` runs) — that's expected, it fills in over the season.

@@ -25,7 +25,7 @@
 - Modify: `demo/Demo Dashboard.html` (near `const rawInv = {};` at line 2541, and inside `init()` at lines 3012-3053)
 
 **Interfaces:**
-- Produces: `rawLive` (object, `{3: Array|null, 4: Array|null}`, each array item shaped like a `/live-predictions` row: `{id, predicted_for, kg_predicted, kg_actual, season, ...}`, sorted ascending by `predicted_for`), `async function loadLiveSeason(inv)`, `function liveKg(row)`, `function liveTotalsFor(inv)` (returns `{rows, total, peak}`), `function fmtWeekLabel(dateStr)`.
+- Produces: `rawLive` (object, `{3: Array|null, 4: Array|null}`, each array item shaped like a `/live-predictions` row: `{id, predicted_for, kg_predicted, kg_actual, season, ...}`, sorted ascending by `predicted_for`), `async function loadLiveSeason(inv)`, `function liveKg(row)`, `function liveTotalsFor(inv)` (returns `{rows, total, peak}`), `function fmtLiveWeekLabel(dateStr)`.
 - Consumes: existing `fetchJSON(path)` helper.
 
 - [ ] **Step 1: Add the shared live-data globals and helpers**
@@ -53,7 +53,7 @@ function liveTotalsFor(inv) {
   return { rows, total, peak };
 }
 
-function fmtWeekLabel(dateStr) {
+function fmtLiveWeekLabel(dateStr) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
 }
 ```
@@ -113,7 +113,7 @@ git commit -m "feat(dashboard): add live T18 season data loader"
 - Modify: `demo/Demo Dashboard.html` (`fillKPIs` at lines 2505-2538, `init()`, `renderForecastSection`'s PATCH handler at lines 3155-3169)
 
 **Interfaces:**
-- Consumes: `rawLive`, `liveTotalsFor(inv)`, `liveKg(row)`, `fmtWeekLabel(dateStr)`, `fmtKg`, `setText` (Task 1).
+- Consumes: `rawLive`, `liveTotalsFor(inv)`, `liveKg(row)`, `fmtLiveWeekLabel(dateStr)`, `fmtKg`, `setText` (Task 1).
 - Produces: `function fillMenuKPIs(inv)` — sets `menu{inv}-total`, `menu{inv}-peak`, `menu{inv}-peak-unit` from live data. Later tasks call this after any live-data mutation.
 
 - [ ] **Step 1: Extract the menu-card lines out of `fillKPIs` into a new live-sourced function**
@@ -139,7 +139,7 @@ function fillMenuKPIs(inv) {
   }
   setText(`menu${inv}-total`, fmtKg(total));
   setText(`menu${inv}-peak`, fmtKg(liveKg(peak)));
-  setText(`menu${inv}-peak-unit`, `kg · ${fmtWeekLabel(peak.predicted_for)}`);
+  setText(`menu${inv}-peak-unit`, `kg · ${fmtLiveWeekLabel(peak.predicted_for)}`);
 }
 ```
 
@@ -190,7 +190,7 @@ git commit -m "feat(dashboard): Vista general cards read live T18 totals"
 - Modify: `demo/Demo Dashboard.html` (`renderYieldGoal` at lines 2939-2997, `init()` at line 3039)
 
 **Interfaces:**
-- Consumes: `rawLive`, `liveKg(row)`, `fmtWeekLabel(dateStr)`, `AREA_M2`, `getMeta(num)` (all pre-existing except `rawLive`/`liveKg` from Task 1).
+- Consumes: `rawLive`, `liveKg(row)`, `fmtLiveWeekLabel(dateStr)` (from Task 1), `AREA_M2`, `getMeta(num)` (pre-existing).
 - Produces: `renderYieldGoal(num)` now reads `rawLive` instead of `rawInv`; same call signature, same DOM targets (`chart-yield-{num}`, `kpi-yield-avg-{num}`, `kpi-yield-trend-{num}`).
 
 - [ ] **Step 1: Rewrite the data-sourcing half of `renderYieldGoal`**
@@ -248,7 +248,7 @@ function renderYieldGoal(num) {
     metaWeek.push(+meta.toFixed(3));
     metaCum.push(+(meta * (i + 1)).toFixed(3));
   }
-  const labels = weeks.map(w => fmtWeekLabel(w));
+  const labels = weeks.map(w => fmtLiveWeekLabel(w));
 ```
 
 The rest of the function (chart construction, `kpi-yield-avg-{num}`/`kpi-yield-trend-{num}` at lines 2960-2997) is unchanged — it already only references `n`, `labels`, `projWeek`, `projCum`, `metaWeek`, `metaCum`, `cumReal`, all of which keep the same names/shapes.
@@ -448,7 +448,7 @@ git commit -m "feat(dashboard): KPI phenology panel reads live T18 Supabase data
 - Modify: `demo/Demo Dashboard.html` (`renderInv` at lines 2553-2569, near `buildHistTable` at lines 2137-2163, `init()`)
 
 **Interfaces:**
-- Consumes: `rawLive`, `errorBucket(err)`, `fmt(n)`, `fmtWeekLabel(dateStr)` (pre-existing / Task 1).
+- Consumes: `rawLive`, `fmtLiveWeekLabel(dateStr)` (from Task 1), `errorBucket(err)`, `fmt(n)` (pre-existing).
 - Produces: `function buildLiveHistTable(tbody, rows)`.
 
 - [ ] **Step 1: Decouple Histórico's tbody from the T17 slider**
@@ -490,7 +490,7 @@ function buildLiveHistTable(tbody, rows) {
     }
     return `
       <tr class="${isObs ? 'observed-row' : 'future'}">
-        <td class="label">${fmtWeekLabel(r.predicted_for)}</td>
+        <td class="label">${fmtLiveWeekLabel(r.predicted_for)}</td>
         <td class="status ${isObs ? 'observed' : ''}">${isObs ? 'Observado' : 'Predicho'}</td>
         <td class="num">${fmt(real)}</td>
         <td class="num">${fmt(pred)}</td>

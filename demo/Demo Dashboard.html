@@ -2511,10 +2511,6 @@ function fillKPIs(inv, series) {
   let peak = preds[0], peakIdx = 0;
   preds.forEach((p, i) => { if (p.pred > peak.pred) { peak = p; peakIdx = i; } });
 
-  setText(`menu${inv}-total`, fmtKg(total));
-  setText(`menu${inv}-peak`,  fmtKg(peak.pred));
-  setText(`menu${inv}-peak-unit`, `kg · ${peak.horizon}`);
-
   setText(`inv${inv}-total`, fmtKg(total));
   setText(`inv${inv}-peak`,  fmtKg(peak.pred));
   setText(`inv${inv}-peak-unit`, `kg · ${peak.horizon}`);
@@ -2535,6 +2531,19 @@ function fillKPIs(inv, series) {
     setText(`inv${inv}-vs-real`, fmtKg(last.real));
     setText(`inv${inv}-vs-err`,  `${err >= 0 ? '+' : ''}${err.toFixed(1)}%`);
   }
+}
+
+function fillMenuKPIs(inv) {
+  const { rows, total, peak } = liveTotalsFor(inv);
+  if (!rows.length) {
+    setText(`menu${inv}-total`, '—');
+    setText(`menu${inv}-peak`, '—');
+    setText(`menu${inv}-peak-unit`, 'Sin datos de T18 todavía');
+    return;
+  }
+  setText(`menu${inv}-total`, fmtKg(total));
+  setText(`menu${inv}-peak`, fmtKg(liveKg(peak)));
+  setText(`menu${inv}-peak-unit`, `kg · ${fmtLiveWeekLabel(peak.predicted_for)}`);
 }
 
 /* Respuestas crudas del backend + cursor por invernadero */
@@ -3063,6 +3072,8 @@ async function init() {
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);
 
+    fillMenuKPIs(3);
+    fillMenuKPIs(4);
     refreshLiveData();
 
     console.log('[Huerta] backend OK',
@@ -3189,6 +3200,8 @@ function renderForecastSection(inv, data) {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ kg_actual: kg }),
       });
+      await loadLiveSeason(btn.dataset.inv);
+      fillMenuKPIs(Number(btn.dataset.inv));
       refreshLiveData();
     });
   });

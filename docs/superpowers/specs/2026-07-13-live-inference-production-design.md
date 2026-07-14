@@ -114,7 +114,10 @@ from `transplant_dates` at the start of each iteration.
 **Missing transplant date** (table has no row for that `greenhouse_id`): that
 greenhouse's inference is skipped for this run, with an `ERROR`-level log
 line identifying which greenhouse and why. The other greenhouse still runs
-and writes its prediction normally.
+and writes its prediction normally. Same skip behavior applies if a
+transplant date exists but no sensor data has been uploaded yet this season
+(see Section 4's corrected `harvest_start` derivation) — there's nothing to
+run the model or the fallback on yet.
 
 ---
 
@@ -137,9 +140,32 @@ training repo).
   ```
 - Run once now; re-run manually only if the underlying Kg data changes.
 
-**At inference time**, for each greenhouse:
+**Correction (post-implementation review, 2026-07-14):** the trigger below
+originally used `wis_target = (predicted_for - transplant_date).days // 7`.
+This is wrong — `transplant_date` marks when the plant went in the ground,
+~10-11 weeks *before* harvest starts (CLAUDE.md §5), while the historical
+means are indexed by weeks-since-harvest-*started* (`skip_first_weeks`
+drops the first 3 *production* rows in training, not the first 3 weeks
+post-transplant). Using `transplant_date` directly fires the fallback on
+the wrong calendar weeks entirely.
+
+**Corrected trigger, based on when the client actually starts uploading
+data each season:** operationally, the client uploads no live sensor data
+before harvest begins for a season — the first upload of a new season IS
+harvest starting, and by the window-coverage validation
+(`backend/routers/uploads.py`, `MIN_WEEKS_FIRST_BY_INV`) that first upload
+already carries ≥ seq_len+horizon weeks of history. So "week harvest
+started" = the earliest `fecha` present in `sensor_readings_wide` for that
+greenhouse at or after the current `transplant_dates.fecha` (transplant
+date still marks the season boundary, just not the harvest-start
+reference point itself).
+
 ```
-wis_target = (predicted_for - transplant_date).days // 7
+harvest_start = MIN(fecha) FROM sensor_readings_wide
+                WHERE greenhouse_id = inv AND fecha >= transplant_date
+# None if no data uploaded yet this season → skip this greenhouse (same as missing transplant_date)
+
+wis_target = (predicted_for - harvest_start).days // 7
 if wis_target < 3:
     kg_predicted = historical_mean_inv{inv}.json[str(wis_target)]
     model_version = "historical_mean_v1"
@@ -147,6 +173,11 @@ else:
     kg_predicted = <CNN-RNN forward pass>
     model_version = "cnn_rnn_v2_production"
 ```
+
+`transplant_date` is still passed to `build_input_tensor` unchanged for the
+model's temporal features (`dias_desde_transplante`, `week_in_season`) —
+only the ramp-up *trigger* changes to use `harvest_start` instead.
+
 Both paths upsert into `predictions` the same way — `model_version`
 distinguishes provenance for later debugging/auditing.
 

@@ -1669,7 +1669,6 @@ Próximo envío disponible en 7 días.
             <th>Estatus</th>
             <th class="num">Real (kg)</th>
             <th class="num">Predicho (kg)</th>
-            <th class="num">Intervalo</th>
             <th class="num">Error</th>
           </tr>
         </thead>
@@ -1698,7 +1697,6 @@ Próximo envío disponible en 7 días.
             <th>Estatus</th>
             <th class="num">Real (kg)</th>
             <th class="num">Predicho (kg)</th>
-            <th class="num">Intervalo</th>
             <th class="num">Error</th>
           </tr>
         </thead>
@@ -2062,7 +2060,7 @@ function buildHistTable(tbody, data) {
 function buildLiveHistTable(tbody, rows) {
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-muted)">Sin datos de T18 todavía.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-muted)">Sin datos de T18 todavía.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -2070,7 +2068,7 @@ function buildLiveHistTable(tbody, rows) {
     const real = r.kg_actual;
     const pred = r.kg_predicted;
     let errHtml = '<td class="num"><span style="color:var(--ink-muted);opacity:0.4">—</span></td>';
-    if (isObs && pred) {
+    if (isObs && pred != null && real !== 0) {
       const err = ((pred - real) / real) * 100;
       const errKg = pred - real;
       const cls = errorBucket(err);
@@ -2087,7 +2085,6 @@ function buildLiveHistTable(tbody, rows) {
         <td class="status ${isObs ? 'observed' : ''}">${isObs ? 'Observado' : 'Predicho'}</td>
         <td class="num">${fmt(real)}</td>
         <td class="num">${fmt(pred)}</td>
-        <td class="num">—</td>
         ${errHtml}
       </tr>`;
   }).join('');
@@ -2779,9 +2776,13 @@ function renderYieldGoal(num) {
   const projWeek = [], projCum = [], metaWeek = [], metaCum = [];
   for (let i = 0; i < n; i++) {
     const r3 = byDate3[weeks[i]], r4 = byDate4[weeks[i]];
-    const w = (((r3 ? liveKg(r3) : 0) / a3) + ((r4 ? liveKg(r4) : 0) / a4)) / 2;
+    const present = (r3 ? 1 : 0) + (r4 ? 1 : 0);
+    const w = present ? (((r3 ? liveKg(r3) : 0) / a3) + ((r4 ? liveKg(r4) : 0) / a4)) / present : 0;
     cum     += w;
-    cumReal += (((r3?.kg_actual || 0) / a3) + ((r4?.kg_actual || 0) / a4)) / 2;
+    const realPresent = (r3?.kg_actual != null ? 1 : 0) + (r4?.kg_actual != null ? 1 : 0);
+    cumReal += realPresent
+      ? (((r3?.kg_actual ?? 0) / a3) + ((r4?.kg_actual ?? 0) / a4)) / realPresent
+      : 0;
     projWeek.push(+w.toFixed(3));
     projCum.push(+cum.toFixed(3));
     metaWeek.push(+meta.toFixed(3));
@@ -2994,11 +2995,21 @@ function renderForecastSection(inv, data) {
       const kg = parseFloat(kgStr);
       if (Number.isNaN(kg)) return;
       const token = localStorage.getItem('sb_token');
-      await fetch(`${API_BASE}/live-predictions/${btn.dataset.inv}/${btn.dataset.id}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kg_actual: kg }),
-      });
+      try {
+        const response = await fetch(`${API_BASE}/live-predictions/${btn.dataset.inv}/${btn.dataset.id}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kg_actual: kg }),
+        });
+        if (!response.ok) {
+          alert('No se pudo registrar la producción real. Intenta de nuevo.');
+          return;
+        }
+      } catch (err) {
+        console.error('[Huerta] Error al registrar producción real:', err);
+        alert('No se pudo registrar la producción real (error de red). Intenta de nuevo.');
+        return;
+      }
       await loadLiveSeason(btn.dataset.inv);
       fillMenuKPIs(Number(btn.dataset.inv));
       buildLiveHistTable(document.getElementById(`tbody-hist${btn.dataset.inv}`), rawLive[btn.dataset.inv] || []);
@@ -3019,18 +3030,26 @@ function renderMenuBadge(inv, data) {
     `${next.predicted_for} · ${Math.round(next.kg_predicted).toLocaleString('es-MX')} kg</span>`;
 }
 
-async function refreshLiveData() {
-  for (const inv of [3, 4]) {
-    const data = await fetchJSON(`/live-predictions/${inv}?season=T18&limit=20`);
-    if (!data) continue;
-    renderForecastSection(inv, data);
-    renderMenuBadge(inv, data);
+let _refreshLiveDataInFlight = false;
 
-    await loadLiveSeason(inv);
-    fillMenuKPIs(inv);
-    buildLiveHistTable(document.getElementById(`tbody-hist${inv}`), rawLive[inv] || []);
+async function refreshLiveData() {
+  if (_refreshLiveDataInFlight) return;
+  _refreshLiveDataInFlight = true;
+  try {
+    for (const inv of [3, 4]) {
+      const data = await fetchJSON(`/live-predictions/${inv}?season=T18&limit=20`);
+      if (!data) continue;
+      renderForecastSection(inv, data);
+      renderMenuBadge(inv, data);
+
+      await loadLiveSeason(inv);
+      fillMenuKPIs(inv);
+      buildLiveHistTable(document.getElementById(`tbody-hist${inv}`), rawLive[inv] || []);
+    }
+    renderYieldGoal(3); renderYieldGoal(4);
+  } finally {
+    _refreshLiveDataInFlight = false;
   }
-  renderYieldGoal(3); renderYieldGoal(4);
 }
 
 document.addEventListener('visibilitychange', () => {

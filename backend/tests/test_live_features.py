@@ -1,6 +1,7 @@
 import os
 import pytest
 import numpy as np
+from pathlib import Path
 from unittest.mock import patch
 from datetime import date
 
@@ -95,6 +96,16 @@ def test_build_input_tensor_shape():
         xs, xt = build_input_tensor(
             3, wide_rows, pheno_rows,
             transplant_date=date(2026, 1, 5),
+            pipeline_path=Path("Models/results/pipeline_inv3.pkl"),
         )
     assert xs.shape == (1, 6, 2)   # (batch, seq_len, n_pca_components)
     assert xt.shape == (1, 6, 2)   # (batch, seq_len, n_temporal)
+
+
+def test_build_input_tensor_requires_explicit_transplant_date():
+    from backend.live_features import build_input_tensor
+    pipeline = _make_pipeline(n_sensor_cols=3, seq_len=6)
+    wide_rows = _wide_rows(60)
+    with patch('backend.live_features.joblib.load', return_value=pipeline):
+        with pytest.raises(TypeError):
+            build_input_tensor(4, wide_rows, [], pipeline_path="dummy.pkl")

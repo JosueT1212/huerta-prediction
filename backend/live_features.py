@@ -5,7 +5,6 @@ Sensor: sensor_readings_wide (daily) → aggregate weekly → scaler_Xs → PCA
 Phenology: phenology_observations (per plant) → mean per week → scaler_Xp
 Temporal: transplant_date + week → dias_desde_transplante, week_in_season → scaler_Xt
 """
-import os
 from datetime import date, timedelta
 from pathlib import Path
 import joblib
@@ -13,7 +12,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-PIPELINE_PATH = Path("Models/results/pipeline_inv3.pkl")
 SUM_SENSORS = {"rad_sum", "riego_total"}
 
 PHENO_DB_TO_MODEL = {
@@ -87,8 +85,8 @@ def build_input_tensor(
     inv: int,
     wide_rows: list[dict],
     pheno_rows: list[dict],
-    transplant_date: date | None = None,
-    pipeline_path: Path = PIPELINE_PATH,
+    transplant_date: date,
+    pipeline_path: Path,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Return (x_sensor, x_temporal) tensors ready for model.forward().
 
@@ -104,10 +102,6 @@ def build_input_tensor(
     scaler_Xp = pipeline["scaler_Xp"]
     scaler_Xt = pipeline["scaler_Xt"]
     pheno_means = pipeline["pheno_means"]
-
-    if transplant_date is None:
-        raw = os.environ.get("TRANSPLANT_DATE_INV3", "")
-        transplant_date = date.fromisoformat(raw) if raw else date(2026, 1, 1)
 
     # ── Sensor: daily → weekly ─────────────────────────────────────────────
     weekly = aggregate_wide_to_weekly(wide_rows, sensor_cols)

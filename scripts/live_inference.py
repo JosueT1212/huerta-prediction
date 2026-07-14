@@ -68,12 +68,12 @@ def get_transplant_date(supa, inv: int) -> date | None:
     return date.fromisoformat(row["fecha"])
 
 
-def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> None:
+def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
     transplant_date = get_transplant_date(supa, inv)
     if transplant_date is None:
         print(f"  ERROR: no transplant_date set for invernadero {inv} — skipping. "
               f"Set it via PUT /transplant-date/{inv}.", file=sys.stderr)
-        return
+        return False
 
     predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
     wis_target = week_in_season(predicted_for, transplant_date)
@@ -85,7 +85,7 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> None:
                   f"(ramp-up) → historical mean {historical_kg:.1f} kg")
             _upsert_prediction(supa, inv, predicted_for, historical_kg,
                                 HISTORICAL_MEAN_VERSION, dry_run)
-            return
+            return True
 
     cutoff = (date.today() - timedelta(weeks=12)).isoformat()
 
@@ -164,6 +164,7 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> None:
 
     print(f"  Inv{inv} → {kg_predicted:.1f} kg for week {predicted_for}")
     _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)
+    return True
 
 
 def _upsert_prediction(supa, inv: int, predicted_for: date, kg_predicted: float,
@@ -189,8 +190,8 @@ def main():
     succeeded = 0
     for inv in INV_IDS:
         try:
-            run_inference_for_greenhouse(supa, inv, dry_run)
-            succeeded += 1
+            if run_inference_for_greenhouse(supa, inv, dry_run):
+                succeeded += 1
         except Exception as e:  # noqa: BLE001
             print(f"  ERROR: invernadero {inv} failed: {e}", file=sys.stderr)
 

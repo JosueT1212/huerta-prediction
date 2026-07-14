@@ -68,6 +68,22 @@ def get_transplant_date(supa, inv: int) -> date | None:
     return date.fromisoformat(row["fecha"])
 
 
+def get_harvest_start(supa, inv: int, transplant_date: date) -> date | None:
+    resp = (
+        supa.table("sensor_readings_wide")
+        .select("fecha")
+        .eq("greenhouse_id", inv)
+        .gte("fecha", transplant_date.isoformat())
+        .order("fecha")
+        .limit(1)
+        .execute()
+    )
+    rows = resp.data or []
+    if not rows:
+        return None
+    return date.fromisoformat(rows[0]["fecha"])
+
+
 def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
     transplant_date = get_transplant_date(supa, inv)
     if transplant_date is None:
@@ -75,8 +91,14 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
               f"Set it via PUT /transplant-date/{inv}.", file=sys.stderr)
         return False
 
+    harvest_start = get_harvest_start(supa, inv, transplant_date)
+    if harvest_start is None:
+        print(f"  ERROR: no sensor data uploaded yet this season for invernadero {inv} — skipping.",
+              file=sys.stderr)
+        return False
+
     predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
-    wis_target = week_in_season(predicted_for, transplant_date)
+    wis_target = week_in_season(predicted_for, harvest_start)
 
     if wis_target < SKIP_FIRST_WEEKS:
         historical_kg = load_historical_mean(inv, wis_target)

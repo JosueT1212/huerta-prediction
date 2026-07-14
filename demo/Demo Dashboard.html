@@ -2539,6 +2539,31 @@ function fillKPIs(inv, series) {
 
 /* Respuestas crudas del backend + cursor por invernadero */
 const rawInv    = {};                 // inv -> /inference payload completo
+
+/* ── Live season (T18) data — shared by Vista general / KPIs / Histórico ── */
+const rawLive = { 3: null, 4: null };
+
+async function loadLiveSeason(inv) {
+  const rows = await fetchJSON(`/live-predictions/${inv}?season=T18&limit=200`);
+  rawLive[inv] = (rows || []).slice().sort((a, b) => a.predicted_for.localeCompare(b.predicted_for));
+}
+
+function liveKg(row) {
+  return row.kg_actual != null ? row.kg_actual : (row.kg_predicted || 0);
+}
+
+function liveTotalsFor(inv) {
+  const rows = rawLive[inv] || [];
+  const total = rows.reduce((a, r) => a + liveKg(r), 0);
+  let peak = null;
+  rows.forEach(r => { if (!peak || liveKg(r) > liveKg(peak)) peak = r; });
+  return { rows, total, peak };
+}
+
+function fmtWeekLabel(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
+}
+
 const cursorInv = { 3: null, 4: null };
 
 /* Pinta el relleno del track del slider hasta la posición actual */
@@ -3011,13 +3036,13 @@ function wireMeta(num) {
 
 async function init() {
   try {
-    const [preds3, preds4, metrics3, metrics4, ph3, ph4] = await Promise.all([
+    const [preds3, preds4, metrics3, metrics4] = await Promise.all([
       fetchJSON('/inference/3'),
       fetchJSON('/inference/4'),
       fetchJSON('/metrics/3'),
       fetchJSON('/metrics/4'),
-      fetchJSON('/phenology/3'),
-      fetchJSON('/phenology/4'),
+      loadLiveSeason(3),
+      loadLiveSeason(4),
     ]);
 
     rawInv[3] = preds3;

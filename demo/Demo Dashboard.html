@@ -2162,6 +2162,40 @@ function buildHistTable(tbody, data) {
   }).join('');
 }
 
+function buildLiveHistTable(tbody, rows) {
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-muted)">Sin datos de T18 todavía.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const isObs = r.kg_actual != null;
+    const real = r.kg_actual;
+    const pred = r.kg_predicted;
+    let errHtml = '<td class="num"><span style="color:var(--ink-muted);opacity:0.4">—</span></td>';
+    if (isObs && pred) {
+      const err = ((pred - real) / real) * 100;
+      const errKg = pred - real;
+      const cls = errorBucket(err);
+      const sign = err >= 0 ? '+' : '';
+      const signKg = errKg >= 0 ? '+' : '';
+      errHtml = `<td class="num">
+        <span class="error-cell ${cls}">${sign}${err.toFixed(1)}%</span>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:3px;font-variant-numeric:tabular-nums;">${signKg}${Math.round(errKg).toLocaleString('en-US')} kg</div>
+      </td>`;
+    }
+    return `
+      <tr class="${isObs ? 'observed-row' : 'future'}">
+        <td class="label">${fmtLiveWeekLabel(r.predicted_for)}</td>
+        <td class="status ${isObs ? 'observed' : ''}">${isObs ? 'Observado' : 'Predicho'}</td>
+        <td class="num">${fmt(real)}</td>
+        <td class="num">${fmt(pred)}</td>
+        <td class="num">—</td>
+        ${errHtml}
+      </tr>`;
+  }).join('');
+}
+
 /* Las tablas se construyen en init() después del fetch a la API */
 
 /* =========================================================
@@ -2595,7 +2629,6 @@ function renderInv(inv, cursor) {
   const s = buildSeriesFromAPI(raw, cursor);
 
   buildPredTable(document.getElementById(`tbody-inv${inv}`), s.predictions);
-  buildHistTable(document.getElementById(`tbody-hist${inv}`), s.fullHistoryTable);
   makeMenuChart(`chart-menu-${inv}`, s.history, s.predictions, palette.accent);
   makeDetailChart(`chart-inv${inv}`, s.history, s.predictions, palette.accent);
   fillKPIs(inv, s);
@@ -3113,6 +3146,8 @@ async function init() {
 
     fillMenuKPIs(3);
     fillMenuKPIs(4);
+    buildLiveHistTable(document.getElementById('tbody-hist3'), rawLive[3] || []);
+    buildLiveHistTable(document.getElementById('tbody-hist4'), rawLive[4] || []);
     refreshLiveData();
 
     console.log('[Huerta] backend OK',
@@ -3241,6 +3276,7 @@ function renderForecastSection(inv, data) {
       });
       await loadLiveSeason(btn.dataset.inv);
       fillMenuKPIs(Number(btn.dataset.inv));
+      buildLiveHistTable(document.getElementById(`tbody-hist${btn.dataset.inv}`), rawLive[btn.dataset.inv] || []);
       refreshLiveData();
     });
   });

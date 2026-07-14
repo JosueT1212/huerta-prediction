@@ -1052,7 +1052,6 @@
     <div class="logo">J</div>
     <div class="sb-brand-text">
       <div class="sb-brand-name">JATA</div>
-      <div class="sb-brand-sub">Tomates · T17</div>
     </div>
   </div>
 
@@ -1086,7 +1085,6 @@
     <div class="page-header">
       <div>
         <h1 class="page-title" id="greeting-title"></h1>
-        <div class="ornament">Monitoreo predictivo de cosecha para las próximas 6 semanas</div>
       </div>
     </div>
     <div class="divider"></div>
@@ -1170,7 +1168,19 @@
       <button class="ins-tab" data-tab="exteriores">Exteriores</button>
       <button class="ins-tab" data-tab="fenologia">Fenología</button>
       <button class="ins-tab" data-tab="produccion">Producción</button>
+      <button class="ins-tab" data-tab="transplante">Fecha de transplante</button>
       <button class="ins-tab" data-tab="hist">Historial</button>
+    </div>
+
+    <div class="panel insert-panel ins-panel" id="ins-panel-transplante" hidden>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <div>
+          <label style="display:block;font-size:0.8rem;margin-bottom:4px">Fecha de transplante</label>
+          <input type="date" id="transplant-date-input" />
+        </div>
+        <button class="btn-primary" id="transplant-date-save">Guardar</button>
+      </div>
+      <div class="insert-result" id="transplant-date-result"></div>
     </div>
 
     <div class="panel insert-panel ins-panel" id="ins-panel-sensores">
@@ -1818,22 +1828,6 @@ Próximo envío disponible en 7 días.
         </thead>
         <tbody id="users-tbody"></tbody>
       </table>
-
-      <div class="panel" style="margin-top:24px">
-        <div class="panel-title">Fecha de transplante</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div>
-            <label style="display:block;font-size:0.8rem;margin-bottom:4px">Invernadero 3</label>
-            <input type="date" id="transplant-date-3" />
-            <button class="btn-primary" id="transplant-date-save-3" style="margin-left:8px">Guardar</button>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;margin-bottom:4px">Invernadero 4</label>
-            <input type="date" id="transplant-date-4" />
-            <button class="btn-primary" id="transplant-date-save-4" style="margin-left:8px">Guardar</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div id="new-user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center">
@@ -2855,23 +2849,35 @@ function initSeasonTabs() {
   });
 }
 
-async function initTransplantDateForm() {
-  for (const inv of [3, 4]) {
-    const data = await fetchJSON(`/transplant-date/${inv}`).catch(() => null);
-    const input = document.getElementById(`transplant-date-${inv}`);
-    if (data && input) input.value = data.fecha;
+async function refreshTransplantDateTab(inv) {
+  const input = document.getElementById('transplant-date-input');
+  const result = document.getElementById('transplant-date-result');
+  if (!input) return;
+  input.value = '';
+  if (result) result.textContent = '';
+  const data = await fetchJSON(`/transplant-date/${inv}`).catch(() => null);
+  if (data) input.value = data.fecha;
+}
 
-    document.getElementById(`transplant-date-save-${inv}`)?.addEventListener('click', async () => {
-      const val = document.getElementById(`transplant-date-${inv}`).value;
-      if (!val) return;
-      const token = localStorage.getItem('sb_token');
-      await fetch(`${API_BASE}/transplant-date/${inv}`, {
+function initTransplantDateForm() {
+  document.getElementById('transplant-date-save')?.addEventListener('click', async () => {
+    const inv = +document.getElementById('ins-inv').value;
+    const val = document.getElementById('transplant-date-input').value;
+    const result = document.getElementById('transplant-date-result');
+    if (!val) return;
+    const token = localStorage.getItem('sb_token');
+    try {
+      const r = await fetch(`${API_BASE}/transplant-date/${inv}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fecha: val }),
       });
-    });
-  }
+      if (!r.ok) throw new Error(`Error ${r.status}`);
+      if (result) { result.className = 'insert-result ok'; result.textContent = '✓ Fecha guardada'; }
+    } catch (e) {
+      if (result) { result.className = 'insert-result bad'; result.textContent = '⚠ ' + e.message; }
+    }
+  });
 }
 
 function initInsTabs() {
@@ -2889,8 +2895,10 @@ function initInsTabs() {
       document.getElementById('ins-panel-exteriores').hidden = tab !== 'exteriores';
       document.getElementById('ins-panel-fenologia').hidden = tab !== 'fenologia';
       document.getElementById('ins-panel-produccion').hidden = tab !== 'produccion';
+      document.getElementById('ins-panel-transplante').hidden = tab !== 'transplante';
       document.getElementById('ins-panel-hist').hidden = tab !== 'hist';
       if (tab === 'hist') loadHistorial(inv);
+      else if (tab === 'transplante') refreshTransplantDateTab(inv);
       else refreshLockBanner(tab, GLOBAL_UPLOAD_TYPES.includes(tab) ? null : inv);
     });
   });
@@ -2911,6 +2919,7 @@ function initInsTabs() {
       if (btnEl) btnEl.disabled = true;
     });
     if (activeTab === 'hist') loadHistorial(inv);
+    else if (activeTab === 'transplante') refreshTransplantDateTab(inv);
     else if (activeTab) refreshLockBanner(activeTab, GLOBAL_UPLOAD_TYPES.includes(activeTab) ? null : inv);
   });
 

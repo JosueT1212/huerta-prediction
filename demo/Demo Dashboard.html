@@ -1021,6 +1021,13 @@
     border-color: var(--border, #d2d6db);
   }
   .ins-tab:not(.active):hover, .hist-subtab:not(.active):hover { background: rgba(0,0,0,.04); }
+  .season-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .season-tab {
+    padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(0,0,0,.12);
+    background: transparent; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  .season-tab.active { background: var(--ink, #1e2a3a); color: #f4ede0; border-color: transparent; }
+  .season-tab:not(.active):hover { background: rgba(0,0,0,.04); }
   .ins-panel { border-top-left-radius: 0; }
   .ins-confirm-panel {
     margin-top: 16px;
@@ -1332,6 +1339,13 @@ Próximo envío disponible en 7 días.
     </div>
     <div class="divider"></div>
 
+    <div class="season-tabs">
+      <button class="season-tab active" data-season="t17" data-inv="3">T17 (histórico)</button>
+      <button class="season-tab" data-season="t18" data-inv="3">T18 (en vivo)</button>
+    </div>
+
+    <div id="season-panel-t17-3">
+
     <div class="sim-bar">
       <div class="sim-head">
         <div>
@@ -1413,10 +1427,14 @@ Próximo envío disponible en 7 días.
       </div>
     </div>
 
-    <div style="margin-top:32px">
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:16px">Predicción en vivo</h3>
-      <div id="forecast-cards-3" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
-        <p style="color:#9aa0a8">Cargando predicciones…</p>
+    </div><!-- /season-panel-t17-3 -->
+
+    <div id="season-panel-t18-3" hidden>
+      <div class="panel">
+        <div class="panel-title">Predicción en vivo — T18</div>
+        <div id="forecast-cards-3" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <p style="color:#9aa0a8">Cargando predicciones…</p>
+        </div>
       </div>
     </div>
 
@@ -1432,6 +1450,13 @@ Próximo envío disponible en 7 días.
       <div class="page-subtitle">Predicción a 6 semanas · T17</div>
     </div>
     <div class="divider"></div>
+
+    <div class="season-tabs">
+      <button class="season-tab active" data-season="t17" data-inv="4">T17 (histórico)</button>
+      <button class="season-tab" data-season="t18" data-inv="4">T18 (en vivo)</button>
+    </div>
+
+    <div id="season-panel-t17-4">
 
     <div class="sim-bar">
       <div class="sim-head">
@@ -1512,10 +1537,14 @@ Próximo envío disponible en 7 días.
       </div>
     </div>
 
-    <div style="margin-top:32px">
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:16px">Predicción en vivo</h3>
-      <div id="forecast-cards-4" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
-        <p style="color:#9aa0a8">Cargando predicciones…</p>
+    </div><!-- /season-panel-t17-4 -->
+
+    <div id="season-panel-t18-4" hidden>
+      <div class="panel">
+        <div class="panel-title">Predicción en vivo — T18</div>
+        <div id="forecast-cards-4" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <p style="color:#9aa0a8">Cargando predicciones…</p>
+        </div>
       </div>
     </div>
 
@@ -1789,6 +1818,22 @@ Próximo envío disponible en 7 días.
         </thead>
         <tbody id="users-tbody"></tbody>
       </table>
+
+      <div class="panel" style="margin-top:24px">
+        <div class="panel-title">Fecha de transplante</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div>
+            <label style="display:block;font-size:0.8rem;margin-bottom:4px">Invernadero 3</label>
+            <input type="date" id="transplant-date-3" />
+            <button class="btn-primary" id="transplant-date-save-3" style="margin-left:8px">Guardar</button>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;margin-bottom:4px">Invernadero 4</label>
+            <input type="date" id="transplant-date-4" />
+            <button class="btn-primary" id="transplant-date-save-4" style="margin-left:8px">Guardar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="new-user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center">
@@ -2797,6 +2842,38 @@ function wireUploadTab(formType) {
   });
 }
 
+function initSeasonTabs() {
+  document.querySelectorAll('.season-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inv = btn.dataset.inv;
+      const season = btn.dataset.season;
+      document.querySelectorAll(`.season-tab[data-inv="${inv}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`season-panel-t17-${inv}`).hidden = season !== 't17';
+      document.getElementById(`season-panel-t18-${inv}`).hidden = season !== 't18';
+    });
+  });
+}
+
+async function initTransplantDateForm() {
+  for (const inv of [3, 4]) {
+    const data = await fetchJSON(`/transplant-date/${inv}`).catch(() => null);
+    const input = document.getElementById(`transplant-date-${inv}`);
+    if (data && input) input.value = data.fecha;
+
+    document.getElementById(`transplant-date-save-${inv}`)?.addEventListener('click', async () => {
+      const val = document.getElementById(`transplant-date-${inv}`).value;
+      if (!val) return;
+      const token = localStorage.getItem('sb_token');
+      await fetch(`${API_BASE}/transplant-date/${inv}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha: val }),
+      });
+    });
+  }
+}
+
 function initInsTabs() {
   initHistSubtabs();
   [...PER_INV_UPLOAD_TYPES, ...GLOBAL_UPLOAD_TYPES].forEach(wireUploadTab);
@@ -2947,6 +3024,8 @@ async function init() {
     phenoFields = ph3.fields || [];
     renderPhenology(3); renderPhenology(4);
     initInsTabs();
+    initSeasonTabs();
+    initTransplantDateForm();
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);
 
@@ -3046,22 +3125,39 @@ document.querySelector('[data-goto="usuarios"]')
 // Inline pheno forms on inv3/inv4 views were replaced by "Insertar datos" tab in init()
 // This JS was dead code — no callsites on the page after deletion of inline forms
 
-// ── Live Prediction Display ───────────────────────────────────────────────
+// ── Live Prediction Display (T18 tab) ─────────────────────────────────────
 function renderForecastSection(inv, data) {
-  const upcoming = data.filter(d => d.kg_actual == null).slice(0, 4);
   const cards = document.getElementById(`forecast-cards-${inv}`);
-  if (cards) {
-    cards.innerHTML = upcoming.length
-      ? upcoming.map(d => `
-          <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:130px;text-align:center">
-            <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">
-              ${new Date(d.predicted_for + 'T12:00:00').toLocaleDateString('es-MX',{month:'short',day:'numeric'})}
-            </div>
-            <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${Math.round(d.kg_predicted).toLocaleString('es-MX')} kg</div>
-          </div>`).join('')
-      : '<p style="color:#9aa0a8">Sin predicciones próximas.</p>';
-  }
+  if (!cards) return;
+  cards.innerHTML = data.length
+    ? data.map(d => `
+        <div style="background:#1e2a3a;border-radius:8px;padding:16px;min-width:150px;text-align:center">
+          <div style="font-size:0.75rem;color:#9aa0a8;margin-bottom:6px">
+            ${new Date(d.predicted_for + 'T12:00:00').toLocaleDateString('es-MX',{month:'short',day:'numeric'})}
+          </div>
+          <div style="font-size:1.4rem;font-weight:600;color:#f4ede0">${Math.round(d.kg_predicted).toLocaleString('es-MX')} kg</div>
+          <div style="font-size:0.75rem;color:#9aa0a8;margin-top:6px">
+            ${d.kg_actual == null ? 'Sin registrar' : `Real: ${Math.round(d.kg_actual).toLocaleString('es-MX')} kg`}
+          </div>
+          ${d.kg_actual == null ? `<button class="btn-ghost register-actual-btn" data-inv="${inv}" data-id="${d.id}" style="margin-top:8px;font-size:0.75rem">Registrar producción real</button>` : ''}
+        </div>`).join('')
+    : '<p style="color:#9aa0a8">Sin predicciones de T18 todavía.</p>';
 
+  cards.querySelectorAll('.register-actual-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const kgStr = prompt('Producción real (kg):');
+      if (kgStr == null) return;
+      const kg = parseFloat(kgStr);
+      if (Number.isNaN(kg)) return;
+      const token = localStorage.getItem('sb_token');
+      await fetch(`${API_BASE}/live-predictions/${btn.dataset.inv}/${btn.dataset.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kg_actual: kg }),
+      });
+      refreshLiveData();
+    });
+  });
 }
 
 function renderMenuBadge(inv, data) {
@@ -3076,61 +3172,12 @@ function renderMenuBadge(inv, data) {
     `${next.predicted_for} · ${Math.round(next.kg_predicted).toLocaleString('es-MX')} kg</span>`;
 }
 
-function extendSliderWithLive(inv, data) {
-  const raw = rawInv[inv];
-  if (!raw) return;
-
-  function toWeekKey(dateStr) {
-    const d = new Date(dateStr + 'T12:00:00');
-    const year = d.getFullYear();
-    const jan4 = new Date(year, 0, 4);
-    const dow = jan4.getDay() || 7; // ISO: Sunday = 7, not 0
-    const isoWeek = Math.ceil(((d - jan4) / 86400000 + dow + 1) / 7);
-    return year * 100 + isoWeek;
-  }
-
-  // Update y_true for already-appended rows where kg_actual has arrived
-  const keyToIndex = {};
-  raw.weeks.forEach((w, idx) => { keyToIndex[w.week_key] = idx; });
-  data.forEach(d => {
-    if (d.kg_actual == null) return;
-    const wk = toWeekKey(d.predicted_for);
-    const idx = keyToIndex[wk];
-    if (idx !== undefined) raw.y_true[idx] = d.kg_actual;
-  });
-
-  const existingKeys = new Set(raw.weeks.map(w => w.week_key));
-  const newRows = [...data]
-    .sort((a, b) => a.predicted_for > b.predicted_for ? 1 : -1)
-    .filter(d => !existingKeys.has(toWeekKey(d.predicted_for)));
-
-  if (!newRows.length) return;
-
-  newRows.forEach(d => {
-    const wk = toWeekKey(d.predicted_for);
-    raw.weeks.push({ week_key: wk, iso_week: wk % 100, year: Math.floor(wk / 100) });
-    raw.y_true.push(d.kg_actual ?? null);
-    raw.y_pred.push(d.kg_predicted);
-    raw.pi_lower.push(null);
-    raw.pi_upper.push(null);
-  });
-
-  if (newRows.length) raw.n_weeks = raw.weeks.length;
-
-  const slider = document.getElementById(`slider${inv}`);
-  if (slider) slider.max = raw.n_weeks - 1;
-
-  // Repaint the active view so chart/table reflect extended data or updated y_true
-  if (typeof renderInv === 'function') renderInv(inv, cursorInv[inv] ?? null);
-}
-
 async function refreshLiveData() {
   for (const inv of [3, 4]) {
-    const data = await fetchJSON(`/live-predictions/${inv}?limit=20`);
+    const data = await fetchJSON(`/live-predictions/${inv}?season=T18&limit=20`);
     if (!data) continue;
     renderForecastSection(inv, data);
     renderMenuBadge(inv, data);
-    extendSliderWithLive(inv, data);
   }
 }
 

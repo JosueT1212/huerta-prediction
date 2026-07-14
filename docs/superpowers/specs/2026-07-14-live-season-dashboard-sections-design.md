@@ -24,8 +24,10 @@ temporada en vivo, no el replay de T17.
   endpoint `/phenology-live/{inv}` ya existen, no es trabajo desde cero).
 - Curva de meta kg/m²·semana (agronómica) NO cambia — se reutiliza igual
   que en T17, solo cambia la serie proyectado/real.
-- Fuera de alcance: tarjetas mock de KPIs (calibres/error/recursos, ver
-  `demo/CLAUDE.md` §5), modal "ver histórico" de sensores (sigue leyendo
+- Tarjetas mock de KPIs (calibres/error/recursos, ver `demo/CLAUDE.md` §5)
+  se eliminan por completo (markup, estilos y JS asociado, ambos
+  invernaderos) — no se dejan ocultas ni se reemplazan por dato real.
+- Fuera de alcance: modal "ver histórico" de sensores (sigue leyendo
   Excel T13–T17, sin dato vivo de sensores en este spec).
 
 ## Data sources (ya existentes, sin cambios de backend)
@@ -56,7 +58,8 @@ de `refreshLiveData()`.
   las filas semanales de `/live-predictions`.
 - Panel de fenología: cambia su fuente de `/phenology/{inv}` (Excel
   estático) a `/phenology-live/{inv}` (Supabase, T18).
-- Tarjetas mock (calibres/error/recursos): sin cambios.
+- Tarjetas mock (calibres/error/recursos): eliminadas por completo del
+  markup/CSS/JS, ambos invernaderos.
 
 ### Histórico (`hist3`/`hist4`)
 Tabla predicho vs real vs %error se reconstruye desde

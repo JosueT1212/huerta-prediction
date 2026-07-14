@@ -2971,26 +2971,30 @@ function getMeta(num) {
 
 /* Card "Rendimiento prom. ambos inv" + chart meta vs proyectado (acumulado por semana) */
 function renderYieldGoal(num) {
-  if (!rawInv[3] || !rawInv[4]) return;
+  if (!rawLive[3] || !rawLive[4]) return;
   const a3 = AREA_M2[3], a4 = AREA_M2[4];
-  const p3 = rawInv[3].y_pred, p4 = rawInv[4].y_pred;
-  const t3 = rawInv[3].y_true, t4 = rawInv[4].y_true;
-  const weeks = rawInv[3].weeks;
-  const n = Math.min(p3.length, p4.length);
+  const byDate3 = Object.fromEntries(rawLive[3].map(r => [r.predicted_for, r]));
+  const byDate4 = Object.fromEntries(rawLive[4].map(r => [r.predicted_for, r]));
+  const weeks = Array.from(new Set([
+    ...rawLive[3].map(r => r.predicted_for),
+    ...rawLive[4].map(r => r.predicted_for),
+  ])).sort();
+  const n = weeks.length;
 
   const meta = getMeta(num);
   let cum = 0, cumReal = 0;
   const projWeek = [], projCum = [], metaWeek = [], metaCum = [];
   for (let i = 0; i < n; i++) {
-    const w = ((p3[i] / a3) + (p4[i] / a4)) / 2;   // producción proyectada de la semana i (prom. ambos)
+    const r3 = byDate3[weeks[i]], r4 = byDate4[weeks[i]];
+    const w = (((r3 ? liveKg(r3) : 0) / a3) + ((r4 ? liveKg(r4) : 0) / a4)) / 2;
     cum     += w;
-    cumReal += (((t3[i] || 0) / a3) + ((t4[i] || 0) / a4)) / 2;
+    cumReal += (((r3?.kg_actual || 0) / a3) + ((r4?.kg_actual || 0) / a4)) / 2;
     projWeek.push(+w.toFixed(3));
     projCum.push(+cum.toFixed(3));
     metaWeek.push(+meta.toFixed(3));
     metaCum.push(+(meta * (i + 1)).toFixed(3));
   }
-  const labels = weeks.slice(0, n).map(w => `S${w.iso_week}`);
+  const labels = weeks.map(w => fmtLiveWeekLabel(w));
   const LIGHT = '#dbe3ea', GRID = 'rgba(244,237,224,.10)';
 
   const id = `chart-yield-${num}`;

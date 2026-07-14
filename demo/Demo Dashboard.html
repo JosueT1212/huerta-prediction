@@ -2624,8 +2624,7 @@ function wireSimControls(inv) {
 /* =========================================================
    FENOLOGÍA (KPIs) + FORMULARIO + HISTÓRICO DE SENSORES
 ========================================================= */
-const rawPheno = { 3: null, 4: null };
-let phenoFields = [];
+const rawLivePheno = { 3: null, 4: null };
 const SEASON_COLORS = ['#94a3b8', '#a78bfa', '#38bdf8', '#fb923c', '#65a30d'];
 
 /* Sparkline SVG simple a partir de una serie de valores */
@@ -2642,20 +2641,56 @@ function sparklineSVG(values) {
     <polyline points="${pts}" fill="none" stroke="${palette.accent}" stroke-width="1.6"/></svg>`;
 }
 
-function renderPhenology(inv) {
-  const data = rawPheno[inv];
+/* Mapea columnas de phenology_observations (Supabase, T18) → label/unit para mostrar */
+const LIVE_PHENO_FIELDS = [
+  { key: 'racimos_puestos',          label: 'Racimos puestos',           unit: 'conteo' },
+  { key: 'flores_racimo_abiertas',   label: 'Flores en racimo abiertas', unit: 'conteo' },
+  { key: 'racimos_en_planta',        label: 'Racimos en planta',         unit: 'conteo' },
+  { key: 'cantidad_tomates',         label: 'Cantidad de tomates',       unit: 'conteo' },
+  { key: 'racimo_en_cosecha',        label: 'Nº de racimo en cosecha',   unit: 'índice' },
+  { key: 'tomates_maduros',          label: 'Tomates maduros (color 2)', unit: 'conteo' },
+  { key: 'diametro_fruto_cm',        label: 'Diámetro del fruto',        unit: 'cm' },
+  { key: 'crecimiento_planta_cm',    label: 'Crecimiento de planta',     unit: 'cm' },
+];
+
+async function loadLivePhenology(inv) {
+  const rows = await fetchJSON(`/phenology-live/${inv}?limit=500`);
+  rawLivePheno[inv] = rows || [];
+}
+
+/* Agrupa observaciones por week_date y promedia cada variable (sobre zona/planta) */
+function livePhenoWeeklyAvg(inv) {
+  const rows = rawLivePheno[inv] || [];
+  const byWeek = {};
+  rows.forEach(r => { (byWeek[r.week_date] ||= []).push(r); });
+  const weeks = Object.keys(byWeek).sort();
+  const series = {};
+  LIVE_PHENO_FIELDS.forEach(f => {
+    series[f.key] = weeks.map(w => {
+      const vals = byWeek[w].map(r => r[f.key]).filter(v => v != null);
+      return vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
+    });
+  });
+  return { weeks, series };
+}
+
+function renderLivePhenology(inv) {
   const grid = document.getElementById(`pheno-grid-${inv}`);
-  if (!data || !grid) return;
-  const lastSeason = data.seasons[data.seasons.length - 1];
-  grid.innerHTML = data.fields.map(f => {
-    const val = data.latest[f.key];
-    const series = lastSeason ? lastSeason.values[f.key] : [];
+  if (!grid) return;
+  const { weeks, series } = livePhenoWeeklyAvg(inv);
+  if (!weeks.length) {
+    grid.innerHTML = '<p style="color:#9aa0a8">Sin fenología de T18 todavía.</p>';
+    return;
+  }
+  grid.innerHTML = LIVE_PHENO_FIELDS.map(f => {
+    const vals = series[f.key];
+    const last = [...vals].reverse().find(v => v != null);
     return `
       <div class="pheno-card">
         <div class="pc-label">${f.label}</div>
-        <div class="pc-value">${val === null || val === undefined ? '—' : val}<small>${f.unit}</small></div>
-        ${sparklineSVG(series || [])}
-        <div class="pc-foot">${data.latest_season || ''} · promedio semanal</div>
+        <div class="pc-value">${last == null ? '—' : last.toFixed(1)}<small>${f.unit}</small></div>
+        ${sparklineSVG(vals)}
+        <div class="pc-foot">T18 · promedio semanal</div>
       </div>`;
   }).join('');
 }
@@ -3056,6 +3091,8 @@ async function init() {
       fetchJSON('/metrics/4'),
       loadLiveSeason(3),
       loadLiveSeason(4),
+      loadLivePhenology(3),
+      loadLivePhenology(4),
     ]);
 
     rawInv[3] = preds3;
@@ -3067,9 +3104,7 @@ async function init() {
     renderInv(3, null);     // cursor inicial = mitad de T17
     renderInv(4, null);
 
-    rawPheno[3] = ph3; rawPheno[4] = ph4;
-    phenoFields = ph3.fields || [];
-    renderPhenology(3); renderPhenology(4);
+    renderLivePhenology(3); renderLivePhenology(4);
     initInsTabs();
     initSeasonTabs();
     initTransplantDateForm();

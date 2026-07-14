@@ -2560,7 +2560,7 @@ function liveTotalsFor(inv) {
   return { rows, total, peak };
 }
 
-function fmtWeekLabel(dateStr) {
+function fmtLiveWeekLabel(dateStr) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
 }
 

@@ -3025,7 +3025,12 @@ async function refreshLiveData() {
     if (!data) continue;
     renderForecastSection(inv, data);
     renderMenuBadge(inv, data);
+
+    await loadLiveSeason(inv);
+    fillMenuKPIs(inv);
+    buildLiveHistTable(document.getElementById(`tbody-hist${inv}`), rawLive[inv] || []);
   }
+  renderYieldGoal(3); renderYieldGoal(4);
 }
 
 document.addEventListener('visibilitychange', () => {

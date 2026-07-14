@@ -15,16 +15,17 @@ class ActualKgRequest(BaseModel):
 def list_predictions(
     inv: int,
     limit: int = Query(20, ge=1, le=200),
+    season: str | None = Query(None),
     _user: Annotated[dict, Depends(get_current_user)] = None,
 ):
-    resp = (
+    query = (
         service_client.table("predictions")
-        .select("id, greenhouse_id, predicted_for, predicted_at, kg_predicted, kg_actual, model_version")
+        .select("id, greenhouse_id, predicted_for, predicted_at, kg_predicted, kg_actual, model_version, season")
         .eq("greenhouse_id", inv)
-        .order("predicted_for", desc=True)
-        .limit(limit)
-        .execute()
     )
+    if season is not None:
+        query = query.eq("season", season)
+    resp = query.order("predicted_for", desc=True).limit(limit).execute()
     return resp.data
 
 

@@ -32,6 +32,23 @@ def test_list_predictions_returns_list(api_client, mock_supa):
     assert isinstance(r.json(), list)
 
 
+def test_list_predictions_filters_by_season(api_client, mock_supa):
+    headers = _auth(mock_supa)
+    chain = mock_supa.table.return_value.select.return_value.eq.return_value
+    chain.eq.return_value.order.return_value.limit.return_value.execute.return_value.data = [
+        {
+            "id": 2, "greenhouse_id": 3, "predicted_for": "2026-08-04",
+            "predicted_at": "2026-07-27T08:00:00Z", "kg_predicted": 12.0,
+            "kg_actual": None, "model_version": "cnn_rnn_v2_production",
+            "season": "T18",
+        }
+    ]
+    r = api_client.get("/live-predictions/3?season=T18", headers=headers)
+    assert r.status_code == 200
+    assert r.json()[0]["season"] == "T18"
+    mock_supa.table.return_value.select.return_value.eq.return_value.eq.assert_called_with("season", "T18")
+
+
 def test_patch_kg_actual_requires_auth(api_client):
     r = api_client.patch("/live-predictions/3/1", json={"kg_actual": 235.0})
     assert r.status_code == 401

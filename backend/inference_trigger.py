@@ -48,16 +48,20 @@ def maybe_trigger_inference(form_type: str, inv: int | None) -> None:
     Runs inference for any invernadero whose required-upload set just
     became complete. Callers must not invoke this for form_type ==
     "produccion" — production never gates inference."""
-    from backend.supabase_client import service_client
-    from scripts.live_inference import run_inference_for_greenhouse
-
     invs_to_check = (3, 4) if form_type == "exteriores" else (inv,)
     for check_inv in invs_to_check:
         if not uploads_complete_for_inv(check_inv):
             continue
         try:
+            from backend.supabase_client import service_client
+            from scripts.live_inference import run_inference_for_greenhouse
+
             run_inference_for_greenhouse(service_client, check_inv, dry_run=False)
         except Exception as e:  # noqa: BLE001
+            # Broad on purpose: a broken/missing optional dependency (e.g.
+            # matplotlib, imported transitively by Models/cnn_rnn_yield.py)
+            # must never surface as a 500 on the upload request — the
+            # upload's data is already committed by the time this runs.
             print(
                 f"  ERROR: upload-triggered inference failed for invernadero "
                 f"{check_inv}: {e}",

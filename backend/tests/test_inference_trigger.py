@@ -111,3 +111,24 @@ def test_maybe_trigger_inference_swallows_inference_errors(monkeypatch):
     monkeypatch.setattr(live_inference, "run_inference_for_greenhouse", run_mock)
 
     inference_trigger.maybe_trigger_inference("riego", 4)  # must not raise
+
+
+def test_maybe_trigger_inference_swallows_import_errors(monkeypatch):
+    # Regression: a missing optional dependency (matplotlib, imported
+    # transitively via Models/cnn_rnn_yield.py) must not crash the upload
+    # request — the ModuleNotFoundError happens at import time, before the
+    # run_inference_for_greenhouse call, and must still be caught.
+    from backend import inference_trigger
+    import builtins
+
+    monkeypatch.setattr(inference_trigger, "uploads_complete_for_inv", lambda inv: True)
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "scripts.live_inference":
+            raise ModuleNotFoundError("No module named 'matplotlib'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    inference_trigger.maybe_trigger_inference("sensores", 3)  # must not raise

@@ -87,3 +87,24 @@ def test_get_lock_status_unlocked_when_older_than_7_days(monkeypatch):
 
     status = lock_utils.get_lock_status(3, "sensores")
     assert status == {"locked": False, "next_allowed_at": None}
+
+
+def test_last_submitted_at_returns_datetime_when_present(monkeypatch):
+    from backend import lock_utils
+    mock = MagicMock()
+    recent = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    mock.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = _mock_row(recent)
+    monkeypatch.setattr(lock_utils, "service_client", mock)
+
+    result = lock_utils.last_submitted_at(3, "sensores")
+    assert result is not None
+    assert result.tzinfo is not None
+
+
+def test_last_submitted_at_returns_none_when_absent(monkeypatch):
+    from backend import lock_utils
+    mock = MagicMock()
+    mock.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = _mock_row(None)
+    monkeypatch.setattr(lock_utils, "service_client", mock)
+
+    assert lock_utils.last_submitted_at(3, "sensores") is None

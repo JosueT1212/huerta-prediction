@@ -5,7 +5,7 @@ from backend.supabase_client import service_client
 LOCK_WINDOW = timedelta(days=7)
 
 
-def _fetch_last_submitted_at(greenhouse_id: int, form_type: str) -> datetime | None:
+def last_submitted_at(greenhouse_id: int, form_type: str) -> datetime | None:
     resp = (
         service_client.table("submission_locks")
         .select("last_submitted_at")
@@ -20,7 +20,7 @@ def _fetch_last_submitted_at(greenhouse_id: int, form_type: str) -> datetime | N
 
 
 def check_submission_lock(greenhouse_id: int, form_type: str) -> None:
-    last = _fetch_last_submitted_at(greenhouse_id, form_type)
+    last = last_submitted_at(greenhouse_id, form_type)
     if last is None:
         return
     next_allowed = last + LOCK_WINDOW
@@ -40,7 +40,7 @@ def touch_submission_lock(greenhouse_id: int, form_type: str) -> None:
 
 
 def get_lock_status(greenhouse_id: int, form_type: str) -> dict:
-    last = _fetch_last_submitted_at(greenhouse_id, form_type)
+    last = last_submitted_at(greenhouse_id, form_type)
     if last is None:
         return {"locked": False, "next_allowed_at": None}
     next_allowed = last + LOCK_WINDOW

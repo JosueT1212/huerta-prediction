@@ -24,7 +24,7 @@ import yaml
 import joblib
 from supabase import create_client
 
-from backend.live_features import build_input_tensor
+from backend.live_features import build_input_tensor, aggregate_wide_to_weekly
 
 # Model class verified via:
 # grep -n "^class" Models/cnn_rnn_yield.py  → CNNRNN at line 757
@@ -34,7 +34,7 @@ RESULTS_DIR = ROOT / "Models" / "results"
 HORIZON_WEEKS = 5
 MODEL_VERSION = "cnn_rnn_v2_production"
 HISTORICAL_MEAN_VERSION = "historical_mean_v1"
-SKIP_FIRST_WEEKS = 3
+SKIP_FIRST_WEEKS = 4
 CURRENT_SEASON = "T18"
 INV_IDS = (3, 4)
 
@@ -68,85 +68,96 @@ def get_transplant_date(supa, inv: int) -> date | None:
     return date.fromisoformat(row["fecha"])
 
 
-def get_harvest_start(supa, inv: int, transplant_date: date) -> date | None:
+def get_harvest_start(supa, inv: int) -> date | None:
+    """Admin-set fact — see harvest_start_dates table (010_harvest_start_dates.sql).
+
+    NOT inferred from sensor_readings_wide: sensors start recording ~10-11
+    weeks before harvest (CLAUDE.md §5) and the client's first upload of a
+    season batches that entire backlog in one payload, so MIN(fecha) from
+    sensor data resolves to the pre-harvest backlog date, not the season's
+    actual week 1. See docs/superpowers/specs/2026-07-15-first-submission-backfill-design.md §1.
+    """
     resp = (
-        supa.table("sensor_readings_wide")
+        supa.table("harvest_start_dates")
         .select("fecha")
         .eq("greenhouse_id", inv)
-        .gte("fecha", transplant_date.isoformat())
-        .order("fecha")
+        .maybe_single()
+        .execute()
+    )
+    row = resp.data if resp is not None else None
+    if not row:
+        return None
+    return date.fromisoformat(row["fecha"])
+
+
+def is_first_submission(supa, inv: int) -> bool:
+    """True iff no predictions row exists yet for this greenhouse+season."""
+    resp = (
+        supa.table("predictions")
+        .select("id")
+        .eq("greenhouse_id", inv)
+        .eq("season", CURRENT_SEASON)
         .limit(1)
         .execute()
     )
-    rows = resp.data or []
-    if not rows:
-        return None
-    return date.fromisoformat(rows[0]["fecha"])
+    return not (resp.data or [])
 
 
-def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
-    transplant_date = get_transplant_date(supa, inv)
-    if transplant_date is None:
-        print(f"  ERROR: no transplant_date set for invernadero {inv} — skipping. "
-              f"Set it via PUT /transplant-date/{inv}.", file=sys.stderr)
-        return False
+def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date) -> float | None:
+    """CNN-RNN forward pass for a sensor window ending at as_of_date.
 
-    harvest_start = get_harvest_start(supa, inv, transplant_date)
-    if harvest_start is None:
-        print(f"  ERROR: no sensor data uploaded yet this season for invernadero {inv} — skipping.",
-              file=sys.stderr)
-        return False
-
-    predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
-    wis_target = week_in_season(predicted_for, harvest_start)
-
-    if wis_target < SKIP_FIRST_WEEKS:
-        historical_kg = load_historical_mean(inv, wis_target)
-        if historical_kg is not None:
-            print(f"  Inv{inv} → week-in-season {wis_target} < {SKIP_FIRST_WEEKS} "
-                  f"(ramp-up) → historical mean {historical_kg:.1f} kg")
-            _upsert_prediction(supa, inv, predicted_for, historical_kg,
-                                HISTORICAL_MEAN_VERSION, dry_run)
-            return True
-
-    cutoff = (date.today() - timedelta(weeks=12)).isoformat()
+    Returns None if the window doesn't have seq_len real (non-padded) weekly
+    rows yet — the caller must not write a prediction built on fabricated
+    zero-padding.
+    """
+    cutoff = (as_of_date - timedelta(weeks=12)).isoformat()
+    upper = as_of_date.isoformat()
 
     sensor_resp = (
         supa.table("sensor_readings_wide").select("*")
-        .eq("greenhouse_id", inv).gte("fecha", cutoff).execute()
+        .eq("greenhouse_id", inv).gte("fecha", cutoff).lte("fecha", upper).execute()
     )
     riego_resp = (
         supa.table("riego_readings").select("*")
-        .eq("greenhouse_id", inv).gte("fecha", cutoff).execute()
+        .eq("greenhouse_id", inv).gte("fecha", cutoff).lte("fecha", upper).execute()
     )
     # exterior_readings is global (no greenhouse_id column) — same weather feeds both invernaderos
     ext_resp = (
         supa.table("exterior_readings").select("*")
-        .gte("fecha", cutoff).execute()
+        .gte("fecha", cutoff).lte("fecha", upper).execute()
     )
 
     merged_by_fecha: dict[str, dict] = {}
     for row in (sensor_resp.data or []) + (riego_resp.data or []) + (ext_resp.data or []):
         merged_by_fecha.setdefault(row["fecha"], {}).update(row)
     wide_rows = list(merged_by_fecha.values())
-    print(f"  Inv{inv} sensor rows pulled: {len(sensor_resp.data or [])} sensores + "
+    print(f"  Inv{inv} sensor rows pulled (as of {as_of_date}): {len(sensor_resp.data or [])} sensores + "
           f"{len(riego_resp.data or [])} riego + {len(ext_resp.data or [])} exteriores "
           f"→ {len(wide_rows)} merged by fecha")
 
     pheno_resp = (
         supa.table("phenology_observations").select("*")
-        .eq("greenhouse_id", inv).gte("week_date", cutoff).execute()
+        .eq("greenhouse_id", inv).gte("week_date", cutoff).lte("week_date", upper).execute()
     )
     pheno_rows = pheno_resp.data or []
 
     pipeline_path = RESULTS_DIR / f"production_pipeline_inv{inv}.pkl"
+    pipeline = joblib.load(pipeline_path)
+    seq_len = pipeline["seq_len"]
+    sensor_cols = pipeline["sensor_cols"]
+
+    weekly_check = aggregate_wide_to_weekly(wide_rows, sensor_cols)
+    if len(weekly_check) < seq_len:
+        print(f"  Inv{inv} → only {len(weekly_check)} weeks of sensor data as of {as_of_date}, "
+              f"need {seq_len} — not enough history yet.")
+        return None
+
     x_sensor, x_temporal = build_input_tensor(
         inv, wide_rows, pheno_rows,
         transplant_date=transplant_date,
         pipeline_path=pipeline_path,
     )
 
-    pipeline = joblib.load(pipeline_path)
     scaler_y = pipeline["scaler_y"]
     bc_lambda = pipeline["bc_lambda"]
     transform = pipeline["transform"]
@@ -186,6 +197,80 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
         kg_predicted = float(inv_boxcox(y_scaled, bc_lambda))
     else:
         kg_predicted = float(y_scaled)
+
+    return kg_predicted
+
+
+def _backfill_first_submission(supa, inv: int, transplant_date: date, harvest_start: date,
+                                dry_run: bool) -> bool:
+    """First submission of the season: write every ramp-up mean week, then
+    every model week the current sensor backlog supports — no hardcoded
+    row count (spec §3)."""
+    wrote_any = False
+
+    for wis in range(SKIP_FIRST_WEEKS):
+        historical_kg = load_historical_mean(inv, wis)
+        if historical_kg is None:
+            print(f"  ERROR: missing historical_mean_inv{inv}.json[\"{wis}\"] — skipping that week.",
+                  file=sys.stderr)
+            continue
+        predicted_for = harvest_start + timedelta(weeks=wis)
+        _upsert_prediction(supa, inv, predicted_for, historical_kg, HISTORICAL_MEAN_VERSION, dry_run)
+        wrote_any = True
+
+    wis = SKIP_FIRST_WEEKS
+    while True:
+        as_of_date = harvest_start + timedelta(weeks=wis - HORIZON_WEEKS)
+        if as_of_date > date.today():
+            print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
+                  f"week-in-season {wis} would need sensor data from the future.")
+            break
+        kg_predicted = _run_model_forward(supa, inv, transplant_date, as_of_date)
+        if kg_predicted is None:
+            print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
+                  f"insufficient sensor history for week-in-season {wis}.")
+            break
+        predicted_for = harvest_start + timedelta(weeks=wis)
+        _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)
+        wrote_any = True
+        wis += 1
+
+    return wrote_any
+
+
+def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
+    transplant_date = get_transplant_date(supa, inv)
+    if transplant_date is None:
+        print(f"  ERROR: no transplant_date set for invernadero {inv} — skipping. "
+              f"Set it via PUT /transplant-date/{inv}.", file=sys.stderr)
+        return False
+
+    harvest_start = get_harvest_start(supa, inv)
+    if harvest_start is None:
+        print(f"  ERROR: no harvest_start set for invernadero {inv} — skipping. "
+              f"Set it via PUT /harvest-start-date/{inv}.", file=sys.stderr)
+        return False
+
+    if is_first_submission(supa, inv):
+        return _backfill_first_submission(supa, inv, transplant_date, harvest_start, dry_run)
+
+    predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
+    wis_target = week_in_season(predicted_for, harvest_start)
+
+    if wis_target < SKIP_FIRST_WEEKS:
+        historical_kg = load_historical_mean(inv, wis_target)
+        if historical_kg is not None:
+            print(f"  Inv{inv} → week-in-season {wis_target} < {SKIP_FIRST_WEEKS} "
+                  f"(ramp-up) → historical mean {historical_kg:.1f} kg")
+            _upsert_prediction(supa, inv, predicted_for, historical_kg,
+                                HISTORICAL_MEAN_VERSION, dry_run)
+            return True
+
+    kg_predicted = _run_model_forward(supa, inv, transplant_date, date.today())
+    if kg_predicted is None:
+        print(f"  ERROR: insufficient sensor history for invernadero {inv} — skipping.",
+              file=sys.stderr)
+        return False
 
     print(f"  Inv{inv} → {kg_predicted:.1f} kg for week {predicted_for}")
     _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)

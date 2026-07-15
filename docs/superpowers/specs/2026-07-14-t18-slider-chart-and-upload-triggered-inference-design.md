@@ -95,10 +95,15 @@ def uploads_complete_for_inv(inv: int) -> bool:
     tienen last_submitted_at dentro de la misma ventana semanal actual."""
 ```
 
-Regla de "misma ventana semanal": los 4 `last_submitted_at` deben caer
-dentro de los últimos `LOCK_WINDOW` (7 días) counting from `now()` — mismo
-criterio que ya usa el lock para bloquear reenvíos, sin inventar una nueva
-noción de "semana".
+Regla de "misma ventana semanal" (actualizada tras code review): los 4
+`last_submitted_at` deben caer dentro de la **semana ISO actual** (desde el
+lunes 00:00 UTC, inclusive). El criterio original de ventana rodante de 7
+días (`LOCK_WINDOW`) re-disparaba la inferencia en la primera carga de la
+semana siguiente usando timestamps viejos de la semana anterior, y luego en
+cada carga subsecuente. Con el ancla al lunes ISO la inferencia dispara
+exactamente una vez, en la carga que completa el set de la semana; si un
+set cruza el límite de semana (p.ej. dom+lun) el trigger no dispara y el
+cron dominical lo cubre.
 
 ### Trigger tras upload
 
@@ -117,9 +122,14 @@ if rows_inserted + rows_updated > 0:
 - Para cada invernadero a chequear: si `uploads_complete_for_inv(inv)` es
   `True` **y** no lo era antes de este upload (evita relanzar en cada envío
   subsecuente de la misma semana — se determina comparando si el
-  `form_type` recién tocado era el único que faltaba), llama
+  `form_type` recién tocado era el único que faltaba — con el ancla ISO
+  esto es automático: cada tipo solo puede enviarse una vez por semana por
+  el submission lock), llama
   `scripts.live_inference.run_inference_for_greenhouse(supa, inv,
-  dry_run=False)` de forma síncrona dentro del request.
+  dry_run=False)` durante el request, vía `run_in_threadpool` (actualizado
+  tras code review: la llamada directa síncrona dentro de un handler
+  `async def` congelaba el event loop de FastAPI para TODOS los requests
+  durante los segundos que tarda la inferencia).
 - Excepciones de la inferencia se capturan y loguean (`print(...,
   file=sys.stderr)`, mismo patrón que `scripts/live_inference.py:217-218`)
   pero **no** hacen fallar la respuesta del upload — la carga de datos ya

@@ -344,18 +344,18 @@ def test_upload_sensores_subsequent_rejects_when_overlap_reduces_new_days_below_
     assert "días nuevos" in r.text
 
 
-def test_upload_fenologia_subsequent_uses_week_date_column(api_client, mock_supa):
+def test_upload_fenologia_subsequent_below_daily_threshold_still_accepted(api_client, mock_supa):
+    # Fenologia is captured weekly, not daily -- MIN_NEW_DAYS_SUBSEQUENT (7)
+    # must not gate it. A single new week's capture (well under 7 rows) is a
+    # legitimate, complete upload and must succeed.
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    _prior_submission(mock_supa)
-    dates = _weekly_dates(8)
-    _matched_dates(mock_supa, [dates[0]], date_col="week_date")  # 1 of 8 already present
-    df = _phenology_rows(8)  # 8 uploaded - 1 already-present = 7 new days, exactly the minimum
+    df = _phenology_rows(3)
     files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_inserted"] == 8
+    assert body["rows_inserted"] == 3
 
 
 def test_upload_sensores_unmapped_inv_first_submission_skips_window_check(api_client, mock_supa):

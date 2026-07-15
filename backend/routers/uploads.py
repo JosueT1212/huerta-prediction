@@ -152,6 +152,12 @@ def _check_window_coverage(
 ) -> None:
     if form_type not in ("sensores", "riego", "exteriores", "fenologia"):
         return
+    if form_type == "fenologia":
+        # Fenologia is captured weekly, not daily — MIN_NEW_DAYS_SUBSEQUENT
+        # is a daily-cadence threshold and doesn't apply to it (a single new
+        # week's upload can be < 7 rows and still be a legitimate, complete
+        # weekly capture). No coverage gate for fenologia.
+        return
 
     existence_query = service_client.table(table).select(date_col)
     if greenhouse_id is not None:

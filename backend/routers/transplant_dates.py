@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 from typing import Annotated
 from backend.auth import get_current_user
+from backend.inference_trigger import maybe_trigger_inference
 from backend.supabase_client import service_client
 
 router = APIRouter()
@@ -30,7 +32,7 @@ def get_transplant_date(
 
 
 @router.put("/transplant-date/{inv}")
-def put_transplant_date(
+async def put_transplant_date(
     inv: int,
     body: TransplantDateRequest,
     _user: Annotated[dict, Depends(get_current_user)] = None,
@@ -38,4 +40,9 @@ def put_transplant_date(
     service_client.table("transplant_dates").upsert(
         {"greenhouse_id": inv, "fecha": body.fecha}, on_conflict="greenhouse_id"
     ).execute()
+    # La fecha de transplante no es una carga semanal (no participa en
+    # uploads_complete_for_inv), pero la inferencia la requiere: si el set
+    # semanal ya estaba completo cuando se guardó la fecha, el trigger de
+    # uploads ya corrió sin fecha y se saltó — este re-chequeo cubre ese caso.
+    await run_in_threadpool(maybe_trigger_inference, "transplant_date", inv)
     return {"ok": True}

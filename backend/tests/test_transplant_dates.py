@@ -53,7 +53,9 @@ def test_put_transplant_date_requires_auth(api_client):
     assert r.status_code == 401
 
 
-def test_put_transplant_date_upserts(api_client, mock_supa):
+def test_put_transplant_date_upserts(api_client, mock_supa, monkeypatch):
+    from backend.routers import transplant_dates as td_router
+    monkeypatch.setattr(td_router, "maybe_trigger_inference", MagicMock())
     headers = _auth(mock_supa)
     mock_supa.table.return_value.upsert.return_value.execute.return_value = MagicMock()
     r = api_client.put("/transplant-date/3", headers=headers, json={"fecha": "2026-05-20"})
@@ -63,3 +65,14 @@ def test_put_transplant_date_upserts(api_client, mock_supa):
     mock_supa.table.return_value.upsert.assert_called_with(
         {"greenhouse_id": 3, "fecha": "2026-05-20"}, on_conflict="greenhouse_id"
     )
+
+
+def test_put_transplant_date_triggers_inference_check(api_client, mock_supa, monkeypatch):
+    from backend.routers import transplant_dates as td_router
+    trigger_mock = MagicMock()
+    monkeypatch.setattr(td_router, "maybe_trigger_inference", trigger_mock)
+    headers = _auth(mock_supa)
+    mock_supa.table.return_value.upsert.return_value.execute.return_value = MagicMock()
+    r = api_client.put("/transplant-date/4", headers=headers, json={"fecha": "2026-05-22"})
+    assert r.status_code == 200
+    trigger_mock.assert_called_once_with("transplant_date", 4)

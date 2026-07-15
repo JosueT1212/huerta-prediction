@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "Models"))
 from cnn_rnn_yield import load_production  # noqa: E402
 
 RESULTS_DIR = ROOT / "Models" / "results"
-N_POSITIONS = 3
+N_POSITIONS = 4
 
 
 def historical_means_by_position(df: pd.DataFrame, n_positions: int = N_POSITIONS) -> dict[int, float]:

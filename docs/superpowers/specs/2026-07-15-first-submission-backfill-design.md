@@ -15,7 +15,7 @@ writes exactly one `predictions` row per triggering upload (see
 `2026-07-14-t18-slider-chart-and-upload-triggered-inference-design.md`). On the
 very first submission this means only one row gets written, and the
 weeks-since-harvest-start indexing (`wis_target`) that decides mean-vs-model
-never revisits earlier weeks — production weeks 1–4 (ramp-up) currently never
+never revisits earlier weeks — the ramp-up weeks (Section 2) currently never
 get a row at all.
 
 This spec fixes that, and fixes a pre-existing bug in how "week 1 of
@@ -83,31 +83,45 @@ concern, not a training concern).
 
 ---
 
-## Section 3: First-submission backfill (6 rows in one trigger call)
+## Section 3: First-submission backfill (dynamic — as many rows as data supports)
 
 **Detection:** a call to `run_inference_for_greenhouse` is the first
 submission of the season for that greenhouse iff `get_harvest_start` (Section
 1) returns `None`.
 
-**On first submission**, instead of writing one row, write six:
+**On first submission**, instead of writing one row, write as many as can
+legitimately be computed right now — no hardcoded row count. Today (week 29,
+2026-07-15) is 2 weeks before T18's actual first submission (week 31), so
+the exact number is not knowable ahead of time and must not be hardcoded
+into the pipeline; it depends on how much sensor backlog the client's first
+upload actually contains, which varies by greenhouse and by season.
 
-| wis | Calendar week | Source | How |
-|---|---|---|---|
-| 0 | week 31 | historical mean | `historical_mean_inv{inv}.json["0"]` |
-| 1 | week 32 | historical mean | `historical_mean_inv{inv}.json["1"]` |
-| 2 | week 33 | historical mean | `historical_mean_inv{inv}.json["2"]` |
-| 3 | week 34 | historical mean | `historical_mean_inv{inv}.json["3"]` |
-| 4 | week 35 | model | forward pass, sensor window truncated to `fecha ≤ week 30` |
-| 5 | week 36 | model | forward pass, freshest sensor window (`fecha ≤ today`) — identical to today's existing normal-path call |
+`harvest_start = monday_of_week(date.today())` for this run.
 
-`harvest_start = monday_of_week(date.today())` for this run (week 31).
-`predicted_for` for each row = `harvest_start + wis weeks`.
+1. **Ramp-up weeks** — for `wis` in `0 .. SKIP_FIRST_WEEKS-1`: always write
+   from `historical_mean_inv{inv}.json[str(wis)]`. These have no sensor-data
+   dependency, so all `SKIP_FIRST_WEEKS` of them are always written.
+2. **Model weeks** — starting at `wis = SKIP_FIRST_WEEKS`, loop upward one
+   week at a time:
+   - `as_of_date = harvest_start + timedelta(weeks=wis - HORIZON_WEEKS)`
+   - `predicted_for = harvest_start + timedelta(weeks=wis)`
+   - If `as_of_date > date.today()`: stop — there's no sensor data that far
+     in the future yet (this is the natural ceiling; it's what makes the
+     normal non-first-submission path only ever produce one row per week,
+     since `as_of_date` catches up to `today` one week at a time).
+   - Otherwise call `_run_model_forward(..., as_of_date=as_of_date)`. If the
+     window it builds needs padding (fewer than `seq_len` real weekly rows
+     before `as_of_date` — see Section 3a below) — stop, this greenhouse's
+     backlog doesn't reach this far back. Log an `INFO` line with how many
+     weeks were backfilled and continue the outer per-greenhouse loop
+     (Section 2 of the 2026-07-13 spec) — this is not an error.
+   - Otherwise write the row and continue to `wis + 1`.
 
-The wis=5/week-36 row is not an extra feature — it's what today's unmodified
-single-call logic already produces (`predicted_for = today + HORIZON_WEEKS`).
-It's included here because the refactor below runs it as part of the same
-first-submission branch rather than special-casing it away; a non-first-run
-next week would otherwise recompute the same row via upsert regardless.
+So the number of rows written on first submission is
+`SKIP_FIRST_WEEKS + (however many consecutive model weeks the backlog and
+today's date support)` — could be as few as `SKIP_FIRST_WEEKS` (mean only, if
+the trigger fires exactly on harvest_start day with a thin backlog) or more,
+naturally, with no upper bound imposed by the code itself.
 
 **Non-first submissions** (`get_harvest_start` returns a date): unchanged —
 one row, `predicted_for = monday_of_week(today + HORIZON_WEEKS)`, model or
@@ -148,14 +162,26 @@ Callers:
 
 `pheno_resp` query also gains `.lte("week_date", upper)` for the same reason.
 
-### Data sufficiency for the truncated (week 30) window
+### Section 3a: Data sufficiency — checked at runtime, not assumed
 
-`MIN_WEEKS_FIRST_BY_INV` (`backend/routers/uploads.py`) already requires the
-first upload to carry `seq_len + HORIZON` weeks of history relative to
-*today* (week 31) before it's accepted. Since the backlog spans ~10-11 weeks
-before week 31 (CLAUDE.md §5), a window ending at week 30 (one week earlier)
-still has `seq_len` trailing weeks available for both Inv3 (`seq_len=4`) and
-Inv4 (`seq_len=2`) — no additional validation needed.
+Earlier drafts of this spec assumed `MIN_WEEKS_FIRST_BY_INV`
+(`backend/routers/uploads.py` — the upload-time check that the first upload
+carries `seq_len + HORIZON` weeks of history relative to *today*) guarantees
+enough backlog for every truncated window this section needs. That's an
+upload-time check anchored to *today*, not to each individual `as_of_date`
+this loop constructs — it says nothing about whether a window ending a
+week (or more) earlier than today has `seq_len` real rows. Relying on it
+here would silently break the moment `MIN_WEEKS_FIRST_BY_INV`'s formula or
+the client's actual backlog habits change. Instead, sufficiency is checked
+directly against the data actually pulled for each `as_of_date`:
+
+`_run_model_forward` returns a sentinel (e.g. `None`) instead of a float
+when `aggregate_wide_to_weekly(...)` (`backend/live_features.py:29-50`),
+after filtering to `fecha ≤ as_of_date`, yields fewer than `seq_len` weekly
+rows — i.e. exactly the condition that today triggers zero-padding
+(`backend/live_features.py:110-114`). The Section 3 loop stops as soon as it
+sees this sentinel, rather than writing a prediction built on padded
+(fabricated) input.
 
 ---
 
@@ -196,8 +222,9 @@ Inv4 (`seq_len=2`) — no additional validation needed.
 
 - `scripts/live_inference.py` — `get_harvest_start` reanchored to
   `predictions` table, `SKIP_FIRST_WEEKS` 3→4, model-forward-pass extracted
-  into `_run_model_forward(..., as_of_date)`, first-submission branch writing
-  6 rows instead of 1.
+  into `_run_model_forward(..., as_of_date) -> float | None`, first-submission
+  branch looping until `as_of_date` exceeds today or the window needs
+  padding, instead of writing 1 fixed row.
 - `scripts/compute_historical_means.py` — add position `"3"`.
 - `Models/results/historical_mean_inv{3,4}.json` — regenerated with 4 keys
   (`"0".."3"`) instead of 3.

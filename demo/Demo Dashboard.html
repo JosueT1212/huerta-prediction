@@ -1158,14 +1158,20 @@
     </div>
 
     <div class="panel insert-panel ins-panel" id="ins-panel-transplante" hidden>
-      <div style="display:flex;align-items:flex-end;gap:8px">
+      <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
         <div>
           <label style="display:block;font-size:0.8rem;margin-bottom:4px">Fecha de transplante</label>
           <input type="date" id="transplant-date-input" />
         </div>
         <button class="btn-primary" id="transplant-date-save">Guardar</button>
+        <div>
+          <label style="display:block;font-size:0.8rem;margin-bottom:4px">Fecha de inicio de cosecha</label>
+          <input type="date" id="harvest-start-date-input" />
+        </div>
+        <button class="btn-primary" id="harvest-start-date-save">Guardar</button>
       </div>
       <div class="insert-result" id="transplant-date-result"></div>
+      <div class="insert-result" id="harvest-start-date-result"></div>
     </div>
 
     <div class="panel insert-panel ins-panel" id="ins-panel-sensores">
@@ -2910,6 +2916,16 @@ async function refreshTransplantDateTab(inv) {
   if (data) input.value = data.fecha;
 }
 
+async function refreshHarvestStartDateTab(inv) {
+  const input = document.getElementById('harvest-start-date-input');
+  const result = document.getElementById('harvest-start-date-result');
+  if (!input) return;
+  input.value = '';
+  if (result) result.textContent = '';
+  const data = await fetchJSON(`/harvest-start-date/${inv}`).catch(() => null);
+  if (data) input.value = data.fecha;
+}
+
 function initTransplantDateForm() {
   document.getElementById('transplant-date-save')?.addEventListener('click', async () => {
     const inv = +document.getElementById('ins-inv').value;
@@ -2919,6 +2935,27 @@ function initTransplantDateForm() {
     const token = localStorage.getItem('sb_token');
     try {
       const r = await fetch(`${API_BASE}/transplant-date/${inv}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha: val }),
+      });
+      if (!r.ok) throw new Error(`Error ${r.status}`);
+      if (result) { result.className = 'insert-result ok'; result.textContent = '✓ Fecha guardada'; }
+    } catch (e) {
+      if (result) { result.className = 'insert-result bad'; result.textContent = '⚠ ' + e.message; }
+    }
+  });
+}
+
+function initHarvestStartDateForm() {
+  document.getElementById('harvest-start-date-save')?.addEventListener('click', async () => {
+    const inv = +document.getElementById('ins-inv').value;
+    const val = document.getElementById('harvest-start-date-input').value;
+    const result = document.getElementById('harvest-start-date-result');
+    if (!val) return;
+    const token = localStorage.getItem('sb_token');
+    try {
+      const r = await fetch(`${API_BASE}/harvest-start-date/${inv}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fecha: val }),
@@ -2949,7 +2986,7 @@ function initInsTabs() {
       document.getElementById('ins-panel-transplante').hidden = tab !== 'transplante';
       document.getElementById('ins-panel-hist').hidden = tab !== 'hist';
       if (tab === 'hist') loadHistorial(inv);
-      else if (tab === 'transplante') refreshTransplantDateTab(inv);
+      else if (tab === 'transplante') { refreshTransplantDateTab(inv); refreshHarvestStartDateTab(inv); }
       else refreshLockBanner(tab, GLOBAL_UPLOAD_TYPES.includes(tab) ? null : inv);
     });
   });
@@ -2970,7 +3007,7 @@ function initInsTabs() {
       if (btnEl) btnEl.disabled = true;
     });
     if (activeTab === 'hist') loadHistorial(inv);
-    else if (activeTab === 'transplante') refreshTransplantDateTab(inv);
+    else if (activeTab === 'transplante') { refreshTransplantDateTab(inv); refreshHarvestStartDateTab(inv); }
     else if (activeTab) refreshLockBanner(activeTab, GLOBAL_UPLOAD_TYPES.includes(activeTab) ? null : inv);
   });
 
@@ -3094,6 +3131,7 @@ async function init() {
     initInsTabs();
     initSeasonTabs();
     initTransplantDateForm();
+    initHarvestStartDateForm();
     wireMeta(3); wireMeta(4);
     renderYieldGoal(3); renderYieldGoal(4);
 

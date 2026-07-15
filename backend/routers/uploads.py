@@ -38,15 +38,6 @@ PER_INV_TYPES = {"sensores", "riego", "fenologia", "produccion"}
 
 EXTERIORES_GH_ID = 0  # sentinel: exteriores has no real invernadero (0 is never a real id)
 
-# Sourced from Models/hp_inv3.yaml / Models/hp_inv4.yaml (seq_len) and
-# Models/cnn_rnn_yield.py (HORIZON = 5) — copied as constants here rather
-# than loaded at runtime, to keep the upload path free of the
-# torch/joblib/pipeline-loading dependency chain that backend/engine.py and
-# scripts/live_inference.py carry.
-HORIZON = 5
-SEQ_LEN_BY_INV = {3: 4, 4: 2}
-MIN_WEEKS_FIRST_BY_INV = {inv: SEQ_LEN_BY_INV[inv] + HORIZON for inv in SEQ_LEN_BY_INV}
-MIN_WEEKS_FIRST_EXTERIORES = max(MIN_WEEKS_FIRST_BY_INV.values())
 MIN_NEW_DAYS_SUBSEQUENT = 7
 
 
@@ -170,20 +161,10 @@ def _check_window_coverage(
     dates = pd.to_datetime(df["fecha"])
 
     if not existing.data:
-        if form_type == "exteriores":
-            required = MIN_WEEKS_FIRST_EXTERIORES
-        else:
-            required = MIN_WEEKS_FIRST_BY_INV.get(greenhouse_id)
-            if required is None:
-                return
-        iso = dates.dt.isocalendar()
-        n_weeks = iso[["year", "week"]].drop_duplicates().shape[0]
-        if n_weeks < required:
-            raise HTTPException(
-                422,
-                f"Not sufficient data for first submission: se requieren al menos "
-                f"{required} semanas de datos, el archivo cubre {n_weeks} semana(s).",
-            )
+        # First submission of a season: no minimum weeks/days required.
+        # Inference predicts off whatever data has actually been uploaded so
+        # far — see docs/superpowers/specs/2026-07-15-first-submission-backfill-design.md §3a
+        # (runtime sufficiency check in _run_model_forward, not an upload-time gate).
         return
 
     date_strs = sorted({_date_str(d) for d in dates})

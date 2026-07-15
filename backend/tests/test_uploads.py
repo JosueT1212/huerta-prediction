@@ -86,15 +86,16 @@ def _matched_dates(mock_supa, dates: list[str], per_inv: bool = True, date_col: 
         mock_supa.table.return_value.select.return_value.in_.return_value.execute.return_value.data = data
 
 
-def test_upload_sensores_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
+def test_upload_sensores_first_submission_accepts_any_coverage(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _sensor_rows(3)  # inv3 requires 9 distinct weeks on first submission
+    df = _sensor_rows(3)  # no minimum weeks required on first submission — see uploads.py:_check_window_coverage
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
-    assert r.status_code == 422
-    assert "semanas" in r.text
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows_inserted"] == 3
 
 
 def test_upload_requires_auth(api_client):
@@ -138,7 +139,7 @@ def test_upload_sensores_upserts_and_touches_lock(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _sensor_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df = _sensor_rows(9)  # arbitrary row count -- no minimum required on first submission
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
     assert r.status_code == 200
@@ -170,7 +171,7 @@ def test_upload_fenologia_rejects_non_numeric_zona(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _phenology_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df = _phenology_rows(9)  # arbitrary row count -- no minimum required on first submission
     df["zona"] = df["zona"].astype(object)
     df.loc[df.index[-1], "zona"] = "abc"
     files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
@@ -183,7 +184,7 @@ def test_upload_sensores_handles_blank_optional_cell(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _sensor_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df = _sensor_rows(9)  # arbitrary row count -- no minimum required on first submission
     df.loc[df.index[-1], "humedad_abs_int"] = None
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
@@ -224,7 +225,7 @@ def test_upload_riego_upserts_and_touches_lock(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _riego_rows(9)  # inv3 requires 9 distinct weeks on first submission
+    df = _riego_rows(9)  # arbitrary row count -- no minimum required on first submission
     files = {"file": ("riego.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/riego", headers=headers, files=files)
     assert r.status_code == 200
@@ -263,7 +264,7 @@ def test_upload_exteriores_upserts_without_greenhouse_id(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa, per_inv=False)
-    df = _exterior_rows(9)  # exteriores requires 9 distinct weeks on first submission
+    df = _exterior_rows(9)  # arbitrary row count -- no minimum required on first submission
     files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/exteriores", headers=headers, files=files)
     assert r.status_code == 200
@@ -316,17 +317,6 @@ def test_upload_sensores_subsequent_rejects_insufficient_new_days(api_client, mo
     assert "días nuevos" in r.text
 
 
-def test_upload_exteriores_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
-    headers = _auth(mock_supa)
-    _no_lock(mock_supa)
-    _first_submission(mock_supa, per_inv=False)
-    df = _exterior_rows(5)  # exteriores requires 9 distinct weeks
-    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
-    r = api_client.post("/uploads/exteriores", headers=headers, files=files)
-    assert r.status_code == 422
-    assert "semanas" in r.text
-
-
 def test_upload_sensores_subsequent_excludes_already_present_dates(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
@@ -354,17 +344,6 @@ def test_upload_sensores_subsequent_rejects_when_overlap_reduces_new_days_below_
     assert "días nuevos" in r.text
 
 
-def test_upload_fenologia_first_submission_rejects_insufficient_weeks(api_client, mock_supa):
-    headers = _auth(mock_supa)
-    _no_lock(mock_supa)
-    _first_submission(mock_supa)
-    df = _phenology_rows(3)  # inv3 requires 9 distinct weeks on first submission
-    files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
-    r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
-    assert r.status_code == 422
-    assert "semanas" in r.text
-
-
 def test_upload_fenologia_subsequent_uses_week_date_column(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
@@ -379,11 +358,11 @@ def test_upload_fenologia_subsequent_uses_week_date_column(api_client, mock_supa
     assert body["rows_inserted"] == 8
 
 
-def test_upload_sensores_unmapped_inv_skips_window_check(api_client, mock_supa):
+def test_upload_sensores_unmapped_inv_first_submission_skips_window_check(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
     _first_submission(mock_supa)
-    df = _sensor_rows(1)  # inv 99 isn't in SEQ_LEN_BY_INV -> check is skipped, not a 500
+    df = _sensor_rows(1)  # any greenhouse_id, any row count on first submission -> not a 500
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/99/sensores", headers=headers, files=files)
     assert r.status_code == 200

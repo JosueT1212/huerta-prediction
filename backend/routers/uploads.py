@@ -2,6 +2,7 @@ import io
 from typing import Annotated
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 from backend.auth import get_current_user
 from backend.supabase_client import service_client
 from backend.lock_utils import check_submission_lock, touch_submission_lock, get_lock_status
@@ -220,7 +221,7 @@ async def upload_excel(
     if rows_inserted + rows_updated > 0:
         touch_submission_lock(inv, form_type)
         if form_type != "produccion":
-            maybe_trigger_inference(form_type, inv)
+            await run_in_threadpool(maybe_trigger_inference, form_type, inv)
 
     return {
         "rows_in_file": len(df),
@@ -284,7 +285,7 @@ async def upload_exteriores(
 
     if rows_inserted + rows_updated > 0:
         touch_submission_lock(EXTERIORES_GH_ID, "exteriores")
-        maybe_trigger_inference("exteriores", None)
+        await run_in_threadpool(maybe_trigger_inference, "exteriores", None)
 
     return {
         "rows_in_file": len(df),

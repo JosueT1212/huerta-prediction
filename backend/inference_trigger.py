@@ -1,16 +1,23 @@
 """Fires live inference right after the last required weekly upload lands.
 
-Each of the 4 required types (sensores/riego/fenologia per invernadero,
-exteriores global) can only be submitted once per LOCK_WINDOW — a repeat
-submission is rejected by check_submission_lock() with 429 before it ever
-reaches this module. That means uploads_complete_for_inv() can only flip
-from False to True on the exact upload call that completes the set; no
-extra "was it already complete" bookkeeping is needed here.
+Completeness requires all four required types (sensores/riego/fenologia per
+invernadero, exteriores global) to have been submitted within the current
+ISO week — i.e. each timestamp must be at or after Monday 00:00 UTC of the
+week containing `now`. This anchors freshness to the calendar week instead
+of a rolling window: a set that straddles a week boundary (e.g. three types
+uploaded late last week, the fourth uploaded early this week) is never
+considered complete here, and is instead picked up by the Sunday cron
+fallback. Within a single ISO week, the four required types can each only
+be submitted once (a repeat submission is rejected by
+check_submission_lock() with 429 before it ever reaches this module), so
+uploads_complete_for_inv() flips from False to True exactly once per
+complete week, on the upload call that completes the set — no extra "was it
+already complete" bookkeeping is needed here.
 """
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 import sys
 
-from backend.lock_utils import LOCK_WINDOW, last_submitted_at
+from backend.lock_utils import last_submitted_at
 
 # Mirrors the sentinel in backend/routers/uploads.py (EXTERIORES_GH_ID) —
 # exteriores has no real invernadero, 0 is never a real greenhouse id.
@@ -21,14 +28,17 @@ REQUIRED_PER_INV_TYPES = ("sensores", "riego", "fenologia")
 
 def uploads_complete_for_inv(inv: int) -> bool:
     """True if sensores+riego+fenologia (this inv) + exteriores (global)
-    were all submitted within the current LOCK_WINDOW."""
+    were all submitted within the current ISO week (Mon 00:00 UTC onward)."""
     now = datetime.now(timezone.utc)
+    monday = datetime.combine(
+        now.date() - timedelta(days=now.weekday()), time.min, tzinfo=timezone.utc
+    )
     for form_type in REQUIRED_PER_INV_TYPES:
         ts = last_submitted_at(inv, form_type)
-        if ts is None or now - ts > LOCK_WINDOW:
+        if ts is None or ts < monday:
             return False
     ts = last_submitted_at(EXTERIORES_GH_ID, "exteriores")
-    if ts is None or now - ts > LOCK_WINDOW:
+    if ts is None or ts < monday:
         return False
     return True
 

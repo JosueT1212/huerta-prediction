@@ -419,6 +419,21 @@ def test_upload_produccion_does_not_trigger_inference(api_client, mock_supa, mon
     trigger_mock.assert_not_called()
 
 
+def test_upload_produccion_all_skipped_does_not_trigger_inference(api_client, mock_supa, monkeypatch):
+    from backend.routers import uploads as uploads_router
+    trigger_mock = MagicMock()
+    monkeypatch.setattr(uploads_router, "maybe_trigger_inference", trigger_mock)
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    # predictions update returns no matched row (empty data) → all rows skipped
+    mock_supa.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value.data = []
+    df = pd.DataFrame([{"fecha": "2026-07-01", "kg_reales": 5000}])
+    files = {"file": ("prod.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/produccion", headers=headers, files=files)
+    assert r.status_code == 200
+    trigger_mock.assert_not_called()
+
+
 def test_upload_exteriores_triggers_inference_check(api_client, mock_supa, monkeypatch):
     from backend.routers import uploads as uploads_router
     trigger_mock = MagicMock()

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from unittest.mock import MagicMock
 
 
@@ -35,13 +35,29 @@ def test_uploads_complete_for_inv_false_when_one_missing(monkeypatch):
 
 def test_uploads_complete_for_inv_false_when_expired(monkeypatch):
     from backend.inference_trigger import uploads_complete_for_inv
-    now = datetime.now(timezone.utc).isoformat()
-    old = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
+    now = datetime.now(timezone.utc)
+    monday = datetime.combine(
+        now.date() - timedelta(days=now.weekday()), time.min, tzinfo=timezone.utc
+    )
+    before_monday = (monday - timedelta(hours=1)).isoformat()
     _stub_locks(monkeypatch, {
-        (3, "sensores"): old, (3, "riego"): now, (3, "fenologia"): now,
-        (0, "exteriores"): now,
+        (3, "sensores"): before_monday, (3, "riego"): now.isoformat(),
+        (3, "fenologia"): now.isoformat(), (0, "exteriores"): now.isoformat(),
     })
     assert uploads_complete_for_inv(3) is False
+
+
+def test_uploads_complete_for_inv_true_at_monday_boundary(monkeypatch):
+    from backend.inference_trigger import uploads_complete_for_inv
+    now = datetime.now(timezone.utc)
+    monday = datetime.combine(
+        now.date() - timedelta(days=now.weekday()), time.min, tzinfo=timezone.utc
+    )
+    _stub_locks(monkeypatch, {
+        (3, "sensores"): monday.isoformat(), (3, "riego"): now.isoformat(),
+        (3, "fenologia"): now.isoformat(), (0, "exteriores"): now.isoformat(),
+    })
+    assert uploads_complete_for_inv(3) is True
 
 
 def test_maybe_trigger_inference_runs_when_complete(monkeypatch):

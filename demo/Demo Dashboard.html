@@ -2457,6 +2457,153 @@ function wireSimControls(inv) {
 }
 
 /* =========================================================
+   T18 (EN VIVO) — slider/chart/tabla, paralelo a T17 pero
+   sobre rawLive[inv] (sin PI bounds, longitud variable).
+========================================================= */
+const cursorLiveInv = { 3: null, 4: null };
+
+/* Recorta rawLive[inv] alrededor del cursor: past=5 semanas antes,
+   el resto (cursor→fin) como "predictions" (semanas ya predichas,
+   algunas con kg_actual ya registrado). */
+function buildLiveSeriesFromRaw(rows, cursor) {
+  const startPast = Math.max(0, cursor - PAST_WINDOW);
+  const history = [];
+  for (let i = startPast; i < cursor; i++) {
+    history.push({
+      week: fmtLiveWeekLabel(rows[i].predicted_for),
+      real: rows[i].kg_actual,
+      pred: rows[i].kg_predicted,
+    });
+  }
+  const predictions = [];
+  for (let i = cursor; i < rows.length; i++) {
+    predictions.push({
+      week: fmtLiveWeekLabel(rows[i].predicted_for),
+      real: rows[i].kg_actual,
+      pred: rows[i].kg_predicted,
+    });
+  }
+  return { history, predictions };
+}
+
+function buildLivePredTable(tbody, data) {
+  if (!tbody) return;
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td class="label">${r.week}</td>
+      <td class="num">${fmt(r.pred)}</td>
+      <td class="num">${fmt(r.real)}</td>
+    </tr>
+  `).join('');
+}
+
+/* Como makeDetailChart pero sin forzar "Real" a null en las filas
+   futuras — T18 puede tener kg_actual ya registrado dentro del rango
+   de "predictions" (semana pasada re-visitada con el slider). */
+function makeLiveDetailChart(ctxId, history, predictions, color) {
+  destroyChart(ctxId);
+  const el = document.getElementById(ctxId);
+  if (!el) return;
+  const ctx = el.getContext('2d');
+  const allRows = [...history, ...predictions];
+  const labels = allRows.map(r => r.week);
+  const realData = allRows.map(r => r.real);
+  const predData = allRows.map(r => r.pred);
+
+  charts[ctxId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Predicción',
+          data: predData,
+          borderColor: color,
+          borderWidth: 2,
+          borderDash: [4, 4],
+          backgroundColor: 'transparent',
+          pointBackgroundColor: color,
+          pointRadius: 3,
+          tension: 0.35,
+          fill: false,
+        },
+        {
+          label: 'Real',
+          data: realData,
+          borderColor: palette.cream,
+          borderWidth: 2.5,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: palette.cream,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          tension: 0.3,
+          fill: false,
+        },
+      ],
+    },
+    options: chartBaseOpts(false),
+  });
+}
+
+function updateLiveSliderFill(inv, cursor, n) {
+  const sl = document.getElementById(`slider${inv}-t18`);
+  if (!sl) return;
+  const pct = n > 1 ? (cursor / (n - 1)) * 100 : 0;
+  sl.style.setProperty('--fill', pct.toFixed(1) + '%');
+}
+
+/* Repinta slider+chart+tabla T18 para un invernadero en la semana `cursor`.
+   cursor=null → última semana con predicción (lo más reciente). */
+function renderLiveInv(inv, cursor) {
+  const rows = rawLive[inv] || [];
+  const n = rows.length;
+  const simBar = document.getElementById(`live-sim-bar-${inv}`);
+  const grid = document.getElementById(`live-detail-grid-${inv}`);
+  const empty = document.getElementById(`live-empty-${inv}`);
+
+  if (!n) {
+    if (simBar) simBar.hidden = true;
+    if (grid) grid.hidden = true;
+    if (empty) empty.hidden = false;
+    return;
+  }
+  if (simBar) simBar.hidden = false;
+  if (grid) grid.hidden = false;
+  if (empty) empty.hidden = true;
+
+  if (cursor == null) cursor = cursorLiveInv[inv] ?? (n - 1);
+  cursor = Math.max(0, Math.min(cursor, n - 1));
+  cursorLiveInv[inv] = cursor;
+
+  const { history, predictions } = buildLiveSeriesFromRaw(rows, cursor);
+  buildLivePredTable(document.getElementById(`tbody-inv${inv}-t18`), predictions);
+  makeLiveDetailChart(`chart-inv${inv}-t18`, history, predictions, palette.accent);
+
+  const sl = document.getElementById(`slider${inv}-t18`);
+  if (sl) {
+    sl.max = n - 1;
+    sl.value = cursor;
+    sl.disabled = n <= 1;
+  }
+  updateLiveSliderFill(inv, cursor, n);
+  setText(`simweek${inv}-t18`, fmtLiveWeekLabel(rows[cursor].predicted_for));
+  setText(`simcur${inv}-t18`, `${cursor + 1} / ${n}`);
+}
+
+function stepLiveInv(inv, delta) {
+  const n = (rawLive[inv] || []).length;
+  if (!n) return;
+  renderLiveInv(inv, Math.max(0, Math.min((cursorLiveInv[inv] ?? (n - 1)) + delta, n - 1)));
+}
+
+function wireLiveSimControls(inv) {
+  const sl = document.getElementById(`slider${inv}-t18`);
+  if (sl) sl.addEventListener('input', () => renderLiveInv(inv, +sl.value));
+  document.getElementById(`prev${inv}-t18`)?.addEventListener('click', () => stepLiveInv(inv, -1));
+  document.getElementById(`next${inv}-t18`)?.addEventListener('click', () => stepLiveInv(inv, +1));
+}
+
+/* =========================================================
    FENOLOGÍA (KPIs) + FORMULARIO + HISTÓRICO DE SENSORES
 ========================================================= */
 const rawLivePheno = { 3: null, 4: null };
@@ -2954,6 +3101,10 @@ async function init() {
     fillMenuKPIs(4);
     buildLiveHistTable(document.getElementById('tbody-hist3'), rawLive[3] || []);
     buildLiveHistTable(document.getElementById('tbody-hist4'), rawLive[4] || []);
+    wireLiveSimControls(3);
+    wireLiveSimControls(4);
+    renderLiveInv(3, null);
+    renderLiveInv(4, null);
     refreshLiveData();
 
     console.log('[Huerta] backend OK',
@@ -3125,6 +3276,7 @@ async function refreshLiveData() {
       await loadLiveSeason(inv);
       fillMenuKPIs(inv);
       buildLiveHistTable(document.getElementById(`tbody-hist${inv}`), rawLive[inv] || []);
+      renderLiveInv(inv, cursorLiveInv[inv]);
     }
     renderYieldGoal(3); renderYieldGoal(4);
   } finally {

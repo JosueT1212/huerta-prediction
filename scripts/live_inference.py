@@ -87,7 +87,7 @@ def get_harvest_start(supa, inv: int) -> date | None:
     row = resp.data if resp is not None else None
     if not row:
         return None
-    return date.fromisoformat(row["fecha"])
+    return monday_of_week(date.fromisoformat(row["fecha"]))
 
 
 def is_first_submission(supa, inv: int) -> bool:

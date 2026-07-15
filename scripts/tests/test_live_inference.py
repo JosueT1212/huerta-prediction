@@ -174,6 +174,51 @@ def test_backfill_first_submission_writes_mean_weeks_and_stops_at_padding(monkey
     assert calls[0] == harvest_start + timedelta(weeks=SKIP_FIRST_WEEKS - HORIZON_WEEKS)
 
 
+def test_get_harvest_start_normalizes_non_monday_to_monday():
+    from scripts.live_inference import get_harvest_start
+
+    mock_supa = MagicMock()
+    resp = MagicMock()
+    # 2026-07-29 is a Wednesday; the Monday of that week is 2026-07-27.
+    resp.data = {"greenhouse_id": 3, "fecha": "2026-07-29", "updated_at": "2026-07-29T08:00:00Z"}
+    mock_supa.table("harvest_start_dates").select("fecha").eq("greenhouse_id", 3).maybe_single().execute.return_value = resp
+
+    result = get_harvest_start(mock_supa, 3)
+    assert result == date(2026, 7, 27)
+
+
+def test_run_model_forward_returns_none_when_not_enough_weekly_history():
+    from scripts.live_inference import _run_model_forward
+
+    mock_supa = MagicMock()
+    # Only one day of sensor data merged by fecha -> aggregates to far fewer
+    # than seq_len weekly rows, so the padding guard must fire before any
+    # attempt to build tensors or load a model.
+    sensor_resp = MagicMock()
+    sensor_resp.data = [{"fecha": "2026-07-20", "greenhouse_id": 3, "temp": 20.0}]
+    empty_resp = MagicMock()
+    empty_resp.data = []
+
+    def table_side_effect(name):
+        m = MagicMock()
+        if name == "sensor_readings_wide":
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = sensor_resp
+        else:
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+            m.select.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+        return m
+
+    mock_supa.table.side_effect = table_side_effect
+
+    with patch(
+        "scripts.live_inference.joblib.load",
+        return_value={"seq_len": 4, "sensor_cols": ["temp"]},
+    ):
+        result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 7, 27))
+
+    assert result is None
+
+
 class _FakeDate(date):
     @classmethod
     def today(cls):

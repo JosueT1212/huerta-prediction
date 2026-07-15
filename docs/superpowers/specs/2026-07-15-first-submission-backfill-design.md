@@ -23,7 +23,7 @@ production" is anchored that the fix depends on.
 
 ---
 
-## Section 1: Fix `harvest_start` anchoring (pre-existing bug)
+## Section 1: `harvest_start` — stored explicitly in Supabase, not inferred
 
 **Problem:** `get_harvest_start()` (`scripts/live_inference.py:71-84`) returns
 `MIN(fecha)` from `sensor_readings_wide` for that greenhouse. Per CLAUDE.md §5,
@@ -35,33 +35,66 @@ is computed relative to this — as it stands today, in production, the ramp-up
 mean fallback added in the 2026-07-13 spec effectively never fires, and no
 part of the pipeline currently notices.
 
-**Fix:** anchor `harvest_start` to the first `predicted_for` value already
-written for this greenhouse+season, not to sensor data:
+**Fix:** stop inferring `harvest_start` at all — store it explicitly in
+Supabase as an admin-set fact, same pattern as `transplant_dates`
+(2026-07-13 spec §3), rather than derive it from sensor rows or from
+`predictions`. New table:
+
+```sql
+-- part of supabase/migrations/010_harvest_start_dates.sql
+create table if not exists harvest_start_dates (
+  greenhouse_id int         primary key,
+  fecha         date        not null,
+  updated_at    timestamptz not null default now()
+);
+```
+
+New endpoints (`backend/routers/harvest_start_dates.py`, identical pattern to
+`transplant_dates.py`):
+
+```
+GET /harvest-start-date/{inv}   → { greenhouse_id, fecha, updated_at } or 404 if unset
+PUT /harvest-start-date/{inv}   → upsert { fecha }; any authenticated user (JWT)
+```
+
+Small dashboard addition alongside the existing transplant-date picker: one
+more date-picker + save button per greenhouse (admin/settings area), calling
+`PUT /harvest-start-date/{inv}`.
+
+`get_harvest_start()` becomes a direct read:
 
 ```python
-def get_harvest_start(supa, inv: int, season: str) -> date | None:
+def get_harvest_start(supa, inv: int) -> date | None:
     resp = (
-        supa.table("predictions")
-        .select("predicted_for")
+        supa.table("harvest_start_dates")
+        .select("fecha")
         .eq("greenhouse_id", inv)
-        .eq("season", season)
-        .order("predicted_for")
-        .limit(1)
+        .maybe_single()
         .execute()
     )
-    rows = resp.data or []
-    if not rows:
-        return None  # no predictions yet this season → this call is the first submission
-    return date.fromisoformat(rows[0]["predicted_for"])
+    row = resp.data if resp is not None else None
+    if not row:
+        return None
+    return date.fromisoformat(row["fecha"])
 ```
+
+**Missing harvest_start_dates row:** same skip behavior as a missing
+`transplant_dates` row (2026-07-13 spec §3) — that greenhouse's inference is
+skipped for this run, `ERROR`-level log line, other greenhouse unaffected.
+This replaces the earlier "`None` means first submission" signal (previous
+draft of this spec) — first-submission detection moves entirely to Section 3
+(whether `predictions` has rows yet for this greenhouse+season), decoupled
+from whether `harvest_start` is known.
+
+**For T18:** admin sets `harvest_start_dates` to `2026-07-27` (Monday of ISO
+week 31, 2026) for both Inv3 and Inv4 before/at go-live — a manual step,
+same as setting `transplant_dates` (2026-07-13 spec §3 "manual step when the
+next season starts").
 
 `transplant_date` is unchanged as an input to `build_input_tensor`'s temporal
 features (`dias_desde_transplante`) — only the ramp-up/week-numbering anchor
-moves off of sensor data.
-
-When `get_harvest_start` returns `None`, the caller is in the first-submission
-case (Section 3) and uses `monday_of_week(date.today())` as the season's
-`harvest_start` for that run.
+moves off of sensor data (and off of `predictions`) onto this new stored
+field.
 
 ---
 
@@ -85,9 +118,28 @@ concern, not a training concern).
 
 ## Section 3: First-submission backfill (dynamic — as many rows as data supports)
 
-**Detection:** a call to `run_inference_for_greenhouse` is the first
-submission of the season for that greenhouse iff `get_harvest_start` (Section
-1) returns `None`.
+**Detection:** decoupled from Section 1 now that `harvest_start` is a stored
+fact rather than an inferred one. A call to `run_inference_for_greenhouse` is
+the first submission of the season for that greenhouse iff there is no
+`predictions` row yet for `(greenhouse_id, season=CURRENT_SEASON)`:
+
+```python
+def is_first_submission(supa, inv: int) -> bool:
+    resp = (
+        supa.table("predictions")
+        .select("id")
+        .eq("greenhouse_id", inv)
+        .eq("season", CURRENT_SEASON)
+        .limit(1)
+        .execute()
+    )
+    return not (resp.data or [])
+```
+
+`harvest_start` itself is read from `harvest_start_dates` (Section 1) —
+required for both the first-submission and non-first-submission paths; if
+unset, skip this greenhouse this run (Section 1's missing-row behavior),
+same as a missing `transplant_dates` row.
 
 **On first submission**, instead of writing one row, write as many as can
 legitimately be computed right now — no hardcoded row count. Today (week 29,
@@ -95,8 +147,6 @@ legitimately be computed right now — no hardcoded row count. Today (week 29,
 the exact number is not knowable ahead of time and must not be hardcoded
 into the pipeline; it depends on how much sensor backlog the client's first
 upload actually contains, which varies by greenhouse and by season.
-
-`harvest_start = monday_of_week(date.today())` for this run.
 
 1. **Ramp-up weeks** — for `wis` in `0 .. SKIP_FIRST_WEEKS-1`: always write
    from `historical_mean_inv{inv}.json[str(wis)]`. These have no sensor-data
@@ -123,9 +173,9 @@ today's date support)` — could be as few as `SKIP_FIRST_WEEKS` (mean only, if
 the trigger fires exactly on harvest_start day with a thin backlog) or more,
 naturally, with no upper bound imposed by the code itself.
 
-**Non-first submissions** (`get_harvest_start` returns a date): unchanged —
-one row, `predicted_for = monday_of_week(today + HORIZON_WEEKS)`, model or
-mean chosen the same way as today, just using the corrected `harvest_start`.
+**Non-first submissions** (`is_first_submission` is `False`): unchanged — one
+row, `predicted_for = monday_of_week(today + HORIZON_WEEKS)`, model or mean
+chosen the same way as today, just using the stored `harvest_start`.
 
 ### Refactor: `as_of_date`-parameterized model forward pass
 
@@ -188,9 +238,12 @@ sees this sentinel, rather than writing a prediction built on padded
 ## Edge cases
 
 - **Concurrent triggers race:** two uploads completing near-simultaneously
-  could both observe `get_harvest_start() is None` and both run the
+  could both observe `is_first_submission() == True` and both run the
   first-submission branch. Harmless — every write is an `upsert` keyed on
   `(greenhouse_id, predicted_for)`; duplicate work, identical final state.
+- **`harvest_start_dates` unset:** greenhouse skipped this run, same as a
+  missing `transplant_dates` row (Section 1) — logged at `ERROR`, other
+  greenhouse unaffected. Must be set before T18 go-live for both invs.
 - **Missing historical mean key:** if `historical_mean_inv{inv}.json` is
   missing a required key (shouldn't happen post Section 2, but defensively),
   skip that one row with an `ERROR`-level log line and continue with the
@@ -220,11 +273,22 @@ sees this sentinel, rather than writing a prediction built on padded
 
 ## Files touched (summary)
 
-- `scripts/live_inference.py` — `get_harvest_start` reanchored to
-  `predictions` table, `SKIP_FIRST_WEEKS` 3→4, model-forward-pass extracted
-  into `_run_model_forward(..., as_of_date) -> float | None`, first-submission
+- `supabase/migrations/010_harvest_start_dates.sql` — new `harvest_start_dates`
+  table.
+- `backend/routers/harvest_start_dates.py` — new router, mirrors
+  `transplant_dates.py` (GET/PUT `/harvest-start-date/{inv}`).
+- `scripts/live_inference.py` — `get_harvest_start` reads
+  `harvest_start_dates` directly (no more inference from sensor data or
+  `predictions`), new `is_first_submission()` helper, `SKIP_FIRST_WEEKS`
+  3→4, model-forward-pass extracted into
+  `_run_model_forward(..., as_of_date) -> float | None`, first-submission
   branch looping until `as_of_date` exceeds today or the window needs
   padding, instead of writing 1 fixed row.
 - `scripts/compute_historical_means.py` — add position `"3"`.
 - `Models/results/historical_mean_inv{3,4}.json` — regenerated with 4 keys
   (`"0".."3"`) instead of 3.
+- Dashboard (`demo/Demo Dashboard.html`) — one more date-picker + save
+  button per greenhouse (admin/settings area, alongside the existing
+  transplant-date picker), calling `PUT /harvest-start-date/{inv}`.
+- **Manual step, not code:** set `harvest_start_dates.fecha = 2026-07-27`
+  for Inv3 and Inv4 before/at T18 go-live.

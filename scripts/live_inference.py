@@ -167,7 +167,10 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
         fc_hidden=hp["fc_hidden"],
     )
     model_path = RESULTS_DIR / f"production_cnn_rnn_inv{inv}.pt"
-    model.load_state_dict(torch.load(model_path, weights_only=True))
+    # map_location="cpu": checkpoints were saved on Apple Silicon (mps
+    # device) and Railway's container is CPU-only Linux — without this,
+    # torch.load fails with "Storage device not recognized: mps".
+    model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=True))
     model.eval()
 
     with torch.no_grad():

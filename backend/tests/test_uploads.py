@@ -389,3 +389,45 @@ def test_upload_sensores_unmapped_inv_skips_window_check(api_client, mock_supa):
     assert r.status_code == 200
     body = r.json()
     assert body["rows_inserted"] == 1
+
+
+def test_upload_sensores_triggers_inference_check(api_client, mock_supa, monkeypatch):
+    from backend.routers import uploads as uploads_router
+    trigger_mock = MagicMock()
+    monkeypatch.setattr(uploads_router, "maybe_trigger_inference", trigger_mock)
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa)
+    df = _sensor_rows(9)
+    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
+    assert r.status_code == 200
+    trigger_mock.assert_called_once_with("sensores", 3)
+
+
+def test_upload_produccion_does_not_trigger_inference(api_client, mock_supa, monkeypatch):
+    from backend.routers import uploads as uploads_router
+    trigger_mock = MagicMock()
+    monkeypatch.setattr(uploads_router, "maybe_trigger_inference", trigger_mock)
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    mock_supa.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value.data = [{"id": 1}]
+    df = pd.DataFrame([{"fecha": "2026-03-02", "kg_reales": 100.0}])
+    files = {"file": ("prod.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/3/produccion", headers=headers, files=files)
+    assert r.status_code == 200
+    trigger_mock.assert_not_called()
+
+
+def test_upload_exteriores_triggers_inference_check(api_client, mock_supa, monkeypatch):
+    from backend.routers import uploads as uploads_router
+    trigger_mock = MagicMock()
+    monkeypatch.setattr(uploads_router, "maybe_trigger_inference", trigger_mock)
+    headers = _auth(mock_supa)
+    _no_lock(mock_supa)
+    _first_submission(mock_supa, per_inv=False)
+    df = _exterior_rows(9)
+    files = {"file": ("ext.xlsx", _xlsx_bytes(df), "application/octet-stream")}
+    r = api_client.post("/uploads/exteriores", headers=headers, files=files)
+    assert r.status_code == 200
+    trigger_mock.assert_called_once_with("exteriores", None)

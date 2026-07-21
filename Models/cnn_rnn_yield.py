@@ -775,7 +775,7 @@ class CNNRNN(nn.Module):
       x_temporal (clean) ──────────────────────────────  ─┘
     """
     def __init__(self, n_sensor, n_temporal, cnn_filters, cnn_kernel_size, cnn_padding,
-                 num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden, n_out=1):
+                 num_cnn_blocks, lstm_hidden, lstm_layers, dropout, fc_hidden, fc_layers=1, n_out=1):
         super().__init__()
 
         cnn_blocks = []
@@ -795,12 +795,13 @@ class CNNRNN(nn.Module):
             dropout=dropout if lstm_layers > 1 else 0.0
         )
 
-        self.fc = nn.Sequential(
-            nn.Linear(lstm_hidden, fc_hidden),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(fc_hidden, n_out)
-        )
+        fc_stack = []
+        in_dim = lstm_hidden
+        for _ in range(fc_layers):
+            fc_stack += [nn.Linear(in_dim, fc_hidden), nn.ReLU(), nn.Dropout(dropout)]
+            in_dim = fc_hidden
+        fc_stack.append(nn.Linear(in_dim, n_out))
+        self.fc = nn.Sequential(*fc_stack)
 
     def forward(self, x_sensor, x_temporal):
         # x_sensor:  (batch, seq_len, n_sensor)
@@ -898,7 +899,26 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     y_val   = val_df['target'].values.astype(np.float32)
     y_test  = test_df['target'].values.astype(np.float32)
 
-    if transform == 'log':
+    target_mode = hp.get('target_mode', 'raw')
+    hist_tr = hist_va = hist_te = None
+    if target_mode == 'residual':
+        # Predict kg - mean(week_in_season) instead of raw kg. mu(wis) is
+        # derived from TRAIN rows only (no leakage into val/test); rows whose
+        # week_in_season wasn't seen in train fall back to the train-wide
+        # mean. bc_lambda stays None — box-cox/log1p assume a positive-ish
+        # target and residuals are centered near 0 (can go negative), so the
+        # transform is skipped entirely and the scaler acts on raw residuals.
+        mu_wis = train_df.groupby('week_in_season')['target'].mean()
+        global_mu = float(train_df['target'].mean())
+        hist_tr = train_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
+        hist_va = val_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
+        hist_te = test_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
+        y_train = y_train - hist_tr
+        y_val   = y_val   - hist_va
+        y_test  = y_test  - hist_te
+        bc_lambda = None
+        print(f'  Target mode: residual (kg - mean(week_in_season), {len(mu_wis)} train weeks in lookup)')
+    elif transform == 'log':
         y_train = np.log1p(y_train).astype(np.float32)
         y_val   = np.log1p(y_val).astype(np.float32)
         y_test  = np.log1p(y_test).astype(np.float32)
@@ -928,11 +948,12 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
         # Must account for skip_first_weeks (see _apply_gap_norm_cnn docstring)
         # or the true horizon silently drifts by skip_first_weeks+1 weeks.
         _seq = hp['seq_len']
+        _horizon = hp.get('horizon', HORIZON)
         if hp.get('use_gap_norm', True):
-            sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq, skip_first_weeks=skip_first_weeks)
-            sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq, skip_first_weeks=skip_first_weeks)
-            sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq, skip_first_weeks=skip_first_weeks)
-            print(f'  Gap-norm applied (HORIZON={HORIZON}, seq_len={_seq}, skip_first_weeks={skip_first_weeks}): sensor frames trimmed per season')
+            sensor_tr_df = _apply_gap_norm_cnn(sensor_tr_df, train_df, _seq, horizon=_horizon, skip_first_weeks=skip_first_weeks)
+            sensor_va_df = _apply_gap_norm_cnn(sensor_va_df, val_df,   _seq, horizon=_horizon, skip_first_weeks=skip_first_weeks)
+            sensor_te_df = _apply_gap_norm_cnn(sensor_te_df, test_df,  _seq, horizon=_horizon, skip_first_weeks=skip_first_weeks)
+            print(f'  Gap-norm applied (horizon={_horizon}, seq_len={_seq}, skip_first_weeks={skip_first_weeks}): sensor frames trimmed per season')
         # Only keep columns present in both sensor frames and feature_cols
         avail_sensor  = [c for c in sensor_cols  if c in sensor_tr_df.columns]
         avail_temporal = [c for c in temporal_cols if c in sensor_tr_df.columns]
@@ -999,7 +1020,7 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     # ── Sequences ──
     seq_len = hp['seq_len']
     stride  = hp.get('stride', 7 if hp.get('resolution') == 'daily' else 1)
-    print(f'  HORIZON={HORIZON} (doc) | seq_len={seq_len} | true_horizon = gap + skip_first_weeks - extra_skip - seq_len + 1 '
+    print(f'  HORIZON={hp.get("horizon", HORIZON)} (doc) | seq_len={seq_len} | true_horizon = gap + skip_first_weeks - extra_skip - seq_len + 1 '
           f'(= HORIZON when use_gap_norm=true; see _apply_gap_norm_cnn)')
     temps_sensor_tr = sensor_tr_df['temporada'].values
     temps_sensor_va = sensor_va_df['temporada'].values
@@ -1017,6 +1038,21 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     print(f'  Sequences — train: {len(Xs_tr_seq)}, val: {len(Xs_va_seq)}, test: {len(Xs_te_seq)}'
           + (f' (stride={stride})' if stride > 1 else ''))
 
+    hist_va_seq = hist_te_seq = None
+    if target_mode == 'residual':
+        # Re-run the identical sequencing pass on the row-level mu(wis) offsets
+        # so hist_*_seq lines up exactly with y_va/y_te (same masking, same
+        # per-season position index) — lets evaluate_model() add mu(wis) back
+        # to a residual prediction and recover actual kg.
+        _, _, hist_va_seq, _ = make_sequences_per_season(
+            Xs_va, Xt_va, hist_va, temps_sensor_va, temps_prod_va, seq_len, stride)
+        _, _, hist_te_seq, _ = make_sequences_per_season(
+            Xs_te, Xt_te, hist_te, temps_sensor_te, temps_prod_te, seq_len, stride)
+        # Stashed on scaler_y (always returned) rather than widening prepare_data's
+        # return tuple, which would require updating every other caller in the repo.
+        scaler_y.hist_va_seq_ = hist_va_seq
+        scaler_y.hist_te_seq_ = hist_te_seq
+
     if return_arrays:
         _has_wk = 'prod_week_key' in test_df.columns
         _week_keys = test_df['prod_week_key'].values if _has_wk else np.arange(len(y_te))
@@ -1030,11 +1066,43 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
                              torch.FloatTensor(y).unsqueeze(1),
                              torch.FloatTensor(w).reshape(-1, 1))
 
-    if ramp_weeks is None:
-        ramp_weeks = hp.get('ramp_weeks', 4)
-    if ramp_weight is None:
-        ramp_weight = hp.get('ramp_weight', 1.0)
-    w_train = np.where(pos_tr < ramp_weeks, ramp_weight, 1.0).astype(np.float32)
+    if hp.get('weight_mode') == 'nll_regime':
+        # Fixed-sigma Gaussian NLL weights: w = 1/(2*sigma(regime)^2), sigma
+        # estimated from TRAIN residuals only (kg - mean(week_in_season)),
+        # split into edge (first/last EDGE_W weeks of each season) vs plateau
+        # — same regime definition used in the EDA that found sigma_edge is
+        # 2-4x sigma_plateau. This is a *fixed*, precomputed weighting (not a
+        # learned second output head) — mathematically it's inverse-variance
+        # weighting, so it will emphasize the plateau over the edge/ramp-up,
+        # the opposite direction from ramp_weight upweighting.
+        EDGE_W = hp.get('nll_edge_weeks', 8)
+        _mu_wis_train = train_df.groupby('week_in_season')['target'].mean()
+        _season_max = train_df.groupby('temporada')['week_in_season'].transform('max')
+        _resid = train_df['target'] - train_df['week_in_season'].map(_mu_wis_train)
+        _is_edge = (train_df['week_in_season'] < EDGE_W) | (train_df['week_in_season'] > _season_max - EDGE_W)
+        _sigma_edge    = float(_resid[_is_edge].std())    or 1.0
+        _sigma_plateau = float(_resid[~_is_edge].std())   or 1.0
+        print(f'  NLL regime weights: sigma_edge={_sigma_edge:.0f}  sigma_plateau={_sigma_plateau:.0f}  '
+              f'(edge<{EDGE_W} or >max-{EDGE_W} weeks)')
+        _w_edge    = 1.0 / (2.0 * _sigma_edge ** 2)
+        _w_plateau = 1.0 / (2.0 * _sigma_plateau ** 2)
+        _mean_w = (_w_edge + _w_plateau) / 2.0  # normalize so overall loss scale ~unchanged
+        _w_edge, _w_plateau = _w_edge / _mean_w, _w_plateau / _mean_w
+        _calendar_wis_tr = pos_tr + skip_first_weeks
+        _season_max_map = train_df.groupby('temporada')['week_in_season'].max().to_dict()
+        # pos_tr doesn't carry season identity post-sequencing; approximate season
+        # length with the train-wide max (seasons are close in length — see §5 gap table)
+        _max_season_len = max(_season_max_map.values()) if _season_max_map else 40
+        w_train = np.where(
+            (_calendar_wis_tr < EDGE_W) | (_calendar_wis_tr > _max_season_len - EDGE_W),
+            _w_edge, _w_plateau
+        ).astype(np.float32)
+    else:
+        if ramp_weeks is None:
+            ramp_weeks = hp.get('ramp_weeks', 4)
+        if ramp_weight is None:
+            ramp_weight = hp.get('ramp_weight', 1.0)
+        w_train = np.where(pos_tr < ramp_weeks, ramp_weight, 1.0).astype(np.float32)
     w_ones_va = np.ones(len(y_va), dtype=np.float32)
     w_ones_te = np.ones(len(y_te), dtype=np.float32)
 
@@ -1152,6 +1220,71 @@ class YieldWMAELoss(nn.Module):
         return wmae + corr_loss
 
 
+class FocalRegressionLoss(nn.Module):
+    """Focal-style regression loss — weight ∝ (|current error| / mean |error|)^gamma.
+
+    Unlike YieldWMAELoss's weighting (fixed, based on target *magnitude*) or a
+    static ramp_weight (fixed, based on season position), this weight is
+    recomputed every forward pass from the model's *current* residual — it
+    adaptively upweights whatever the model is currently getting wrong, not a
+    fixed population statistic. gamma=0 reduces to plain Huber (no focal
+    effect); higher gamma concentrates more of the loss on currently-hard
+    samples. The weight is detached (stop-gradient) so it only re-scales the
+    loss landscape, it doesn't itself contribute a gradient term.
+    """
+    def __init__(self, corr_weight=0.8, gamma=1.5, delta=0.7, base='huber', t_nu=5.0):
+        super().__init__()
+        self.corr_weight = corr_weight
+        self.gamma = gamma
+        self.delta = delta
+        self.base = base
+        self.t_nu = t_nu
+
+    def forward(self, pred, target, sample_weights=None):
+        pred_f   = pred.flatten()
+        target_f = target.flatten()
+        err = torch.abs(pred_f - target_f)
+        if self.base == 'mse':
+            # Gaussian NLL with fixed sigma reduces exactly to (scaled) MSE —
+            # the matching base term now that regime-rescaled residuals have
+            # been confirmed close to Normal (Shapiro p=0.11-0.37, EDA
+            # 2026-07-16). Huber's outlier-robustness trades away calibration
+            # accuracy on a residual that isn't actually heavy-tailed anymore.
+            base_loss = err ** 2
+        elif self.base == 't_nll':
+            # Student-t NLL, shape (nu) fixed from the confirmed raw-residual
+            # fit (nu=4.22 inv3, 6.32 inv4 — bootstrap-validated, EDA
+            # 2026-07-16/21), scale estimated per-batch from the current
+            # residuals (detached — training operates in scaler_y-transformed
+            # units, not raw kg, so a fixed raw-kg scale wouldn't transfer).
+            # Grows sub-quadratically for large err (nu finite), unlike MSE —
+            # matches the fat-tailed process instead of over-penalizing
+            # outliers that the data itself says are not that rare.
+            with torch.no_grad():
+                scale_est = err.std() + 1e-6
+            base_loss = 0.5 * (self.t_nu + 1) * torch.log1p((err ** 2) / (self.t_nu * scale_est ** 2))
+        else:
+            base_loss = torch.where(err <= self.delta,
+                                    0.5 * err ** 2 / self.delta,
+                                    err - 0.5 * self.delta)
+        with torch.no_grad():
+            focal_w = (err / (err.mean() + 1e-6)) ** self.gamma
+        weights = focal_w
+        if sample_weights is not None:
+            weights = weights * sample_weights.flatten().to(pred.device)
+        floss = torch.mean(weights * base_loss)
+        corr_loss = torch.zeros(1, device=pred.device)
+        if pred_f.shape[0] >= 4 and self.corr_weight > 0:
+            pm = pred_f - pred_f.mean()
+            tm = target_f - target_f.mean()
+            corr = torch.sum(pm * tm) / (
+                torch.sqrt(torch.sum(pm ** 2) + 1e-8) *
+                torch.sqrt(torch.sum(tm ** 2) + 1e-8)
+            )
+            corr_loss = self.corr_weight * (1.0 - corr)
+        return floss + corr_loss
+
+
 class PinballLoss(nn.Module):
     """Pinball (quantile) loss for multi-quantile output.
 
@@ -1198,6 +1331,11 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
                                 var_y_train=var_y_train)
     elif loss_type == 'quantile':
         criterion = PinballLoss(quantiles=hp.get('quantiles', [0.1, 0.5, 0.9])).to(DEVICE)
+    elif loss_type == 'focal':
+        criterion = FocalRegressionLoss(corr_weight=hp.get('corr_weight', 0.8),
+                                        gamma=hp.get('focal_gamma', 1.5),
+                                        base=hp.get('focal_base', 'huber'),
+                                        t_nu=hp.get('focal_t_nu', 5.0))
     else:
         criterion = YieldWMAELoss(corr_weight=hp.get('corr_weight', 0.8),
                                   power=hp.get('wmae_power', 1),
@@ -1222,7 +1360,7 @@ def train_model(model, train_loader, val_loader, hp, model_path, var_y_train=1.0
 
             optimizer.zero_grad()
             pred = model(Xs_batch, Xt_batch)
-            if isinstance(criterion, YieldWMAELoss):
+            if isinstance(criterion, (YieldWMAELoss, FocalRegressionLoss)):
                 loss = criterion(pred, y_batch, sample_weights=w_batch)
             else:
                 loss = criterion(pred, y_batch)

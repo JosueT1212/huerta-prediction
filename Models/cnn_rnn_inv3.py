@@ -21,7 +21,7 @@ from cnn_rnn_yield import (
     DEVICE, RESULTS_DIR, HORIZON,
     prepare_data, set_seed, init_weights,
     CNNRNN, train_model, evaluate_model, evaluate_model_q,
-    compute_metrics, compute_phase_metrics,
+    compute_metrics,
     print_metrics, plot_results_per_greenhouse, plot_quantile_bands,
     compute_cptc_intervals,
 )
@@ -40,7 +40,7 @@ def main():
     print('=' * 60)
     print('  CNN-RNN Invernadero 3')
     print(f'  Train: {TRAIN_SEASONS} | Val: {VAL_SEASON} | Test: T17')
-    print(f'  HORIZON={HORIZON} (doc) | seq_len={HP["seq_len"]} | eff_horizon = gap - seq_len (per temporada)')
+    print(f'  HORIZON={HP.get("horizon", HORIZON)} (doc) | seq_len={HP["seq_len"]} | eff_horizon = gap - seq_len (per temporada)')
     print('=' * 60)
 
     train_loader, val_loader, test_loader, scaler_y, bc_lambda, n_sensor_pca, n_temporal, var_y_train, test_week_keys, wis_test = \
@@ -84,7 +84,8 @@ def main():
                                                              quantiles=_quantiles)
                 y_pred = q_preds.get(0.5, list(q_preds.values())[0])
             else:
-                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda)
+                y_true, y_pred, metrics = evaluate_model(model, test_loader, scaler_y, bc_lambda,
+                                                          hist_te=getattr(scaler_y, 'hist_te_seq_', None))
                 q_preds = None
             r2 = metrics['R²']
             print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={metrics["MAPE (%)"]:.2f}%')
@@ -132,7 +133,8 @@ def main():
             n_out=_n_out,
         ).to(DEVICE)
         best_model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=True))
-        y_val_true, y_val_pred, _ = evaluate_model(best_model, val_loader, scaler_y, bc_lambda)
+        y_val_true, y_val_pred, _ = evaluate_model(best_model, val_loader, scaler_y, bc_lambda,
+                                                    hist_te=getattr(scaler_y, 'hist_va_seq_', None))
         lower, upper, val_cov, avg_w = compute_cptc_intervals(y_val_true, y_val_pred, best_result['y_pred'])
         best_result['pi_lower'] = lower
         best_result['pi_upper'] = upper
@@ -140,7 +142,7 @@ def main():
 
     print(f'\n  >>> Best: [{best_result["init_method"]}] seed={best_result["seed"]}  R²={best_r2:.4f} <<<')
     print(f'  >>> Ensemble top-{top_k}: R²={ensemble_metrics["R²"]:.4f}, MAPE={ensemble_metrics["MAPE (%)"]:.2f}% <<<')
-    print_metrics(INV_ID, best_result['metrics'], horizon=HORIZON)
+    print_metrics(INV_ID, best_result['metrics'], horizon=HP.get('horizon', HORIZON))
 
     if HP.get('loss_type') == 'quantile' and best_result.get('q_preds') is not None:
         plot_quantile_bands(
@@ -150,13 +152,13 @@ def main():
             val_losses=best_result['val_losses'],
             inv_id=INV_ID,
             metrics=best_result['metrics'],
-            horizon=HORIZON,
+            horizon=HP.get('horizon', HORIZON),
             quantiles=HP.get('quantiles', [0.1, 0.5, 0.9]),
             wis=best_result.get('wis_test'),
             ramp_weeks=HP.get('ramp_weeks', 4),
         )
     else:
-        plot_results_per_greenhouse({INV_ID: best_result}, horizon=HORIZON,
+        plot_results_per_greenhouse({INV_ID: best_result}, horizon=HP.get('horizon', HORIZON),
                                     intervals={INV_ID: (lower, upper)})
 
     # Top-25 R² statistics
@@ -166,10 +168,6 @@ def main():
     top25_std  = float(np.std(top25_r2s))
     print(f'\n  Top-25 R²: mean={top25_mean:.4f}, std={top25_std:.4f}')
 
-    phase = compute_phase_metrics(
-        best_result['y_true'], best_result['y_pred'], wis_test,
-        ramp_weeks=HP.get('ramp_weeks', 4))
-
     metrics_rows = [
         {'invernadero': INV_ID, 'model': 'best',              **best_result['metrics']},
         {'invernadero': INV_ID, 'model': f'ensemble_top{top_k}', **ensemble_metrics},
@@ -178,10 +176,6 @@ def main():
         {'invernadero': INV_ID, 'model': 'quantile_pi' if HP.get('loss_type') == 'quantile' else 'cptc_pi', 'pi_coverage': val_cov, 'pi_avg_width': avg_w,
          'R²': None, 'RMSE (kg)': None, 'NSE': None, 'PBIAS (%)': None, 'MAPE (%)': None},
     ]
-    if 'ramp_up' in phase:
-        metrics_rows.append({'invernadero': INV_ID, 'model': 'best_ramp_up', **phase['ramp_up']})
-    if 'peak' in phase:
-        metrics_rows.append({'invernadero': INV_ID, 'model': 'best_peak',    **phase['peak']})
     pd.DataFrame(metrics_rows).to_csv(RESULTS_DIR / 'cnn_rnn_inv3_metrics.csv', index=False)
 
     np.savez_compressed(

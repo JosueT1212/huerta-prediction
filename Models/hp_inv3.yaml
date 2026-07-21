@@ -1,5 +1,5 @@
 seq_len: 4
-skip_first_weeks: 3
+skip_first_weeks: 0
 ramp_weeks: 4
 ramp_weight: 0.5
 alignment: positional
@@ -17,6 +17,10 @@ cnn_padding: 1
 num_cnn_blocks: 1
 
 # RNN
+target_mode: residual
+loss_type: focal
+focal_gamma: 1.5
+focal_base: mse
 lstm_hidden: 64
 lstm_layers: 1
 fc_hidden: 32

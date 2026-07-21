@@ -902,15 +902,27 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
     target_mode = hp.get('target_mode', 'raw')
     hist_tr = hist_va = hist_te = None
     if target_mode == 'residual':
-        # Predict kg - mean(week_in_season) instead of raw kg. mu(wis) is
-        # derived from TRAIN rows only (no leakage into val/test); rows whose
-        # week_in_season wasn't seen in train fall back to the train-wide
-        # mean. bc_lambda stays None — box-cox/log1p assume a positive-ish
-        # target and residuals are centered near 0 (can go negative), so the
-        # transform is skipped entirely and the scaler acts on raw residuals.
+        # Predict kg - mean(week_in_season) instead of raw kg. mu(wis) for
+        # val/test is derived from TRAIN rows only (no leakage — T16/T17
+        # never contribute). bc_lambda stays None — box-cox/log1p assume a
+        # positive-ish target and residuals are centered near 0 (can go
+        # negative), so the transform is skipped and the scaler acts on raw
+        # residuals.
         mu_wis = train_df.groupby('week_in_season')['target'].mean()
         global_mu = float(train_df['target'].mean())
-        hist_tr = train_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
+        # TRAIN rows use leave-one-season-out mu(wis) instead of mu_wis above:
+        # with only 3 train seasons, a row's own season is ~33% of mu_wis's
+        # weight, so subtracting mu_wis from that same row leaks its own
+        # target into its own baseline (the classic "target mean encoding"
+        # leak — same failure mode as encoding a category by its own-row-
+        # included target mean). LOSO excludes the row's own season, val/test
+        # already don't have this problem (T16/T17 never in mu_wis).
+        _grp_sum = train_df.groupby('week_in_season')['target'].transform('sum')
+        _grp_cnt = train_df.groupby('week_in_season')['target'].transform('count')
+        with np.errstate(divide='ignore', invalid='ignore'):
+            _loso_mu = (_grp_sum - train_df['target']) / (_grp_cnt - 1)
+        _loso_mu = _loso_mu.where(_grp_cnt > 1, global_mu)
+        hist_tr = _loso_mu.values.astype(np.float32)
         hist_va = val_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
         hist_te = test_df['week_in_season'].map(mu_wis).fillna(global_mu).values.astype(np.float32)
         y_train = y_train - hist_tr

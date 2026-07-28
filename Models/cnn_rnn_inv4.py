@@ -86,7 +86,7 @@ def main():
                                                           hist_te=getattr(scaler_y, 'hist_te_seq_', None))
                 q_preds = None
             r2 = metrics['R²']
-            print(f'    [{init_method}] s{seed}: R²={r2:.4f}, MAPE={metrics["MAPE (%)"]:.2f}%')
+            print(f'    [{init_method}] s{seed}: R²={r2:.4f}, RMSE={metrics["RMSE (kg)"]:.1f}, MAPE={metrics["MAPE (%)"]:.2f}%')
             top_runs.append((r2, y_pred.copy()))
 
             if r2 > best_r2:

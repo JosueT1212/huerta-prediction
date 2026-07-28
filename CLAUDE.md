@@ -223,16 +223,16 @@ Resumen del pipeline aplicado a **ambos** invernaderos:
    Pesos finales → `Models/results/production_cnn_rnn_inv3.pt` / `_inv4.pt`
    (nunca sobrescriben los checkpoints de evaluación `best_cnn_rnn_inv*.pt`).
 
-### Nota para el pipeline de inferencia en vivo (importante)
+### Nota para el pipeline de inferencia en vivo (actualizado 2026-07-28)
 
-Las primeras `skip_first_weeks=3` semanas de cada temporada NO tienen predicción
-del modelo (se descartan del entrenamiento/evaluación por ser semanas de rampa de
-cosecha, poco confiables). **En inferencia real, esas primeras 3 semanas de cada
-temporada nueva deben inferirse usando la media histórica** (media de esas mismas
-semanas en temporadas pasadas), no con el modelo CNN-RNN — el modelo nunca fue
-entrenado para predecir esas semanas y no debe usarse ahí. Esto debe implementarse
-en el pipeline de inferencia en vivo (ver spec `docs/superpowers/specs/2026-06-23-live-inference-pipeline-design.md`),
-no en este repo de entrenamiento.
+**Ya NO aplica el fallback a media histórica de las primeras semanas.** Con
+`skip_first_weeks: 0` en ambos `hp_inv*.yaml` (adoptado junto con `target_mode:
+residual` + focal loss, §8-9), el modelo SÍ se entrena sobre las semanas de rampa
+de cosecha y su desempeño no se degradó por incluirlas. `scripts/live_inference.py`
+ya no tiene el fallback `SKIP_FIRST_WEEKS`/`historical_mean_inv*.json` — el modelo
+predice desde `week_in_season=0` en toda temporada nueva. `scripts/
+compute_historical_means.py` y los JSON generados se eliminaron del repo (dead
+code tras el cambio).
 
 ## 9. Comparación pure-LSTM (sin bloques CNN) — resultado (2026-07-13)
 

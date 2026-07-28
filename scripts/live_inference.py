@@ -10,7 +10,6 @@ Env vars required:
 Optional:
   DRY_RUN=1  — run models but skip Supabase write
 """
-import json
 import os
 import sys
 from datetime import date, timedelta
@@ -33,8 +32,6 @@ from Models.cnn_rnn_yield import CNNRNN
 RESULTS_DIR = ROOT / "Models" / "results"
 HORIZON_WEEKS = 5
 MODEL_VERSION = "cnn_rnn_v2_production"
-HISTORICAL_MEAN_VERSION = "historical_mean_v1"
-SKIP_FIRST_WEEKS = 4
 CURRENT_SEASON = "T18"
 INV_IDS = (3, 4)
 
@@ -45,13 +42,6 @@ def monday_of_week(d: date) -> date:
 
 def week_in_season(target_date: date, transplant_date: date) -> int:
     return max(0, (target_date - transplant_date).days // 7)
-
-
-def load_historical_mean(inv: int, wis: int) -> float | None:
-    path = RESULTS_DIR / f"historical_mean_inv{inv}.json"
-    with open(path) as f:
-        means = json.load(f)
-    return means.get(str(wis))
 
 
 def get_transplant_date(supa, inv: int) -> date | None:
@@ -228,22 +218,12 @@ def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
 
 def _backfill_first_submission(supa, inv: int, transplant_date: date, harvest_start: date,
                                 dry_run: bool) -> bool:
-    """First submission of the season: write every ramp-up mean week, then
-    every model week the current sensor backlog supports — no hardcoded
+    """First submission of the season: write every model week the current
+    sensor backlog supports, starting from week-in-season 0 — no hardcoded
     row count (spec §3)."""
     wrote_any = False
 
-    for wis in range(SKIP_FIRST_WEEKS):
-        historical_kg = load_historical_mean(inv, wis)
-        if historical_kg is None:
-            print(f"  ERROR: missing historical_mean_inv{inv}.json[\"{wis}\"] — skipping that week.",
-                  file=sys.stderr)
-            continue
-        predicted_for = harvest_start + timedelta(weeks=wis)
-        _upsert_prediction(supa, inv, predicted_for, historical_kg, HISTORICAL_MEAN_VERSION, dry_run)
-        wrote_any = True
-
-    wis = SKIP_FIRST_WEEKS
+    wis = 0
     while True:
         as_of_date = harvest_start + timedelta(weeks=wis - HORIZON_WEEKS)
         if as_of_date > date.today():
@@ -281,15 +261,6 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
 
     predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
     wis_target = week_in_season(predicted_for, harvest_start)
-
-    if wis_target < SKIP_FIRST_WEEKS:
-        historical_kg = load_historical_mean(inv, wis_target)
-        if historical_kg is not None:
-            print(f"  Inv{inv} → week-in-season {wis_target} < {SKIP_FIRST_WEEKS} "
-                  f"(ramp-up) → historical mean {historical_kg:.1f} kg")
-            _upsert_prediction(supa, inv, predicted_for, historical_kg,
-                                HISTORICAL_MEAN_VERSION, dry_run)
-            return True
 
     kg_predicted = _run_model_forward(supa, inv, transplant_date, date.today(), wis_target)
     if kg_predicted is None:

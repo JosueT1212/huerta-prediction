@@ -1160,6 +1160,9 @@ def prepare_data(invernadero_id, hp, train_seasons=None, val_season=None, transf
             'pheno_means':   _pheno_means,
             'seq_len':       hp['seq_len'],
             'transform':     transform,
+            'target_mode':   target_mode,
+            'mu_wis':        (mu_wis.to_dict() if target_mode == 'residual' else None),
+            'global_mu':     (global_mu if target_mode == 'residual' else None),
         }
         joblib.dump(pipeline, pipeline_path)
         print(f'  Pipeline saved → {pipeline_path}')

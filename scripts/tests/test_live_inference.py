@@ -151,7 +151,7 @@ def test_backfill_first_submission_writes_mean_weeks_and_stops_at_padding(monkey
 
     calls = []
 
-    def fake_run_model_forward(supa, inv, td, as_of_date):
+    def fake_run_model_forward(supa, inv, td, as_of_date, wis_target):
         calls.append(as_of_date)
         # First model call succeeds (enough backlog), second is padded (not enough).
         return 5000.0 if len(calls) == 1 else None
@@ -214,7 +214,7 @@ def test_run_model_forward_returns_none_when_not_enough_weekly_history():
         "scripts.live_inference.joblib.load",
         return_value={"seq_len": 4, "sensor_cols": ["temp"]},
     ):
-        result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 7, 27))
+        result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 7, 27), 4)
 
     assert result is None
 

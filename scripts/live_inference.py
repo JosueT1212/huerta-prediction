@@ -103,12 +103,17 @@ def is_first_submission(supa, inv: int) -> bool:
     return not (resp.data or [])
 
 
-def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date) -> float | None:
-    """CNN-RNN forward pass for a sensor window ending at as_of_date.
+def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
+                        wis_target: int) -> float | None:
+    """CNN-RNN ensemble forward pass for a sensor window ending at as_of_date.
 
     Returns None if the window doesn't have seq_len real (non-padded) weekly
     rows yet — the caller must not write a prediction built on fabricated
     zero-padding.
+
+    wis_target: week-in-season of the PREDICTED week (not as_of_date) — used
+    to add the historical mean back when the model was trained in residual
+    target_mode (predicts kg - mean(week_in_season), not raw kg).
     """
     cutoff = (as_of_date - timedelta(weeks=12)).isoformat()
     upper = as_of_date.isoformat()
@@ -165,38 +170,58 @@ def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date) 
     with open(ROOT / "Models" / f"hp_inv{inv}.yaml") as f:
         hp = yaml.safe_load(f)
 
-    model = CNNRNN(
-        n_sensor=x_sensor.shape[-1],
-        n_temporal=x_temporal.shape[-1],
-        cnn_filters=hp["cnn_filters"],
-        cnn_kernel_size=hp["cnn_kernel_size"],
-        cnn_padding=hp["cnn_padding"],
-        num_cnn_blocks=hp["num_cnn_blocks"],
-        lstm_hidden=hp["lstm_hidden"],
-        lstm_layers=hp["lstm_layers"],
-        dropout=0.0,
-        fc_hidden=hp["fc_hidden"],
-    )
     model_path = RESULTS_DIR / f"production_cnn_rnn_inv{inv}.pt"
     # map_location="cpu": checkpoints were saved on Apple Silicon (mps
     # device) and Railway's container is CPU-only Linux — without this,
     # torch.load fails with "Storage device not recognized: mps".
-    model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=True))
-    model.eval()
+    checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
+    # 10-seed production ensemble: checkpoint is a LIST of state_dicts (one
+    # per seed), not a single state_dict — run all members, average in kg
+    # space (post inverse-transform, so it's correct even for nonlinear
+    # transforms).
+    state_dicts = checkpoint if isinstance(checkpoint, list) else [checkpoint]
 
-    with torch.no_grad():
-        y_norm = model(x_sensor, x_temporal).squeeze().item()
+    member_kg_preds = []
+    for state_dict in state_dicts:
+        model = CNNRNN(
+            n_sensor=x_sensor.shape[-1],
+            n_temporal=x_temporal.shape[-1],
+            cnn_filters=hp["cnn_filters"],
+            cnn_kernel_size=hp["cnn_kernel_size"],
+            cnn_padding=hp["cnn_padding"],
+            num_cnn_blocks=hp["num_cnn_blocks"],
+            lstm_hidden=hp["lstm_hidden"],
+            lstm_layers=hp["lstm_layers"],
+            dropout=0.0,
+            fc_hidden=hp["fc_hidden"],
+            fc_layers=hp.get("fc_layers", 1),
+        )
+        model.load_state_dict(state_dict)
+        model.eval()
 
-    y_scaled = scaler_y.inverse_transform([[y_norm]])[0][0]
+        with torch.no_grad():
+            y_norm = model(x_sensor, x_temporal).squeeze().item()
 
-    if transform == "log":
-        import numpy as np
-        kg_predicted = float(np.expm1(y_scaled))
-    elif transform == "boxcox" and bc_lambda is not None:
-        from scipy.special import inv_boxcox
-        kg_predicted = float(inv_boxcox(y_scaled, bc_lambda))
-    else:
-        kg_predicted = float(y_scaled)
+        y_scaled = scaler_y.inverse_transform([[y_norm]])[0][0]
+
+        if transform == "log":
+            import numpy as np
+            kg_member = float(np.expm1(y_scaled))
+        elif transform == "boxcox" and bc_lambda is not None:
+            from scipy.special import inv_boxcox
+            kg_member = float(inv_boxcox(y_scaled, bc_lambda))
+        else:
+            kg_member = float(y_scaled)
+
+        member_kg_preds.append(kg_member)
+
+    kg_predicted = sum(member_kg_preds) / len(member_kg_preds)
+
+    if pipeline.get("target_mode") == "residual":
+        mu_wis = pipeline.get("mu_wis") or {}
+        global_mu = pipeline.get("global_mu")
+        historical_baseline = mu_wis.get(str(wis_target), mu_wis.get(wis_target, global_mu))
+        kg_predicted += historical_baseline
 
     return kg_predicted
 
@@ -225,7 +250,7 @@ def _backfill_first_submission(supa, inv: int, transplant_date: date, harvest_st
             print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
                   f"week-in-season {wis} would need sensor data from the future.")
             break
-        kg_predicted = _run_model_forward(supa, inv, transplant_date, as_of_date)
+        kg_predicted = _run_model_forward(supa, inv, transplant_date, as_of_date, wis)
         if kg_predicted is None:
             print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
                   f"insufficient sensor history for week-in-season {wis}.")
@@ -266,7 +291,7 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
                                 HISTORICAL_MEAN_VERSION, dry_run)
             return True
 
-    kg_predicted = _run_model_forward(supa, inv, transplant_date, date.today())
+    kg_predicted = _run_model_forward(supa, inv, transplant_date, date.today(), wis_target)
     if kg_predicted is None:
         print(f"  ERROR: insufficient sensor history for invernadero {inv} — skipping.",
               file=sys.stderr)

@@ -1181,6 +1181,7 @@
         <button class="btn-primary" id="upload-sensores-btn" disabled>Enviar captura</button>
       </div>
       <div class="insert-hint" id="upload-sensores-lock-banner"></div>
+      <div class="insert-hint" id="upload-sensores-latest-date"></div>
       <div class="insert-hint" id="upload-sensores-preview"></div>
       <div class="ins-confirm-panel" id="upload-sensores-confirm1" hidden>
         <pre class="ins-confirm-summary" id="upload-sensores-confirm1-summary"></pre>
@@ -1208,6 +1209,7 @@ Próximo envío disponible en 7 días.
         <button class="btn-primary" id="upload-riego-btn" disabled>Enviar captura</button>
       </div>
       <div class="insert-hint" id="upload-riego-lock-banner"></div>
+      <div class="insert-hint" id="upload-riego-latest-date"></div>
       <div class="insert-hint" id="upload-riego-preview"></div>
       <div class="ins-confirm-panel" id="upload-riego-confirm1" hidden>
         <pre class="ins-confirm-summary" id="upload-riego-confirm1-summary"></pre>
@@ -1236,6 +1238,7 @@ Próximo envío disponible en 7 días.
         <button class="btn-primary" id="upload-exteriores-btn" disabled>Enviar captura</button>
       </div>
       <div class="insert-hint" id="upload-exteriores-lock-banner"></div>
+      <div class="insert-hint" id="upload-exteriores-latest-date"></div>
       <div class="insert-hint" id="upload-exteriores-preview"></div>
       <div class="ins-confirm-panel" id="upload-exteriores-confirm1" hidden>
         <pre class="ins-confirm-summary" id="upload-exteriores-confirm1-summary"></pre>
@@ -1263,6 +1266,7 @@ Próximo envío disponible en 7 días.
         <button class="btn-primary" id="upload-fenologia-btn" disabled>Enviar captura</button>
       </div>
       <div class="insert-hint" id="upload-fenologia-lock-banner"></div>
+      <div class="insert-hint" id="upload-fenologia-latest-date"></div>
       <div class="insert-hint" id="upload-fenologia-preview"></div>
       <div class="ins-confirm-panel" id="upload-fenologia-confirm1" hidden>
         <pre class="ins-confirm-summary" id="upload-fenologia-confirm1-summary"></pre>
@@ -1290,6 +1294,7 @@ Próximo envío disponible en 7 días.
         <button class="btn-primary" id="upload-produccion-btn" disabled>Enviar captura</button>
       </div>
       <div class="insert-hint" id="upload-produccion-lock-banner"></div>
+      <div class="insert-hint" id="upload-produccion-latest-date"></div>
       <div class="insert-hint" id="upload-produccion-preview"></div>
       <div class="ins-confirm-panel" id="upload-produccion-confirm1" hidden>
         <pre class="ins-confirm-summary" id="upload-produccion-confirm1-summary"></pre>
@@ -2818,6 +2823,29 @@ async function refreshLockBanner(formType, inv) {
   }
 }
 
+/* Fecha ("fecha" del archivo) de la última fila ya insertada, por tipo de dato */
+const HIST_DATE_FIELD = { sensores: 'fecha', riego: 'fecha', exteriores: 'fecha', fenologia: 'week_date', produccion: 'predicted_for' };
+
+async function refreshLatestDate(formType, inv) {
+  const el = document.getElementById(`upload-${formType}-latest-date`);
+  if (!el) return;
+  el.textContent = '';
+  const token = localStorage.getItem('sb_token');
+  const url = inv == null
+    ? `${API_BASE}/uploads/${formType}/history?limit=1`
+    : `${API_BASE}/uploads/${inv}/${formType}/history?limit=1`;
+  try {
+    const rows = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
+    const row = Array.isArray(rows) ? rows[0] : null;
+    const dateVal = row?.[HIST_DATE_FIELD[formType]];
+    el.textContent = dateVal
+      ? `Última fecha con datos: ${new Date(dateVal).toLocaleDateString('es-MX')}`
+      : 'Sin datos registrados todavía';
+  } catch (e) {
+    el.textContent = '';
+  }
+}
+
 function wireUploadTab(formType) {
   const fileInput = document.getElementById(`upload-${formType}-file`);
   const btn = document.getElementById(`upload-${formType}-btn`);
@@ -2905,6 +2933,7 @@ function wireUploadTab(formType) {
       preview.textContent = '';
       delete uploadState[formType];
       refreshLockBanner(formType, state.inv);
+      refreshLatestDate(formType, GLOBAL_UPLOAD_TYPES.includes(formType) ? null : state.inv);
     } catch (e) {
       result.className = 'insert-result bad';
       result.textContent = '⚠ ' + e.message;
@@ -3007,7 +3036,11 @@ function initInsTabs() {
       document.getElementById('ins-panel-hist').hidden = tab !== 'hist';
       if (tab === 'hist') loadHistorial(inv);
       else if (tab === 'transplante') { refreshTransplantDateTab(inv); refreshHarvestStartDateTab(inv); }
-      else refreshLockBanner(tab, GLOBAL_UPLOAD_TYPES.includes(tab) ? null : inv);
+      else {
+        const tabInv = GLOBAL_UPLOAD_TYPES.includes(tab) ? null : inv;
+        refreshLockBanner(tab, tabInv);
+        refreshLatestDate(tab, tabInv);
+      }
     });
   });
 
@@ -3028,10 +3061,15 @@ function initInsTabs() {
     });
     if (activeTab === 'hist') loadHistorial(inv);
     else if (activeTab === 'transplante') { refreshTransplantDateTab(inv); refreshHarvestStartDateTab(inv); }
-    else if (activeTab) refreshLockBanner(activeTab, GLOBAL_UPLOAD_TYPES.includes(activeTab) ? null : inv);
+    else if (activeTab) {
+      const tabInv = GLOBAL_UPLOAD_TYPES.includes(activeTab) ? null : inv;
+      refreshLockBanner(activeTab, tabInv);
+      refreshLatestDate(activeTab, tabInv);
+    }
   });
 
   refreshLockBanner('sensores', +document.getElementById('ins-inv').value);
+  refreshLatestDate('sensores', +document.getElementById('ins-inv').value);
 }
 
 /* ── Rendimiento kg/m² (superficie de cultivo, m²) ── */

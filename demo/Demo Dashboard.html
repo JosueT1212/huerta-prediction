@@ -1639,7 +1639,7 @@ Próximo envío disponible en 7 días.
         <h1 class="page-title">Métricas <em>detalladas</em></h1>
         <div class="ornament">Indicadores de rendimiento y análisis de cosecha</div>
       </div>
-      <div class="page-subtitle">Invernadero 3 · Ciclo T17</div>
+      <div class="page-subtitle">Invernadero 3 · Ciclo T18</div>
     </div>
     <div class="divider"></div>
 
@@ -1647,7 +1647,7 @@ Próximo envío disponible en 7 días.
       <div class="yield-head">
         <div>
           <div class="panel-title">Rendimiento kg/m² · meta vs producción proyectada</div>
-          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T17</div>
+          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T18</div>
         </div>
         <label class="yield-meta">
           <span>Meta kg/m² · semana</span>
@@ -1661,7 +1661,7 @@ Próximo envío disponible en 7 días.
       <div class="kpi-stat">
         <div class="kpi-stat-label">Rendimiento · prom. ambos inv</div>
         <div class="kpi-stat-value" id="kpi-yield-avg-3">—</div>
-        <div class="kpi-stat-unit">kg/m² acumulado T17</div>
+        <div class="kpi-stat-unit">kg/m² acumulado T18</div>
         <div class="kpi-stat-trend trend-flat" id="kpi-yield-trend-3">— real vs proyectado</div>
       </div>
     </div>
@@ -1691,7 +1691,7 @@ Próximo envío disponible en 7 días.
         <h1 class="page-title">Métricas <em>detalladas</em></h1>
         <div class="ornament">Indicadores de rendimiento y análisis de cosecha</div>
       </div>
-      <div class="page-subtitle">Invernadero 4 · Ciclo T17</div>
+      <div class="page-subtitle">Invernadero 4 · Ciclo T18</div>
     </div>
     <div class="divider"></div>
 
@@ -1699,7 +1699,7 @@ Próximo envío disponible en 7 días.
       <div class="yield-head">
         <div>
           <div class="panel-title">Rendimiento kg/m² · meta vs producción proyectada</div>
-          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T17</div>
+          <div class="chart-sub">Promedio de ambos invernaderos · barras = por semana · líneas = acumulado · T18</div>
         </div>
         <label class="yield-meta">
           <span>Meta kg/m² · semana</span>
@@ -1713,7 +1713,7 @@ Próximo envío disponible en 7 días.
       <div class="kpi-stat">
         <div class="kpi-stat-label">Rendimiento · prom. ambos inv</div>
         <div class="kpi-stat-value" id="kpi-yield-avg-4">—</div>
-        <div class="kpi-stat-unit">kg/m² acumulado T17</div>
+        <div class="kpi-stat-unit">kg/m² acumulado T18</div>
         <div class="kpi-stat-trend trend-flat" id="kpi-yield-trend-4">— real vs proyectado</div>
       </div>
     </div>
@@ -2381,11 +2381,32 @@ function fillMenuKPIs(inv) {
     setText(`menu${inv}-total`, '—');
     setText(`menu${inv}-peak`, '—');
     setText(`menu${inv}-peak-unit`, 'Sin datos de T18 todavía');
+    destroyChart(`chart-menu-${inv}`);
     return;
   }
   setText(`menu${inv}-total`, fmtKg(total));
   setText(`menu${inv}-peak`, fmtKg(liveKg(peak)));
   setText(`menu${inv}-peak-unit`, `kg · ${fmtLiveWeekLabel(peak.predicted_for)}`);
+  renderMenuChartLive(inv);
+}
+
+/* Chart de "Vista general" — temporada en curso (T18), no T17 histórico */
+function buildLiveMenuSeries(inv) {
+  const rows = rawLive[inv] || [];
+  const history = [];
+  const predictions = [];
+  rows.forEach(r => {
+    const week = fmtLiveWeekLabel(r.predicted_for);
+    if (r.kg_actual != null) history.push({ week, real: r.kg_actual, pred: r.kg_predicted });
+    else predictions.push({ week, pred: r.kg_predicted });
+  });
+  return { history, predictions };
+}
+
+function renderMenuChartLive(inv) {
+  const { history, predictions } = buildLiveMenuSeries(inv);
+  if (!history.length && !predictions.length) return;
+  makeMenuChart(`chart-menu-${inv}`, history, predictions, palette.accent);
 }
 
 /* Respuestas crudas del backend + cursor por invernadero */
@@ -2437,7 +2458,6 @@ function renderInv(inv, cursor) {
   const s = buildSeriesFromAPI(raw, cursor);
 
   buildPredTable(document.getElementById(`tbody-inv${inv}`), s.predictions);
-  makeMenuChart(`chart-menu-${inv}`, s.history, s.predictions, palette.accent);
   makeDetailChart(`chart-inv${inv}`, s.history, s.predictions, palette.accent);
   fillKPIs(inv, s);
 

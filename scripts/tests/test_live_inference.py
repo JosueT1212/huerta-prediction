@@ -67,34 +67,48 @@ def test_get_harvest_start_returns_none_when_unset():
     assert result is None
 
 
-def test_is_first_submission_true_when_no_predictions_rows():
-    from scripts.live_inference import is_first_submission
+def test_get_last_predicted_wis_none_when_no_predictions_rows():
+    from scripts.live_inference import get_last_predicted_wis
 
     mock_supa = MagicMock()
     resp = MagicMock()
     resp.data = []
-    mock_supa.table("predictions").select("id").eq("greenhouse_id", 3).eq("season", "T18").limit(1).execute.return_value = resp
+    (mock_supa.table("predictions").select("predicted_for").eq("greenhouse_id", 3)
+     .eq("season", "T18").order("predicted_for", desc=True).limit(1).execute.return_value) = resp
 
-    assert is_first_submission(mock_supa, 3) is True
+    harvest_start = date(2026, 7, 27)
+    assert get_last_predicted_wis(mock_supa, 3, harvest_start) is None
 
 
-def test_is_first_submission_false_when_predictions_rows_exist():
-    from scripts.live_inference import is_first_submission
+def test_get_last_predicted_wis_returns_wis_of_latest_row():
+    from scripts.live_inference import get_last_predicted_wis
 
     mock_supa = MagicMock()
     resp = MagicMock()
-    resp.data = [{"id": 1}]
-    mock_supa.table("predictions").select("id").eq("greenhouse_id", 3).eq("season", "T18").limit(1).execute.return_value = resp
+    harvest_start = date(2026, 7, 27)  # wis 0
+    resp.data = [{"predicted_for": (harvest_start + timedelta(weeks=3)).isoformat()}]
+    (mock_supa.table("predictions").select("predicted_for").eq("greenhouse_id", 3)
+     .eq("season", "T18").order("predicted_for", desc=True).limit(1).execute.return_value) = resp
 
-    assert is_first_submission(mock_supa, 3) is False
+    assert get_last_predicted_wis(mock_supa, 3, harvest_start) == 3
 
 
-def test_backfill_first_submission_writes_model_weeks_from_zero_and_stops_at_padding(monkeypatch):
-    from scripts.live_inference import _backfill_first_submission, HORIZON_WEEKS
+def test_run_inference_for_greenhouse_starts_from_zero_when_no_predictions_yet(monkeypatch):
+    from scripts.live_inference import run_inference_for_greenhouse, HORIZON_WEEKS
 
     mock_supa = MagicMock()
     transplant_date = date(2026, 5, 15)
     harvest_start = date(2026, 7, 27)  # week 31
+
+    monkeypatch.setattr(
+        "scripts.live_inference.get_transplant_date", lambda supa, inv: transplant_date
+    )
+    monkeypatch.setattr(
+        "scripts.live_inference.get_harvest_start", lambda supa, inv: harvest_start
+    )
+    monkeypatch.setattr(
+        "scripts.live_inference.get_last_predicted_wis", lambda supa, inv, hs: None
+    )
 
     calls = []
 
@@ -104,11 +118,8 @@ def test_backfill_first_submission_writes_model_weeks_from_zero_and_stops_at_pad
         return 5000.0 if len(calls) == 1 else None
 
     monkeypatch.setattr("scripts.live_inference._run_model_forward", fake_run_model_forward)
-    # Freeze "today" far enough ahead that the loop's ceiling isn't what stops it —
-    # the padding check (fake_run_model_forward returning None) should stop it instead.
-    monkeypatch.setattr("scripts.live_inference.date", _FakeDate)
 
-    result = _backfill_first_submission(mock_supa, 3, transplant_date, harvest_start, dry_run=False)
+    result = run_inference_for_greenhouse(mock_supa, 3, dry_run=False)
     assert result is True
 
     upsert_calls = mock_supa.table("predictions").upsert.call_args_list
@@ -118,6 +129,39 @@ def test_backfill_first_submission_writes_model_weeks_from_zero_and_stops_at_pad
     assert model_versions == ["cnn_rnn_v2_production"]
     # First model call's as_of_date = harvest_start - HORIZON_WEEKS weeks (wis starts at 0)
     assert calls[0] == harvest_start - timedelta(weeks=HORIZON_WEEKS)
+
+
+def test_run_inference_for_greenhouse_resumes_after_last_predicted_wis(monkeypatch):
+    from scripts.live_inference import run_inference_for_greenhouse, HORIZON_WEEKS
+
+    mock_supa = MagicMock()
+    transplant_date = date(2026, 5, 15)
+    harvest_start = date(2026, 7, 27)  # week 31
+
+    monkeypatch.setattr(
+        "scripts.live_inference.get_transplant_date", lambda supa, inv: transplant_date
+    )
+    monkeypatch.setattr(
+        "scripts.live_inference.get_harvest_start", lambda supa, inv: harvest_start
+    )
+    # Last prediction already written was for week-in-season 4 — resume at wis 5,
+    # regardless of what date.today() is.
+    monkeypatch.setattr(
+        "scripts.live_inference.get_last_predicted_wis", lambda supa, inv, hs: 4
+    )
+
+    calls = []
+
+    def fake_run_model_forward(supa, inv, td, as_of_date, wis_target):
+        calls.append(wis_target)
+        return None  # no new data yet — nothing to predict beyond wis 4
+
+    monkeypatch.setattr("scripts.live_inference._run_model_forward", fake_run_model_forward)
+
+    result = run_inference_for_greenhouse(mock_supa, 3, dry_run=False)
+    assert result is False
+    assert calls == [5]
+    mock_supa.table("predictions").upsert.assert_not_called()
 
 
 def test_get_harvest_start_normalizes_non_monday_to_monday():
@@ -163,9 +207,3 @@ def test_run_model_forward_returns_none_when_not_enough_weekly_history():
         result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 7, 27), 4)
 
     assert result is None
-
-
-class _FakeDate(date):
-    @classmethod
-    def today(cls):
-        return date(2026, 12, 31)  # far enough ahead that the ceiling never triggers first

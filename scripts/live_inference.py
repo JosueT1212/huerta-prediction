@@ -80,17 +80,22 @@ def get_harvest_start(supa, inv: int) -> date | None:
     return monday_of_week(date.fromisoformat(row["fecha"]))
 
 
-def is_first_submission(supa, inv: int) -> bool:
-    """True iff no predictions row exists yet for this greenhouse+season."""
+def get_last_predicted_wis(supa, inv: int, harvest_start: date) -> int | None:
+    """week-in-season of the most recent prediction already written for this
+    greenhouse+season, or None if no predictions row exists yet."""
     resp = (
         supa.table("predictions")
-        .select("id")
+        .select("predicted_for")
         .eq("greenhouse_id", inv)
         .eq("season", CURRENT_SEASON)
+        .order("predicted_for", desc=True)
         .limit(1)
         .execute()
     )
-    return not (resp.data or [])
+    rows = resp.data or []
+    if not rows:
+        return None
+    return week_in_season(date.fromisoformat(rows[0]["predicted_for"]), harvest_start)
 
 
 def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
@@ -216,34 +221,12 @@ def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
     return kg_predicted
 
 
-def _backfill_first_submission(supa, inv: int, transplant_date: date, harvest_start: date,
-                                dry_run: bool) -> bool:
-    """First submission of the season: write every model week the current
-    sensor backlog supports, starting from week-in-season 0 — no hardcoded
-    row count (spec §3)."""
-    wrote_any = False
-
-    wis = 0
-    while True:
-        as_of_date = harvest_start + timedelta(weeks=wis - HORIZON_WEEKS)
-        if as_of_date > date.today():
-            print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
-                  f"week-in-season {wis} would need sensor data from the future.")
-            break
-        kg_predicted = _run_model_forward(supa, inv, transplant_date, as_of_date, wis)
-        if kg_predicted is None:
-            print(f"  Inv{inv} → backfilled through week-in-season {wis - 1}; "
-                  f"insufficient sensor history for week-in-season {wis}.")
-            break
-        predicted_for = harvest_start + timedelta(weeks=wis)
-        _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)
-        wrote_any = True
-        wis += 1
-
-    return wrote_any
-
-
 def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
+    """Data-driven, not calendar-driven: starts at the week-in-season right
+    after the last prediction already written (or week 0 if none exist yet),
+    then keeps predicting wis, wis+1, wis+2, ... as far as the uploaded
+    sensor data supports — stopping only when _run_model_forward reports
+    insufficient history, never on a date.today() ceiling."""
     transplant_date = get_transplant_date(supa, inv)
     if transplant_date is None:
         print(f"  ERROR: no transplant_date set for invernadero {inv} — skipping. "
@@ -256,21 +239,24 @@ def run_inference_for_greenhouse(supa, inv: int, dry_run: bool) -> bool:
               f"Set it via PUT /harvest-start-date/{inv}.", file=sys.stderr)
         return False
 
-    if is_first_submission(supa, inv):
-        return _backfill_first_submission(supa, inv, transplant_date, harvest_start, dry_run)
+    last_wis = get_last_predicted_wis(supa, inv, harvest_start)
+    wis = 0 if last_wis is None else last_wis + 1
 
-    predicted_for = monday_of_week(date.today() + timedelta(weeks=HORIZON_WEEKS))
-    wis_target = week_in_season(predicted_for, harvest_start)
+    wrote_any = False
+    while True:
+        as_of_date = harvest_start + timedelta(weeks=wis - HORIZON_WEEKS)
+        kg_predicted = _run_model_forward(supa, inv, transplant_date, as_of_date, wis)
+        if kg_predicted is None:
+            print(f"  Inv{inv} → stopped at week-in-season {wis}; "
+                  f"insufficient sensor history for week-in-season {wis}.")
+            break
+        predicted_for = harvest_start + timedelta(weeks=wis)
+        print(f"  Inv{inv} → {kg_predicted:.1f} kg for week {predicted_for} (wis={wis})")
+        _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)
+        wrote_any = True
+        wis += 1
 
-    kg_predicted = _run_model_forward(supa, inv, transplant_date, date.today(), wis_target)
-    if kg_predicted is None:
-        print(f"  ERROR: insufficient sensor history for invernadero {inv} — skipping.",
-              file=sys.stderr)
-        return False
-
-    print(f"  Inv{inv} → {kg_predicted:.1f} kg for week {predicted_for}")
-    _upsert_prediction(supa, inv, predicted_for, kg_predicted, MODEL_VERSION, dry_run)
-    return True
+    return wrote_any
 
 
 def _upsert_prediction(supa, inv: int, predicted_for: date, kg_predicted: float,

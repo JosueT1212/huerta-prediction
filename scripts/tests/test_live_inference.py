@@ -207,3 +207,77 @@ def test_run_model_forward_returns_none_when_not_enough_weekly_history():
         result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 7, 27), 4)
 
     assert result is None
+
+
+def test_run_model_forward_returns_none_when_latest_real_data_is_stale():
+    from scripts.live_inference import _run_model_forward
+
+    mock_supa = MagicMock()
+    # Plenty of real daily rows (would satisfy any seq_len), but every one of
+    # them is from over a week before as_of_date — e.g. as_of_date has kept
+    # advancing week over week while uploads stopped. The recency guard must
+    # fire before the seq_len/weekly-count check even runs, so this must
+    # short-circuit with no need to mock joblib.load / pipeline files at all.
+    sensor_resp = MagicMock()
+    sensor_resp.data = [
+        {"fecha": f"2026-06-{d:02d}", "greenhouse_id": 3, "temp": 20.0} for d in range(1, 29)
+    ]
+    empty_resp = MagicMock()
+    empty_resp.data = []
+
+    def table_side_effect(name):
+        m = MagicMock()
+        if name == "sensor_readings_wide":
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = sensor_resp
+        else:
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+            m.select.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+        return m
+
+    mock_supa.table.side_effect = table_side_effect
+
+    # as_of_date is over a month past the latest real row (2026-06-28).
+    result = _run_model_forward(mock_supa, 3, date(2026, 5, 15), date(2026, 8, 15), 4)
+
+    assert result is None
+
+
+def test_run_model_forward_proceeds_past_guards_when_data_is_recent(monkeypatch):
+    from scripts.live_inference import _run_model_forward
+
+    mock_supa = MagicMock()
+    as_of_date = date(2026, 8, 10)
+    sensor_resp = MagicMock()
+    sensor_resp.data = [
+        {"fecha": f"2026-07-{d:02d}", "greenhouse_id": 3, "temp": 20.0} for d in range(14, 32)
+    ] + [{"fecha": f"2026-08-{d:02d}", "greenhouse_id": 3, "temp": 20.0} for d in range(1, 11)]
+    empty_resp = MagicMock()
+    empty_resp.data = []
+
+    def table_side_effect(name):
+        m = MagicMock()
+        if name == "sensor_readings_wide":
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = sensor_resp
+        else:
+            m.select.return_value.eq.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+            m.select.return_value.gte.return_value.lte.return_value.execute.return_value = empty_resp
+        return m
+
+    mock_supa.table.side_effect = table_side_effect
+
+    sentinel = RuntimeError("reached model stage — guards did not block")
+
+    def fake_build_input_tensor(*a, **k):
+        raise sentinel
+
+    monkeypatch.setattr("scripts.live_inference.build_input_tensor", fake_build_input_tensor)
+
+    with patch(
+        "scripts.live_inference.joblib.load",
+        return_value={"seq_len": 2, "sensor_cols": ["temp"]},
+    ):
+        try:
+            _run_model_forward(mock_supa, 3, date(2026, 5, 15), as_of_date, 4)
+            assert False, "expected the sentinel RuntimeError to propagate"
+        except RuntimeError as e:
+            assert e is sentinel

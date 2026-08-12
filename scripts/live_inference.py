@@ -103,8 +103,9 @@ def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
     """CNN-RNN ensemble forward pass for a sensor window ending at as_of_date.
 
     Returns None if the window doesn't have seq_len real (non-padded) weekly
-    rows yet — the caller must not write a prediction built on fabricated
-    zero-padding.
+    rows yet, or if the most recent real data in the window is more than a
+    week behind as_of_date (see recency guard below) — the caller must not
+    write a prediction built on fabricated zero-padding or a stale window.
 
     wis_target: week-in-season of the PREDICTED week (not as_of_date) — used
     to add the historical mean back when the model was trained in residual
@@ -134,6 +135,23 @@ def _run_model_forward(supa, inv: int, transplant_date: date, as_of_date: date,
     print(f"  Inv{inv} sensor rows pulled (as of {as_of_date}): {len(sensor_resp.data or [])} sensores + "
           f"{len(riego_resp.data or [])} riego + {len(ext_resp.data or [])} exteriores "
           f"→ {len(wide_rows)} merged by fecha")
+
+    # Recency guard: a wide trailing window can still contain >= seq_len real
+    # weeks long after real uploads stopped (they just haven't aged out of
+    # the 12-week lookback yet), which let the caller's advancing loop drift
+    # for months past the last real upload, silently extrapolating on a
+    # stale window. Require the most recent real date in the window to be
+    # within a week of as_of_date — if the DB's real data doesn't reach that
+    # far, stop here instead of computing a fabricated forward prediction.
+    if not merged_by_fecha:
+        print(f"  Inv{inv} → no sensor data at all as of {as_of_date} — nothing to predict from.")
+        return None
+    latest_real_date = max(date.fromisoformat(d) for d in merged_by_fecha)
+    if latest_real_date < as_of_date - timedelta(days=6):
+        print(f"  Inv{inv} → latest real data is {latest_real_date}, "
+              f"{(as_of_date - latest_real_date).days} days behind as_of_date {as_of_date} — "
+              f"window would exceed what's actually in the DB, stopping.")
+        return None
 
     pheno_resp = (
         supa.table("phenology_observations").select("*")

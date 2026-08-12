@@ -7,12 +7,11 @@ week containing `now`. This anchors freshness to the calendar week instead
 of a rolling window: a set that straddles a week boundary (e.g. three types
 uploaded late last week, the fourth uploaded early this week) is never
 considered complete here, and is instead picked up by the Sunday cron
-fallback. Within a single ISO week, the four required types can each only
-be submitted once (a repeat submission is rejected by
-check_submission_lock() with 429 before it ever reaches this module), so
-uploads_complete_for_inv() flips from False to True exactly once per
-complete week, on the upload call that completes the set — no extra "was it
-already complete" bookkeeping is needed here.
+fallback. Repeat submissions within the same ISO week are allowed (no
+per-week upload cap) — each one just refreshes last_submitted_at and may
+re-trigger inference, which is a harmless no-op once the model has nothing
+new to predict (see run_inference_for_greenhouse's data-driven stop
+condition in scripts/live_inference.py).
 """
 from datetime import datetime, time, timedelta, timezone
 import sys

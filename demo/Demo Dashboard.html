@@ -1192,7 +1192,6 @@
       </div>
       <div class="ins-confirm-panel" id="upload-sensores-confirm2" hidden>
         <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
-Próximo envío disponible en 7 días.
 ¿Confirmar definitivamente?</pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="upload-sensores-cancel2">Cancelar</button>
@@ -1220,7 +1219,6 @@ Próximo envío disponible en 7 días.
       </div>
       <div class="ins-confirm-panel" id="upload-riego-confirm2" hidden>
         <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
-Próximo envío disponible en 7 días.
 ¿Confirmar definitivamente?</pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="upload-riego-cancel2">Cancelar</button>
@@ -1249,7 +1247,6 @@ Próximo envío disponible en 7 días.
       </div>
       <div class="ins-confirm-panel" id="upload-exteriores-confirm2" hidden>
         <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
-Próximo envío disponible en 7 días.
 ¿Confirmar definitivamente?</pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="upload-exteriores-cancel2">Cancelar</button>
@@ -1277,7 +1274,6 @@ Próximo envío disponible en 7 días.
       </div>
       <div class="ins-confirm-panel" id="upload-fenologia-confirm2" hidden>
         <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
-Próximo envío disponible en 7 días.
 ¿Confirmar definitivamente?</pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="upload-fenologia-cancel2">Cancelar</button>
@@ -1305,7 +1301,6 @@ Próximo envío disponible en 7 días.
       </div>
       <div class="ins-confirm-panel" id="upload-produccion-confirm2" hidden>
         <pre class="ins-confirm-summary">Esta captura no podrá modificarse ni eliminarse.
-Próximo envío disponible en 7 días.
 ¿Confirmar definitivamente?</pre>
         <div class="ins-confirm-actions">
           <button class="btn-ghost" id="upload-produccion-cancel2">Cancelar</button>
@@ -2796,31 +2791,13 @@ function parseXlsxPreview(formType, file) {
 }
 
 async function refreshLockBanner(formType, inv) {
+  // No upload-cadence restriction anymore — the client resends the same
+  // growing season file as often as needed, so this never gates the form.
   const banner = document.getElementById(`upload-${formType}-lock-banner`);
-  const btn = document.getElementById(`upload-${formType}-btn`);
-  const token = localStorage.getItem('sb_token');
-  const lockUrl = inv == null
-    ? `${API_BASE}/submission-lock/${formType}`
-    : `${API_BASE}/submission-lock/${inv}/${formType}`;
-  try {
-    const status = await fetch(lockUrl, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(r => r.json());
-    if (status.locked) {
-      const date = new Date(status.next_allowed_at).toLocaleDateString('es-MX');
-      banner.textContent = `Próximo envío disponible: ${date}`;
-      banner.classList.add('bad');
-      btn.disabled = true;
-      document.getElementById(`upload-${formType}-file`).disabled = true;
-    } else {
-      banner.textContent = '';
-      banner.classList.remove('bad');
-      document.getElementById(`upload-${formType}-file`).disabled = false;
-      btn.disabled = !uploadState[formType]?.rows?.length;
-    }
-  } catch (e) {
-    banner.textContent = '';
-  }
+  banner.textContent = '';
+  banner.classList.remove('bad');
+  document.getElementById(`upload-${formType}-file`).disabled = false;
+  document.getElementById(`upload-${formType}-btn`).disabled = !uploadState[formType]?.rows?.length;
 }
 
 /* Fecha ("fecha" del archivo) de la última fila ya insertada, por tipo de dato */
@@ -2921,9 +2898,6 @@ function wireUploadTab(formType) {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
-        if (r.status === 429) {
-          throw new Error(`Ya se envió una captura esta semana. Próximo envío: ${new Date(j.detail?.next_allowed_at).toLocaleDateString('es-MX')}`);
-        }
         throw new Error(j.detail || `Error ${r.status}`);
       }
       result.className = 'insert-result ok';

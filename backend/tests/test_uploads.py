@@ -97,7 +97,10 @@ def test_upload_rejects_invalid_form_type(api_client, mock_supa):
     assert r.status_code == 422
 
 
-def test_upload_returns_429_when_locked(api_client, mock_supa):
+def test_upload_not_blocked_by_recent_prior_submission(api_client, mock_supa):
+    # No upload-cadence restriction: a submission_locks row from minutes ago
+    # (same shape check_submission_lock used to reject on) must not block
+    # a same-day reupload of the growing season file.
     headers = _auth(mock_supa)
     from datetime import datetime, timezone
     mock_supa.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = [
@@ -106,7 +109,7 @@ def test_upload_returns_429_when_locked(api_client, mock_supa):
     df = pd.DataFrame([{"fecha": "2026-07-01", "kg_reales": 100}])
     files = {"file": ("prod.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/produccion", headers=headers, files=files)
-    assert r.status_code == 429
+    assert r.status_code == 200
 
 
 def test_upload_rejects_missing_columns(api_client, mock_supa):

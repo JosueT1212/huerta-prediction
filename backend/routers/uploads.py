@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 from backend.auth import get_current_user
 from backend.supabase_client import service_client
-from backend.lock_utils import check_submission_lock, touch_submission_lock, get_lock_status
+from backend.lock_utils import touch_submission_lock, get_lock_status
 from backend.inference_trigger import maybe_trigger_inference
 
 router = APIRouter()
@@ -151,7 +151,6 @@ async def upload_excel(
     if form_type not in PER_INV_TYPES:
         raise HTTPException(422, f"{form_type} no usa invernadero; usa /uploads/{form_type}")
     required_cols = _require_form_type(form_type)
-    check_submission_lock(inv, form_type)
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)
@@ -215,7 +214,6 @@ async def upload_exteriores(
     _user: Annotated[dict, Depends(get_current_user)] = None,
 ):
     required_cols = FORM_TYPES["exteriores"]
-    check_submission_lock(EXTERIORES_GH_ID, "exteriores")
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)

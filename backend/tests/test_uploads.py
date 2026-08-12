@@ -195,6 +195,22 @@ def test_history_returns_list(api_client, mock_supa):
     assert isinstance(r.json(), list)
 
 
+def test_produccion_history_only_returns_rows_with_real_kg(api_client, mock_supa):
+    # predictions has a row for every model-predicted week, most with
+    # kg_actual still null — history must only surface weeks the client
+    # actually submitted a real value for.
+    headers = _auth(mock_supa)
+    mock_supa.table.return_value.select.return_value.eq.return_value.not_.is_.return_value.order.return_value.limit.return_value.execute.return_value.data = [
+        {"predicted_for": "2026-08-03", "kg_predicted": 31372.5, "kg_actual": 27841}
+    ]
+    r = api_client.get("/uploads/3/produccion/history", headers=headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 1
+    assert body[0]["kg_actual"] == 27841
+    mock_supa.table.return_value.select.return_value.eq.return_value.not_.is_.assert_any_call("kg_actual", "null")
+
+
 def test_lock_status_endpoint_requires_auth(api_client):
     r = api_client.get("/submission-lock/3/sensores")
     assert r.status_code == 401

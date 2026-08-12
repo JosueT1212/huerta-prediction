@@ -185,14 +185,13 @@ def upload_history(
         "sensores": "fecha", "riego": "fecha",
         "fenologia": "week_date", "produccion": "predicted_for",
     }[form_type]
-    resp = (
-        service_client.table(table)
-        .select("*")
-        .eq("greenhouse_id", inv)
-        .order(order_col, desc=True)
-        .limit(limit)
-        .execute()
-    )
+    query = service_client.table(table).select("*").eq("greenhouse_id", inv)
+    if form_type == "produccion":
+        # predictions rows exist for every model-predicted week, not just the
+        # ones the client actually submitted real kg for — a "capture
+        # history" must only show weeks with a real value on file.
+        query = query.not_.is_("kg_actual", "null")
+    resp = query.order(order_col, desc=True).limit(limit).execute()
     return resp.data
 
 

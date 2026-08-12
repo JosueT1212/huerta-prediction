@@ -2597,7 +2597,14 @@ function renderLiveInv(inv, cursor) {
   if (grid) grid.hidden = false;
   if (empty) empty.hidden = true;
 
-  if (cursor == null) cursor = cursorLiveInv[inv] ?? (n - 1);
+  if (cursor == null) {
+    // Default: anchor at the real→predicted boundary (first week without
+    // kg_actual yet), not the last week — otherwise the default window can
+    // land entirely past the weeks that have real data, hiding the white
+    // "Real" line even though it's wired into the chart (see makeLiveDetailChart).
+    const firstUnrealized = rows.findIndex(r => r.kg_actual == null);
+    cursor = cursorLiveInv[inv] ?? (firstUnrealized === -1 ? n - 1 : firstUnrealized);
+  }
   cursor = Math.max(0, Math.min(cursor, n - 1));
   cursorLiveInv[inv] = cursor;
 
@@ -2815,8 +2822,10 @@ async function refreshLatestDate(formType, inv) {
     const rows = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
     const row = Array.isArray(rows) ? rows[0] : null;
     const dateVal = row?.[HIST_DATE_FIELD[formType]];
+    // 'T12:00:00' avoids the off-by-one from parsing a date-only string as
+    // UTC midnight then rendering in a negative-offset local timezone.
     el.textContent = dateVal
-      ? `Última fecha con datos: ${new Date(dateVal).toLocaleDateString('es-MX')}`
+      ? `Última fecha con datos: ${new Date(dateVal + 'T12:00:00').toLocaleDateString('es-MX')}`
       : 'Sin datos registrados todavía';
   } catch (e) {
     el.textContent = '';

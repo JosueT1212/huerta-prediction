@@ -70,22 +70,6 @@ def _first_submission(mock_supa, per_inv: bool = True):
         mock_supa.table.return_value.select.return_value.limit.return_value.execute.return_value.data = []
 
 
-def _prior_submission(mock_supa, per_inv: bool = True):
-    existing_row = [{"fecha": "2020-01-01"}]
-    if per_inv:
-        mock_supa.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = existing_row
-    else:
-        mock_supa.table.return_value.select.return_value.limit.return_value.execute.return_value.data = existing_row
-
-
-def _matched_dates(mock_supa, dates: list[str], per_inv: bool = True, date_col: str = "fecha"):
-    data = [{date_col: d} for d in dates]
-    if per_inv:
-        mock_supa.table.return_value.select.return_value.in_.return_value.eq.return_value.execute.return_value.data = data
-    else:
-        mock_supa.table.return_value.select.return_value.in_.return_value.execute.return_value.data = data
-
-
 def test_upload_sensores_first_submission_accepts_any_coverage(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
@@ -305,64 +289,24 @@ def test_exteriores_lock_status_uses_sentinel(api_client, mock_supa):
     mock_supa.table.return_value.select.return_value.eq.assert_any_call("greenhouse_id", 0)
 
 
-def test_upload_sensores_subsequent_rejects_insufficient_new_days(api_client, mock_supa):
+def test_upload_sensores_small_incremental_reupload_accepted(api_client, mock_supa):
+    # No coverage gate anymore: a reupload of the same growing T18 file with
+    # just a couple of new days must succeed, not be rejected for "too few
+    # new days" (removed — inference's own seq_len guard handles sparse data).
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    _prior_submission(mock_supa)
-    _matched_dates(mock_supa, [])  # none of the uploaded dates are already in the DB
-    df = _sensor_rows(3)  # 3 new days < 7 required
-    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
-    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
-    assert r.status_code == 422
-    assert "días nuevos" in r.text
-
-
-def test_upload_sensores_subsequent_excludes_already_present_dates(api_client, mock_supa):
-    headers = _auth(mock_supa)
-    _no_lock(mock_supa)
-    _prior_submission(mock_supa)
-    dates = _weekly_dates(8)
-    _matched_dates(mock_supa, [dates[0]])  # 1 of the 8 uploaded dates already exists
-    df = _sensor_rows(8)  # 8 uploaded - 1 already-present = 7 new days, exactly the minimum
+    df = _sensor_rows(2)
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["rows_inserted"] == 8
+    assert body["rows_inserted"] == 2
 
 
-def test_upload_sensores_subsequent_rejects_when_overlap_reduces_new_days_below_threshold(api_client, mock_supa):
+def test_upload_sensores_unmapped_inv_accepted(api_client, mock_supa):
     headers = _auth(mock_supa)
     _no_lock(mock_supa)
-    _prior_submission(mock_supa)
-    dates = _weekly_dates(8)
-    _matched_dates(mock_supa, dates[:4])  # 4 of 8 uploaded dates already exist -> only 4 new days
-    df = _sensor_rows(8)
-    files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
-    r = api_client.post("/uploads/3/sensores", headers=headers, files=files)
-    assert r.status_code == 422
-    assert "días nuevos" in r.text
-
-
-def test_upload_fenologia_subsequent_below_daily_threshold_still_accepted(api_client, mock_supa):
-    # Fenologia is captured weekly, not daily -- MIN_NEW_DAYS_SUBSEQUENT (7)
-    # must not gate it. A single new week's capture (well under 7 rows) is a
-    # legitimate, complete upload and must succeed.
-    headers = _auth(mock_supa)
-    _no_lock(mock_supa)
-    df = _phenology_rows(3)
-    files = {"file": ("fenologia.xlsx", _xlsx_bytes(df), "application/octet-stream")}
-    r = api_client.post("/uploads/3/fenologia", headers=headers, files=files)
-    assert r.status_code == 200
-    body = r.json()
-    assert body["rows_inserted"] == 3
-
-
-def test_upload_sensores_unmapped_inv_first_submission_skips_window_check(api_client, mock_supa):
-    headers = _auth(mock_supa)
-    _no_lock(mock_supa)
-    _first_submission(mock_supa)
-    df = _sensor_rows(1)  # any greenhouse_id, any row count on first submission -> not a 500
+    df = _sensor_rows(1)  # any greenhouse_id, any row count -> not a 500
     files = {"file": ("sensores.xlsx", _xlsx_bytes(df), "application/octet-stream")}
     r = api_client.post("/uploads/99/sensores", headers=headers, files=files)
     assert r.status_code == 200

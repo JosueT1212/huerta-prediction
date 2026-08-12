@@ -38,8 +38,6 @@ PER_INV_TYPES = {"sensores", "riego", "fenologia", "produccion"}
 
 EXTERIORES_GH_ID = 0  # sentinel: exteriores has no real invernadero (0 is never a real id)
 
-MIN_NEW_DAYS_SUBSEQUENT = 7
-
 
 def _require_form_type(form_type: str) -> list[str]:
     cols = FORM_TYPES.get(form_type)
@@ -143,51 +141,6 @@ def _ingest_rows(df: pd.DataFrame, form_type: str, greenhouse_id: int | None):
     return rows_inserted, rows_updated, rows_skipped, skipped_reasons
 
 
-def _date_col_for(form_type: str) -> str:
-    return "week_date" if form_type == "fenologia" else "fecha"
-
-
-def _check_window_coverage(
-    form_type: str, greenhouse_id: int | None, table: str, date_col: str, df: pd.DataFrame
-) -> None:
-    if form_type not in ("sensores", "riego", "exteriores", "fenologia"):
-        return
-    if form_type == "fenologia":
-        # Fenologia is captured weekly, not daily — MIN_NEW_DAYS_SUBSEQUENT
-        # is a daily-cadence threshold and doesn't apply to it (a single new
-        # week's upload can be < 7 rows and still be a legitimate, complete
-        # weekly capture). No coverage gate for fenologia.
-        return
-
-    existence_query = service_client.table(table).select(date_col)
-    if greenhouse_id is not None:
-        existence_query = existence_query.eq("greenhouse_id", greenhouse_id)
-    existing = existence_query.limit(1).execute()
-
-    dates = pd.to_datetime(df["fecha"])
-
-    if not existing.data:
-        # First submission of a season: no minimum weeks/days required.
-        # Inference predicts off whatever data has actually been uploaded so
-        # far — see docs/superpowers/specs/2026-07-15-first-submission-backfill-design.md §3a
-        # (runtime sufficiency check in _run_model_forward, not an upload-time gate).
-        return
-
-    date_strs = sorted({_date_str(d) for d in dates})
-    subsequent_query = service_client.table(table).select(date_col).in_(date_col, date_strs)
-    if greenhouse_id is not None:
-        subsequent_query = subsequent_query.eq("greenhouse_id", greenhouse_id)
-    matched = subsequent_query.execute()
-    existing_dates = {row[date_col] for row in matched.data}
-    new_days = len(set(date_strs) - existing_dates)
-    if new_days < MIN_NEW_DAYS_SUBSEQUENT:
-        raise HTTPException(
-            422,
-            f"Not sufficient data: se requieren al menos {MIN_NEW_DAYS_SUBSEQUENT} "
-            f"días nuevos de datos, el archivo aporta {new_days} día(s) nuevo(s).",
-        )
-
-
 @router.post("/uploads/{inv}/{form_type}")
 async def upload_excel(
     inv: int,
@@ -202,7 +155,6 @@ async def upload_excel(
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)
-    _check_window_coverage(form_type, inv, _table_for(form_type), _date_col_for(form_type), df)
     rows_inserted, rows_updated, rows_skipped, skipped_reasons = _ingest_rows(df, form_type, inv)
 
     if rows_inserted + rows_updated > 0:
@@ -267,7 +219,6 @@ async def upload_exteriores(
 
     contents = await file.read()
     df = _parse_excel(contents, required_cols)
-    _check_window_coverage("exteriores", None, "exterior_readings", "fecha", df)
     rows_inserted, rows_updated, rows_skipped, skipped_reasons = _ingest_rows(df, "exteriores", None)
 
     if rows_inserted + rows_updated > 0:

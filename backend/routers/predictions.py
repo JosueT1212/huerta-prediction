@@ -8,7 +8,8 @@ router = APIRouter()
 
 
 class ActualKgRequest(BaseModel):
-    kg_actual: float
+    # None clears a real production value the client entered by mistake
+    kg_actual: float | None
 
 
 @router.get("/live-predictions/{inv}")

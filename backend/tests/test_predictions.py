@@ -62,3 +62,15 @@ def test_patch_kg_actual_updates_row(api_client, mock_supa):
     assert r.json() == {"ok": True}
     mock_supa.table.assert_called_with("predictions")
     mock_supa.table.return_value.update.assert_called_with({"kg_actual": 235.0})
+
+
+def test_patch_kg_actual_null_clears_row(api_client, mock_supa):
+    # the client mistyped a real production value; clearing it must write a
+    # real NULL back so the week returns to "sin registrar" everywhere the
+    # real/predicted boundary is derived from kg_actual.
+    headers = _auth(mock_supa)
+    mock_supa.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    r = api_client.patch("/live-predictions/3/1", headers=headers, json={"kg_actual": None})
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    mock_supa.table.return_value.update.assert_called_with({"kg_actual": None})

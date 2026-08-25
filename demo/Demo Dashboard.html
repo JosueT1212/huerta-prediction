@@ -2598,12 +2598,15 @@ function renderLiveInv(inv, cursor) {
   if (empty) empty.hidden = true;
 
   if (cursor == null) {
-    // Default: anchor at the real→predicted boundary (first week without
-    // kg_actual yet), not the last week — otherwise the default window can
-    // land entirely past the weeks that have real data, hiding the white
-    // "Real" line even though it's wired into the chart (see makeLiveDetailChart).
-    const firstUnrealized = rows.findIndex(r => r.kg_actual == null);
-    cursor = cursorLiveInv[inv] ?? (firstUnrealized === -1 ? n - 1 : firstUnrealized);
+    // Default: anchor at the real→predicted boundary — the week after the LAST
+    // week with kg_actual, not the first week without it. A deleted mid-series
+    // capture ("Borrar producción real") leaves a hole, and the first-null
+    // index would land on that hole instead of the boundary. Otherwise the
+    // default window can land entirely past the weeks that have real data,
+    // hiding the white "Real" line even though it's wired into the chart
+    // (see makeLiveDetailChart).
+    const lastRealized = rows.findLastIndex(r => r.kg_actual != null);
+    cursor = cursorLiveInv[inv] ?? (lastRealized === -1 ? 0 : Math.min(lastRealized + 1, n - 1));
   }
   cursor = Math.max(0, Math.min(cursor, n - 1));
   cursorLiveInv[inv] = cursor;
@@ -3294,9 +3297,36 @@ function renderForecastSection(inv, data) {
           <div style="font-size:0.75rem;color:#9aa0a8;margin-top:6px">
             ${d.kg_actual == null ? 'Sin registrar' : `Real: ${Math.round(d.kg_actual).toLocaleString('es-MX')} kg`}
           </div>
-          ${d.kg_actual == null ? `<button class="btn-ghost register-actual-btn" data-inv="${inv}" data-id="${d.id}" style="margin-top:8px;font-size:0.75rem">Registrar producción real</button>` : ''}
+          ${d.kg_actual == null
+            ? `<button class="btn-ghost register-actual-btn" data-inv="${inv}" data-id="${d.id}" style="margin-top:8px;font-size:0.75rem">Registrar producción real</button>`
+            : `<button class="btn-ghost delete-actual-btn" data-inv="${inv}" data-id="${d.id}" data-date="${d.predicted_for}" style="margin-top:8px;font-size:0.75rem;color:#e07a5f;border-color:#e07a5f">Borrar producción real</button>`}
         </div>`).join('')
     : '<p style="color:#9aa0a8">Sin predicciones de T18 todavía.</p>';
+
+  // kg_actual = null clears a value entered by mistake; the real/predicted
+  // boundary is derived from kg_actual, so the refresh below fixes the chart too.
+  async function patchActual(btn, kgActual, verb) {
+    const token = localStorage.getItem('sb_token');
+    try {
+      const response = await fetch(`${API_BASE}/live-predictions/${btn.dataset.inv}/${btn.dataset.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kg_actual: kgActual }),
+      });
+      if (!response.ok) {
+        alert(`No se pudo ${verb} la producción real. Intenta de nuevo.`);
+        return;
+      }
+    } catch (err) {
+      console.error(`[Huerta] Error al ${verb} producción real:`, err);
+      alert(`No se pudo ${verb} la producción real (error de red). Intenta de nuevo.`);
+      return;
+    }
+    await loadLiveSeason(btn.dataset.inv);
+    fillMenuKPIs(Number(btn.dataset.inv));
+    buildLiveHistTable(document.getElementById(`tbody-hist${btn.dataset.inv}`), rawLive[btn.dataset.inv] || []);
+    refreshLiveData();
+  }
 
   cards.querySelectorAll('.register-actual-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -3304,26 +3334,16 @@ function renderForecastSection(inv, data) {
       if (kgStr == null) return;
       const kg = parseFloat(kgStr);
       if (Number.isNaN(kg)) return;
-      const token = localStorage.getItem('sb_token');
-      try {
-        const response = await fetch(`${API_BASE}/live-predictions/${btn.dataset.inv}/${btn.dataset.id}`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kg_actual: kg }),
-        });
-        if (!response.ok) {
-          alert('No se pudo registrar la producción real. Intenta de nuevo.');
-          return;
-        }
-      } catch (err) {
-        console.error('[Huerta] Error al registrar producción real:', err);
-        alert('No se pudo registrar la producción real (error de red). Intenta de nuevo.');
-        return;
-      }
-      await loadLiveSeason(btn.dataset.inv);
-      fillMenuKPIs(Number(btn.dataset.inv));
-      buildLiveHistTable(document.getElementById(`tbody-hist${btn.dataset.inv}`), rawLive[btn.dataset.inv] || []);
-      refreshLiveData();
+      await patchActual(btn, kg, 'registrar');
+    });
+  });
+
+  cards.querySelectorAll('.delete-actual-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const fecha = new Date(btn.dataset.date + 'T12:00:00')
+        .toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
+      if (!confirm(`¿Borrar la producción real registrada para la semana del ${fecha}? La semana vuelve a "Sin registrar" y podrás capturarla de nuevo.`)) return;
+      await patchActual(btn, null, 'borrar');
     });
   });
 }

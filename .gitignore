@@ -28,3 +28,20 @@ __pycache__/
 # Environment variables — never commit
 .env
 .env.local
+
+# Datos del cliente — NO se publican (repositorio público)
+Data/
+*.xlsx
+*.xls
+
+# Artefactos derivados que contienen kg reales de producción
+Models/results/*.npz
+Models/results/*.pkl
+Models/results/*_results.png
+Report/*.png
+
+# PDFs (papers de terceros, reportes)
+*.pdf
+
+# Notebooks con salidas de datos reales
+EDA/eda.ipynb

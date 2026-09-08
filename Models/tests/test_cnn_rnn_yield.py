@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import numpy as np
 import pytest
+from pathlib import Path
 
 
 # ── sample weight computation ─────────────────────────────────────────────────
@@ -351,6 +352,10 @@ def test_cnnrnn_num_cnn_blocks_zero_runs_forward():
     assert out.shape == (batch, 1)
 
 
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parents[2] / 'Data').is_dir(),
+    reason='requires private Data/ directory',
+)
 def test_spline_yield_in_sensor_frame_after_prepare_data():
     """
     spline_yield must appear in the pheno path's actual CNN input (sensor_tr_df),

@@ -5,6 +5,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import numpy as np
 import yaml
 from pathlib import Path
+import pytest
+
+if not (Path(__file__).resolve().parents[2] / 'Data').is_dir():
+    pytest.skip('requires private Data/ directory', allow_module_level=True)
+
 from cnn_rnn_yield import prepare_data
 
 hp_path = Path(__file__).parent.parent / 'hp_inv3.yaml'
